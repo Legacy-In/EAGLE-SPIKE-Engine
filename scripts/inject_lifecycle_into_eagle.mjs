@@ -363,7 +363,7 @@ const journalViewHtml = `
 if (!html.includes('id="view-JOURNAL"')) {
   html = html.replace('<!-- 5. HISTORY VIEW -->', () => `${journalViewHtml}\n\n    <!-- 5. HISTORY VIEW -->`);
 } else {
-  html = html.replace(/<!-- 4b\. SIGNAL JOURNAL VIEW[\s\S]*?<\/div>\s*<\/div>/, () => journalViewHtml.trim());
+  html = html.replace(/<!-- 4b\. SIGNAL JOURNAL VIEW[\s\S]*?(?=\s*<!-- 5\. HISTORY VIEW -->)/, () => `${journalViewHtml.trim()}\n\n    `);
 }
 
 // 6. Modals (Detail Drawer, Cohort Analytics, Settings, Import)
@@ -681,7 +681,7 @@ const lifecycleModalsHtml = `
 if (!html.includes('id="lifecycle-detail-modal"')) {
   html = html.replace('<!-- APPLICATION JAVASCRIPT LOGIC -->', () => `${lifecycleModalsHtml}\n\n  <!-- APPLICATION JAVASCRIPT LOGIC -->`);
 } else {
-  html = html.replace(/<!-- DETAILED SIGNAL LIFECYCLE MODAL[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/, () => lifecycleModalsHtml.trim());
+  html = html.replace(/<!-- DETAILED SIGNAL LIFECYCLE MODAL[\s\S]*?(?=\s*<!-- APPLICATION JAVASCRIPT LOGIC -->)/, () => `${lifecycleModalsHtml.trim()}\n\n  `);
 }
 
 // 7. Inject LifecycleEngine JavaScript module into script
