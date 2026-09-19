@@ -163,6 +163,11 @@ const lifecycleStyles = `
       margin: 12px 0;
       flex-wrap: wrap;
     }
+    table.hide-lifecycle-cols .lifecycle-col,
+    .hide-lifecycle-cols th.lifecycle-col,
+    .hide-lifecycle-cols td.lifecycle-col {
+      display: none !important;
+    }
 `;
 
 // Inject CSS before </style>
@@ -591,9 +596,29 @@ const glueJs = `
     function toggleLifecycleColumns() {
       LifecycleEngine.settings.showLifecycleColumns = !LifecycleEngine.settings.showLifecycleColumns;
       LifecycleEngine.saveSettings();
+      syncLifecycleColumnVisibility();
+    }
+
+    function syncLifecycleColumnVisibility() {
+      const show = LifecycleEngine?.settings?.showLifecycleColumns !== false;
+      const tbl = document.getElementById('scanner-table');
+      if (tbl) {
+        if (show) {
+          tbl.classList.remove('hide-lifecycle-cols');
+        } else {
+          tbl.classList.add('hide-lifecycle-cols');
+        }
+      }
       const lbl = document.getElementById('lbl-lifecycle-toggle');
-      if (lbl) lbl.innerText = LifecycleEngine.settings.showLifecycleColumns ? 'ON' : 'OFF';
-      renderScannerTable();
+      if (lbl) lbl.innerText = show ? 'ON' : 'OFF';
+      const btn = document.getElementById('btn-lifecycle-cols');
+      if (btn) {
+        if (show) {
+          btn.classList.add('btn-emerald');
+        } else {
+          btn.classList.remove('btn-emerald');
+        }
+      }
     }
 
     function setJournalFilter(filter, btn) {
@@ -758,22 +783,34 @@ html = html.replace(
 // Add optional lifecycle columns to renderScannerTable
 html = html.replace(
   `<td class="tabular c-dark">\${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>`,
-  () => `<td class="tabular c-dark">\${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>\${LifecycleEngine.settings.showLifecycleColumns ? (() => {
-            const sig = LifecycleEngine.signals.find(x => x.symbol === s.symbol && ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(x.status));
-            if (!sig) return '<td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td>';
-            const age = LifecycleEngine.formatAge(Date.now() - sig.detectedAt);
-            return '<td class="tabular font-bold">' + age + '</td>' +
-                   '<td>' + LifecycleEngine.formatPct(sig.checkpoints['4H']) + '</td>' +
-                   '<td>' + LifecycleEngine.formatPct(sig.checkpoints['8H']) + '</td>' +
-                   '<td>' + LifecycleEngine.formatPct(sig.checkpoints['1D']) + '</td>' +
-                   '<td>' + LifecycleEngine.getStatusBadge(sig.status) + '</td>';
-          })() : ''}`
+  () => `<td class="tabular c-dark">\${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>
+            \${(() => {
+              const sig = LifecycleEngine.signals.find(x => x.symbol === s.symbol && ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(x.status));
+              if (!sig) return '<td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td>';
+              const age = LifecycleEngine.formatAge(Date.now() - sig.detectedAt);
+              return '<td class="tabular font-bold lifecycle-col">' + age + '</td>' +
+                     '<td class="lifecycle-col">' + LifecycleEngine.formatPct(sig.checkpoints['4H']) + '</td>' +
+                     '<td class="lifecycle-col">' + LifecycleEngine.formatPct(sig.checkpoints['8H']) + '</td>' +
+                     '<td class="lifecycle-col">' + LifecycleEngine.formatPct(sig.checkpoints['1D']) + '</td>' +
+                     '<td class="lifecycle-col">' + LifecycleEngine.getStatusBadge(sig.status) + '</td>';
+            })()}`
 );
 
 // Add headers for lifecycle columns in table head
 html = html.replace(
   `<th onclick="sortTable('distHigh')">From High</th>`,
-  () => `<th onclick="sortTable('distHigh')">From High</th>\${LifecycleEngine?.settings?.showLifecycleColumns ? '<th>Age</th><th>4H</th><th>8H</th><th>1D</th><th>Status</th>' : ''}`
+  () => `<th onclick="sortTable('distHigh')">From High</th>
+              <th class="lifecycle-col" onclick="sortTable('detectedAt')">Age</th>
+              <th class="lifecycle-col">4H</th>
+              <th class="lifecycle-col">8H</th>
+              <th class="lifecycle-col">1D</th>
+              <th class="lifecycle-col">Status</th>`
+);
+
+// Hook syncLifecycleColumnVisibility into bootstrap
+html = html.replace(
+  'await LifecycleEngine.init();',
+  () => 'await LifecycleEngine.init();\n      syncLifecycleColumnVisibility();'
 );
 
 console.log('Writing updated eagle-flash.html...');
