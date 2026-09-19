@@ -2023,11 +2023,124 @@ a{color:var(--blue)}
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-sm" onclick="openModal('lifecycle-analytics-modal')">📊 Cohort Analytics</button>
+          <button class="btn btn-sm" onclick="openModal('lifecycle-import-modal')">📥 Import JSON</button>
           <button class="btn btn-sm" onclick="openModal('lifecycle-settings-modal')">⚙ Settings</button>
           <button class="btn btn-sm btn-emerald" onclick="LifecycleEngine.exportJournalCSV()">⬇ Export CSV</button>
+          <button class="btn btn-sm" onclick="LifecycleEngine.exportTimelineCSV()">⬇ Export Timeline</button>
           <button class="btn btn-sm" onclick="LifecycleEngine.exportSignalsJSON()">⬇ Export JSON</button>
         </div>
       </div>
+
+      <!-- Lifecycle KPI Summary Strip (Section 18) -->
+      <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Total Signals</div>
+          <div class="kpi-val tabular" id="jkpi-total">0</div>
+          <div class="kpi-sub">Recorded</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Active Signals</div>
+          <div class="kpi-val tabular c-emerald" id="jkpi-active">0</div>
+          <div class="kpi-sub">Tracking live</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Confirmed %</div>
+          <div class="kpi-val tabular c-cyan" id="jkpi-confirmed">0 (0.0%)</div>
+          <div class="kpi-sub">Breakout verified</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Rejected %</div>
+          <div class="kpi-val tabular c-red" id="jkpi-rejected">0 (0.0%)</div>
+          <div class="kpi-sub">Invalidated</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg 4H Return</div>
+          <div class="kpi-val tabular" id="jkpi-avg4h">PENDING</div>
+          <div class="kpi-sub">Directional</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg 8H Return</div>
+          <div class="kpi-val tabular" id="jkpi-avg8h">PENDING</div>
+          <div class="kpi-sub">Directional</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg 1D Return</div>
+          <div class="kpi-val tabular" id="jkpi-avg1d">PENDING</div>
+          <div class="kpi-sub">Directional</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg MFE (Peak)</div>
+          <div class="kpi-val tabular c-emerald" id="jkpi-avgmfe">PENDING</div>
+          <div class="kpi-sub">Max Favorable</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg MAE (Adverse)</div>
+          <div class="kpi-val tabular c-red" id="jkpi-avgmae">PENDING</div>
+          <div class="kpi-sub">Max Adverse</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg Time To Rejection</div>
+          <div class="kpi-val tabular" id="jkpi-avgttr">—</div>
+          <div class="kpi-sub">Survival duration</div>
+        </div>
+      </div>
+
+      <!-- Journal Filter Bar -->
+      <div class="filter-bar" style="margin-bottom:12px;">
+        <div class="presets-group">
+          <span class="c-dark" style="font-size:11px; font-family:var(--font-mono); margin-right:4px;">STATUS:</span>
+          <button class="preset-pill active" onclick="setJournalFilter('ALL', this)">All</button>
+          <button class="preset-pill" onclick="setJournalFilter('ACTIVE', this)">Active</button>
+          <button class="preset-pill" onclick="setJournalFilter('CONFIRMED', this)">Confirmed</button>
+          <button class="preset-pill" onclick="setJournalFilter('WARNING', this)">Warning</button>
+          <button class="preset-pill" onclick="setJournalFilter('REJECTED', this)">Rejected</button>
+          <button class="preset-pill" onclick="setJournalFilter('EXPIRED', this)">Expired</button>
+        </div>
+        <div class="presets-group" style="margin-left:8px;">
+          <span class="c-dark" style="font-size:11px; font-family:var(--font-mono); margin-right:4px;">SIDE:</span>
+          <button class="preset-pill active" onclick="setJournalSide('ALL', this)">All</button>
+          <button class="preset-pill" onclick="setJournalSide('LONG', this)">Long</button>
+          <button class="preset-pill" onclick="setJournalSide('SHORT', this)">Short</button>
+        </div>
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="journal-search" class="search-input" placeholder="Search signal ID or symbol..." oninput="handleJournalSearch(this.value)" />
+        </div>
+      </div>
+
+      <!-- Journal Table (Section 19: 20 Standardized Columns) -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortJournal('index')">#</th>
+              <th onclick="sortJournal('signalId')">Signal ID</th>
+              <th onclick="sortJournal('symbol')">Symbol</th>
+              <th onclick="sortJournal('direction')">Side</th>
+              <th onclick="sortJournal('signalType')">Signal</th>
+              <th onclick="sortJournal('score')">Score</th>
+              <th onclick="sortJournal('detectedAt')">Detected (Local)</th>
+              <th onclick="sortJournal('detectedAt')">Age</th>
+              <th onclick="sortJournal('price')">Entry</th>
+              <th onclick="sortJournal('currentPrice')">Current</th>
+              <th onclick="sortJournal('currentPct')">Current %</th>
+              <th onclick="sortJournal('checkpoints.4H')">4H %</th>
+              <th onclick="sortJournal('checkpoints.8H')">8H %</th>
+              <th onclick="sortJournal('checkpoints.1D')">1D %</th>
+              <th onclick="sortJournal('mfePct')">MFE %</th>
+              <th onclick="sortJournal('maePct')">MAE %</th>
+              <th onclick="sortJournal('status')">Status</th>
+              <th>Rejection / Warning</th>
+              <th>Time To Rejection</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="journal-tbody">
+            <tr><td colspan="20" class="c-dark" style="text-align:center; padding:30px;">Loading Signal Lifecycle Journal...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
       <!-- Lifecycle KPI Summary Strip -->
       <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
@@ -2178,6 +2291,30 @@ a{color:var(--blue)}
           <div class="kpi-val tabular c-emerald" id="diag-coverage">100%</div>
         </div>
       </div>
+      
+      <!-- Lifecycle Diagnostics -->
+      <div style="margin-top:14px; margin-bottom:6px;">
+        <h3 style="font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--emerald);">🦅 SIGNAL LIFECYCLE INTELLIGENCE SUBSYSTEM</h3>
+      </div>
+      <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Lifecycle Engine</div>
+          <div class="kpi-val tabular c-emerald" id="diag-life-state">ONLINE</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">IndexedDB Health</div>
+          <div class="kpi-val tabular c-emerald" id="diag-life-db">EagleFlash_DB (OK)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Signals Tracked</div>
+          <div class="kpi-val tabular" id="diag-life-signals">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Snapshots Stored</div>
+          <div class="kpi-val tabular" id="diag-life-snapshots">0</div>
+        </div>
+      </div>
+
       <div class="table-wrap" style="padding:14px; font-family:var(--font-mono); font-size:11px; line-height:1.8;">
         <div>• <strong>Primary Exchange:</strong> Bybit Linear (Category: linear)</div>
         <div>• <strong>REST Endpoint:</strong> https://api.bybit.com/v5/market/tickers</div>
@@ -2277,7 +2414,7 @@ a{color:var(--blue)}
   
   <!-- DETAILED SIGNAL LIFECYCLE MODAL -->
   <div class="modal-backdrop" id="lifecycle-detail-modal">
-    <div class="modal-card" style="max-width:850px; max-height:92vh; overflow-y:auto;">
+    <div class="modal-card" style="max-width:880px; max-height:92vh; overflow-y:auto;">
       <div class="modal-header" style="position:sticky; top:0; background:var(--bg-surface1); z-index:10; padding-bottom:10px;">
         <div>
           <div style="display:flex; align-items:center; gap:8px;">
@@ -2287,7 +2424,10 @@ a{color:var(--blue)}
           </div>
           <div style="font-family:var(--font-mono); font-size:10px; color:var(--cyan); margin-top:3px;" id="ld-signal-id">--</div>
         </div>
-        <button class="modal-close" onclick="closeModal('lifecycle-detail-modal')">&times;</button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-sm" onclick="LifecycleEngine.exportSelectedSignalJSON()">⬇ Export JSON</button>
+          <button class="modal-close" onclick="closeModal('lifecycle-detail-modal')">&times;</button>
+        </div>
       </div>
 
       <div style="padding:14px 0;">
@@ -2314,6 +2454,272 @@ a{color:var(--blue)}
             <div class="kpi-sub" id="ld-snap-rvol">RVOL: --</div>
           </div>
         </div>
+
+        <!-- Section 1: Standardized Time Checkpoints (11 Milestones) -->
+        <div style="margin-bottom:16px;">
+          <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:6px;">
+            ⏱️ TIME-BASED DIRECTIONAL PERFORMANCE (15M TO 7D STANDARDIZED CHECKPOINTS)
+          </div>
+          <div class="cp-grid" id="ld-checkpoints-grid"></div>
+        </div>
+
+        <!-- Section 2: Extremes (MFE & MAE) -->
+        <div style="margin-bottom:16px;">
+          <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:6px;">
+            🎯 EXTREMES (MAXIMUM FAVORABLE & ADVERSE EXCURSIONS)
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;" class="tabular">
+            <div class="kpi-card" style="border-left:3px solid var(--emerald);">
+              <div class="kpi-lbl">MFE (Maximum Favorable Excursion)</div>
+              <div class="kpi-val c-emerald" id="ld-mfe-pct">--%</div>
+              <div class="kpi-sub" id="ld-mfe-price">Peak: $--</div>
+              <div class="c-dark" style="font-size:9px; margin-top:2px;" id="ld-mfe-time">Time: --</div>
+            </div>
+            <div class="kpi-card" style="border-left:3px solid var(--red);">
+              <div class="kpi-lbl">MAE (Maximum Adverse Excursion)</div>
+              <div class="kpi-val c-red" id="ld-mae-pct">--%</div>
+              <div class="kpi-sub" id="ld-mae-price">Trough: $--</div>
+              <div class="c-dark" style="font-size:9px; margin-top:2px;" id="ld-mae-time">Time: --</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-lbl">Post-Signal High / Low</div>
+              <div style="font-size:12px; font-weight:700; margin-top:4px;">
+                High: <span class="c-emerald" id="ld-post-high">$--</span>
+              </div>
+              <div style="font-size:12px; font-weight:700;">
+                Low: <span class="c-red" id="ld-post-low">$--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: What Happened So Far (Dynamic Narrative) -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--cyan); margin-bottom:8px;">
+            💡 WHAT HAPPENED SO FAR (OBSERVED EVENT NARRATIVE)
+          </div>
+          <div id="ld-summary-bullets"></div>
+        </div>
+
+        <!-- Section 4: Normalized Price Progression Chart -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--text-muted);">
+              📈 NORMALIZED PRICE PATH (ENTRY = 0.0%)
+            </span>
+            <span class="c-dark" style="font-size:9px; font-family:var(--font-mono);">ZERO LOOK-AHEAD BIAS</span>
+          </div>
+          <div id="ld-chart-container" style="width:100%; min-height:150px;"></div>
+        </div>
+
+        <!-- Section 5: Strict No Look-Ahead Signal Replay -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--emerald);">
+              ▶ STRICT NO LOOK-AHEAD REPLAY (STEP-BY-STEP SCRUBBER)
+            </span>
+            <span class="tabular c-dark" id="replay-step-progress" style="font-size:10px;">Step 1 of 1</span>
+          </div>
+          <input type="range" id="replay-scrubber" class="replay-slider" min="0" max="0" value="0" oninput="LifecycleEngine.setReplayStep(parseInt(this.value))" />
+          <div class="replay-control-bar tabular">
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(0)">⏮ T=0</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayStepIndex - 1)">◀ Prev</button>
+              <button class="btn btn-sm btn-emerald" id="btn-replay-play" onclick="LifecycleEngine.toggleReplayPlay()">▶ Play</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayStepIndex + 1)">▶ Next</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(Infinity)">⏭ Now</button>
+            </div>
+            <div>
+              <span id="replay-step-label" style="font-weight:700; color:var(--text);">T+0 (Detection)</span>:
+              <span id="replay-step-price" style="font-weight:700;">$--</span>
+              (<span id="replay-step-return">0.0%</span>)
+            </div>
+          </div>
+          <div class="c-muted" id="replay-step-desc" style="font-family:var(--font-mono); font-size:11px;">Initial signal trigger.</div>
+        </div>
+
+        <!-- Section 6: Chronological Event Timeline -->
+        <div style="margin-bottom:16px;">
+          <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:8px;">
+            📜 CHRONOLOGICAL AUDIT TIMELINE
+          </div>
+          <div id="ld-timeline-container" style="max-height:220px; overflow-y:auto; padding:4px 0;"></div>
+        </div>
+
+        <!-- Section 7: Post-Mortem Card (if resolved / rejected / expired) -->
+        <div id="ld-postmortem-card" style="display:none; background:rgba(255, 71, 87, 0.08); border:1px solid rgba(255, 71, 87, 0.3); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--red); margin-bottom:6px;">
+            🦅 SIGNAL POST-MORTEM AUDIT
+          </div>
+          <div style="font-family:var(--font-mono); font-size:11px; line-height:1.7;">
+            <div>• <strong>Final Status:</strong> <span id="ld-pm-status">--</span></div>
+            <div>• <strong>Termination Reason:</strong> <span id="ld-pm-reason">--</span></div>
+            <div>• <strong>Timestamp:</strong> <span id="ld-pm-time">--</span> (Duration: <span id="ld-pm-duration">--</span>)</div>
+            <div>• <strong>Realized Directional Return:</strong> <span id="ld-pm-return">--</span></div>
+            <ul id="ld-pm-bullets" style="margin-top:6px; padding-left:14px; color:var(--text-muted); list-style:none;"></ul>
+          </div>
+        </div>
+
+        <!-- Detection Context Card -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; font-family:var(--font-mono); font-size:11px;">
+          <div class="c-dark" style="font-weight:700; margin-bottom:6px;">IMMUTABLE DETECTION SNAPSHOT (T=0)</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px; color:var(--text-muted);">
+            <div>Open Interest: <strong id="ld-snap-oi">--</strong></div>
+            <div>Funding Rate: <strong id="ld-snap-funding">--</strong></div>
+            <div>Trend: <strong id="ld-snap-trend">--</strong></div>
+            <div>Taker Imbalance: <strong id="ld-snap-taker">--</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COHORT ANALYTICS MODAL -->
+  <div class="modal-backdrop" id="lifecycle-analytics-modal">
+    <div class="modal-card" style="max-width:880px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">📊 SIGNAL COHORT PERFORMANCE ANALYTICS</h2>
+          <p class="c-dark" style="font-size:11px;">DESCRIPTIVE OBSERVATIONS ACROSS SCORE, RVOL, AND DIRECTIONAL COHORTS</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('lifecycle-analytics-modal')">&times;</button>
+      </div>
+      <div style="padding:14px 0; font-family:var(--font-mono); font-size:11px;" id="analytics-modal-body">
+        <div class="table-wrap" style="margin-bottom:14px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Cohort Group</th>
+                <th>Sample Size</th>
+                <th>4H Return (Mean / Med)</th>
+                <th>8H Return (Mean / Med)</th>
+                <th>1D Return (Mean / Med)</th>
+                <th>MFE (Mean / Med)</th>
+                <th>MAE (Mean / Med)</th>
+                <th>Avg Time To Rejection</th>
+              </tr>
+            </thead>
+            <tbody id="cohort-tbody">
+              <tr><td colspan="8" class="c-dark" style="text-align:center; padding:20px;">Computing cohort metrics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="c-dark" style="font-size:10px; line-height:1.6; border-left:3px solid var(--amber); padding-left:8px;">
+          ⚠️ RESEARCH INTEGRITY DISCLAIMER: Descriptive historical statistics only. Derived strictly from local Bybit observations. Does not constitute predictive guarantees or financial advice.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIFECYCLE SETTINGS MODAL -->
+  <div class="modal-backdrop" id="lifecycle-settings-modal">
+    <div class="modal-card" style="max-width:540px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">⚙️ SIGNAL LIFECYCLE SETTINGS</h2>
+          <p class="c-dark" style="font-size:11px;">RETENTION · SNAPSHOTS · REJECTION THRESHOLDS</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('lifecycle-settings-modal')">&times;</button>
+      </div>
+      <div style="padding:14px 0; font-family:var(--font-mono); font-size:12px;">
+        <div style="margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="lset-enabled" checked />
+            <span>Enable Signal Lifecycle Intelligence Tracking</span>
+          </label>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">SNAPSHOT INTERVAL</label>
+          <select id="lset-interval" class="search-input" style="width:100%;">
+            <option value="5">5 Minutes</option>
+            <option value="15" selected>15 Minutes (Default)</option>
+            <option value="30">30 Minutes</option>
+            <option value="60">1 Hour</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">SIGNAL TIME-TO-LIVE (TTL)</label>
+          <select id="lset-ttl" class="search-input" style="width:100%;">
+            <option value="12">12 Hours</option>
+            <option value="24">24 Hours</option>
+            <option value="48">48 Hours</option>
+            <option value="72" selected>72 Hours (Default)</option>
+            <option value="168">7 Days</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">INVALIDATION THRESHOLD (% ADVERSE MOVE)</label>
+          <input type="number" step="0.5" id="lset-invalidation" class="search-input" value="3.0" style="width:100%;" />
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">DEDUPLICATION COOLDOWN (MINUTES)</label>
+          <select id="lset-cooldown" class="search-input" style="width:100%;">
+            <option value="15">15 Minutes</option>
+            <option value="30" selected>30 Minutes (Default)</option>
+            <option value="60">1 Hour</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">DATA RETENTION PERIOD</label>
+          <select id="lset-retention" class="search-input" style="width:100%;">
+            <option value="7">7 Days</option>
+            <option value="30">30 Days</option>
+            <option value="90" selected>90 Days (Default)</option>
+            <option value="365">1 Year</option>
+            <option value="0">Unlimited</option>
+          </select>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
+          <button class="btn btn-sm btn-red" onclick="LifecycleEngine.clearAllSignals()">🗑️ Clear History</button>
+          <button class="btn btn-sm btn-emerald" onclick="saveLifecycleSettings()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIFECYCLE IMPORT MODAL -->
+  <div class="modal-backdrop" id="lifecycle-import-modal">
+    <div class="modal-card" style="max-width:540px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">📥 IMPORT LIFECYCLE DATASET</h2>
+          <p class="c-dark" style="font-size:11px;">LOAD PREVIOUSLY EXPORTED SIGNAL DATASETS (.JSON)</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('lifecycle-import-modal')">&times;</button>
+      </div>
+      <div style="padding:14px 0; font-family:var(--font-mono); font-size:12px;">
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">SELECT JSON FILE</label>
+          <input type="file" id="import-json-file" accept=".json" class="search-input" style="width:100%;" onchange="handleImportFileSelect(this)" />
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">OR PASTE RAW JSON PAYLOAD</label>
+          <textarea id="import-json-text" class="search-input" rows="6" style="width:100%; font-size:11px;" placeholder="Paste JSON here..."></textarea>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:6px;">CONFLICT RESOLUTION MODE</label>
+          <div style="display:flex; gap:14px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="import-mode" value="MERGE" checked />
+              <span>Merge & Update</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="import-mode" value="SKIP_DUPLICATES" />
+              <span>Skip Existing</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="import-mode" value="REPLACE" />
+              <span>Replace All</span>
+            </label>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:12px;">
+          <button class="btn btn-sm" onclick="closeModal('lifecycle-import-modal')">Cancel</button>
+          <button class="btn btn-sm btn-emerald" onclick="executeImportSignals()">📥 Execute Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
         <!-- Section 1: Standardized Time Checkpoints -->
         <div style="margin-bottom:16px;">
@@ -6546,6 +6952,15 @@ const LifecycleEngine = {
     }
 
     function renderDiagnostics() {
+      const dLifeSignals = document.getElementById('diag-life-signals');
+      if (dLifeSignals) dLifeSignals.innerText = LifecycleEngine.signals.length;
+      const dLifeSnapshots = document.getElementById('diag-life-snapshots');
+      if (dLifeSnapshots) {
+        const totalSnaps = LifecycleEngine.signals.reduce((a, s) => a + (s.snapshots ? s.snapshots.length : 0), 0);
+        dLifeSnapshots.innerText = totalSnaps;
+      }
+      const dLifeDb = document.getElementById('diag-life-db');
+      if (dLifeDb) dLifeDb.innerText = LifecycleEngine.db ? 'EagleFlash_DB (OK)' : 'localStorage (FALLBACK)';
       document.getElementById('diag-ws-state').innerText = State.wsConnected ? 'CONNECTED' : 'OFFLINE';
       document.getElementById('diag-ws-state').className = 'kpi-val tabular ' + (State.wsConnected ? 'c-emerald' : 'c-red');
       document.getElementById('diag-rest-latency').innerText = State.restLatency + ' ms';

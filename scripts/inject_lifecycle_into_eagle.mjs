@@ -7,6 +7,7 @@ const targetFile = path.join(rootDir, 'apps', 'web', 'public', 'eagle-flash.html
 console.log('Reading apps/web/public/eagle-flash.html...');
 let html = fs.readFileSync(targetFile, 'utf-8');
 
+// If already injected, restore to clean base or re-apply idempotently
 // 1. Extra CSS for Signal Lifecycle Intelligence
 const lifecycleStyles = `
     /* ═══════════════════════════════════════════════════════
@@ -163,6 +164,12 @@ const lifecycleStyles = `
       margin: 12px 0;
       flex-wrap: wrap;
     }
+    .replay-slider {
+      width: 100%;
+      accent-color: var(--cyan);
+      margin: 6px 0;
+      cursor: pointer;
+    }
     table.hide-lifecycle-cols .lifecycle-col,
     .hide-lifecycle-cols th.lifecycle-col,
     .hide-lifecycle-cols td.lifecycle-col {
@@ -170,34 +177,54 @@ const lifecycleStyles = `
     }
 `;
 
-// Inject CSS before </style>
-html = html.replace('</style>', () => `${lifecycleStyles}\n  </style>`);
+// Inject CSS before </style> if not already present
+if (!html.includes('EAGLE FLASH — SIGNAL LIFECYCLE INTELLIGENCE STYLES')) {
+  html = html.replace('</style>', () => `${lifecycleStyles}\n  </style>`);
+}
 
 // 2. Add Navigation tab "Signal Journal" to desktop nav
-html = html.replace(
-  `<button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>`,
-  () => `<button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>
+if (!html.includes('switchTab(\'JOURNAL\')')) {
+  html = html.replace(
+    `<button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>`,
+    () => `<button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>
       <button class="nav-btn" onclick="switchTab('JOURNAL')">Signal Journal <span class="badge-count" id="journal-count">0</span></button>`
-);
+  );
 
-// 3. Add Navigation item to mobile bottom nav
-html = html.replace(
-  `<button class="m-nav-item" data-tab="WATCHLIST" onclick="switchTab('WATCHLIST')">`,
-  () => `<button class="m-nav-item" data-tab="JOURNAL" onclick="switchTab('JOURNAL')">
-      <span class="m-icon">🦅</span>
-      <span>Journal (<span id="m-journal-count">0</span>)</span>
-    </button>
-    <button class="m-nav-item" data-tab="WATCHLIST" onclick="switchTab('WATCHLIST')">`
-);
+  // Mobile Bottom Tabs
+  html = html.replace(
+    `<button class="m-tab" onclick="switchTab('WATCHLIST')">`,
+    () => `<button class="m-tab" onclick="switchTab('JOURNAL')">
+        <span class="m-tab-icon">📓</span>
+        <span>Journal</span>
+        <span class="badge-count" id="m-journal-count" style="position:absolute; top:2px; right:8px;">0</span>
+      </button>
+      <button class="m-tab" onclick="switchTab('WATCHLIST')">`
+  );
+}
 
-// 4. Add Toggle Lifecycle Columns button in Scanner toolbar
-html = html.replace(
-  `<button id="btn-view-table" class="btn btn-sm" onclick="setScannerLayout('table')">📋 Table (Scroll)</button>`,
-  () => `<button id="btn-view-table" class="btn btn-sm" onclick="setScannerLayout('table')">📋 Table (Scroll)</button>
+// 3. Add table layout toggle button in Scanner view
+if (!html.includes('btn-lifecycle-cols')) {
+  html = html.replace(
+    `<button id="btn-view-table" class="btn btn-sm" onclick="setScannerLayout('table')">📋 Table (Scroll)</button>`,
+    () => `<button id="btn-view-table" class="btn btn-sm" onclick="setScannerLayout('table')">📋 Table (Scroll)</button>
         <button id="btn-lifecycle-cols" class="btn btn-sm btn-emerald" onclick="toggleLifecycleColumns()" title="Toggle Lifecycle Columns (Age, 4H, 8H, 1D, Status)">
           ⏱️ Lifecycle Cols: <span id="lbl-lifecycle-toggle">ON</span>
         </button>`
-);
+  );
+}
+
+// 4. Clean Table Header in Scanner view
+if (!html.includes('class="lifecycle-col" onclick="sortTable(\'detectedAt\')"')) {
+  html = html.replace(
+    `<th onclick="sortTable('distHigh')">From High</th>`,
+    () => `<th onclick="sortTable('distHigh')">From High</th>
+              <th class="lifecycle-col" onclick="sortTable('detectedAt')">Age</th>
+              <th class="lifecycle-col">4H</th>
+              <th class="lifecycle-col">8H</th>
+              <th class="lifecycle-col">1D</th>
+              <th class="lifecycle-col">Status</th>`
+  );
+}
 
 // 5. Add Signal Journal HTML view container
 const journalViewHtml = `
@@ -213,13 +240,15 @@ const journalViewHtml = `
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-sm" onclick="openModal('lifecycle-analytics-modal')">📊 Cohort Analytics</button>
+          <button class="btn btn-sm" onclick="openModal('lifecycle-import-modal')">📥 Import JSON</button>
           <button class="btn btn-sm" onclick="openModal('lifecycle-settings-modal')">⚙ Settings</button>
           <button class="btn btn-sm btn-emerald" onclick="LifecycleEngine.exportJournalCSV()">⬇ Export CSV</button>
+          <button class="btn btn-sm" onclick="LifecycleEngine.exportTimelineCSV()">⬇ Export Timeline</button>
           <button class="btn btn-sm" onclick="LifecycleEngine.exportSignalsJSON()">⬇ Export JSON</button>
         </div>
       </div>
 
-      <!-- Lifecycle KPI Summary Strip -->
+      <!-- Lifecycle KPI Summary Strip (Section 18) -->
       <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
         <div class="kpi-card">
           <div class="kpi-lbl">Total Signals</div>
@@ -232,9 +261,14 @@ const journalViewHtml = `
           <div class="kpi-sub">Tracking live</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-lbl">Confirmed</div>
-          <div class="kpi-val tabular c-cyan" id="jkpi-confirmed">0</div>
+          <div class="kpi-lbl">Confirmed %</div>
+          <div class="kpi-val tabular c-cyan" id="jkpi-confirmed">0 (0.0%)</div>
           <div class="kpi-sub">Breakout verified</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Rejected %</div>
+          <div class="kpi-val tabular c-red" id="jkpi-rejected">0 (0.0%)</div>
+          <div class="kpi-sub">Invalidated</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-lbl">Avg 4H Return</div>
@@ -261,6 +295,11 @@ const journalViewHtml = `
           <div class="kpi-val tabular c-red" id="jkpi-avgmae">PENDING</div>
           <div class="kpi-sub">Max Adverse</div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg Time To Rejection</div>
+          <div class="kpi-val tabular" id="jkpi-avgttr">—</div>
+          <div class="kpi-sub">Survival duration</div>
+        </div>
       </div>
 
       <!-- Journal Filter Bar -->
@@ -286,7 +325,7 @@ const journalViewHtml = `
         </div>
       </div>
 
-      <!-- Journal Table -->
+      <!-- Journal Table (Section 19: 20 Standardized Columns) -->
       <div class="table-wrap">
         <table>
           <thead>
@@ -294,38 +333,44 @@ const journalViewHtml = `
               <th onclick="sortJournal('index')">#</th>
               <th onclick="sortJournal('signalId')">Signal ID</th>
               <th onclick="sortJournal('symbol')">Symbol</th>
+              <th onclick="sortJournal('direction')">Side</th>
               <th onclick="sortJournal('signalType')">Signal</th>
+              <th onclick="sortJournal('score')">Score</th>
               <th onclick="sortJournal('detectedAt')">Detected (Local)</th>
               <th onclick="sortJournal('detectedAt')">Age</th>
-              <th onclick="sortJournal('signalPrice')">Signal Price</th>
-              <th onclick="sortJournal('currentPrice')">Current Price</th>
+              <th onclick="sortJournal('price')">Entry</th>
+              <th onclick="sortJournal('currentPrice')">Current</th>
+              <th onclick="sortJournal('currentPct')">Current %</th>
               <th onclick="sortJournal('checkpoints.4H')">4H %</th>
               <th onclick="sortJournal('checkpoints.8H')">8H %</th>
               <th onclick="sortJournal('checkpoints.1D')">1D %</th>
               <th onclick="sortJournal('mfePct')">MFE %</th>
               <th onclick="sortJournal('maePct')">MAE %</th>
               <th onclick="sortJournal('status')">Status</th>
-              <th>Warning / Invalidation</th>
-              <th onclick="sortJournal('initialSnapshot.signalScore')">Score</th>
-              <th>Action</th>
+              <th>Rejection / Warning</th>
+              <th>Time To Rejection</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="journal-tbody">
-            <tr><td colspan="17" class="c-dark" style="text-align:center; padding:30px;">Loading Signal Lifecycle Journal...</td></tr>
+            <tr><td colspan="20" class="c-dark" style="text-align:center; padding:30px;">Loading Signal Lifecycle Journal...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 `;
 
-html = html.replace('<!-- 5. HISTORY VIEW -->', () => `${journalViewHtml}\n\n    <!-- 5. HISTORY VIEW -->`);
+if (!html.includes('id="view-JOURNAL"')) {
+  html = html.replace('<!-- 5. HISTORY VIEW -->', () => `${journalViewHtml}\n\n    <!-- 5. HISTORY VIEW -->`);
+} else {
+  html = html.replace(/<!-- 4b\. SIGNAL JOURNAL VIEW[\s\S]*?<\/div>\s*<\/div>/, () => journalViewHtml.trim());
+}
 
-
-// 6. Add Detailed Signal Lifecycle Modal
+// 6. Modals (Detail Drawer, Cohort Analytics, Settings, Import)
 const lifecycleModalsHtml = `
   <!-- DETAILED SIGNAL LIFECYCLE MODAL -->
   <div class="modal-backdrop" id="lifecycle-detail-modal">
-    <div class="modal-card" style="max-width:850px; max-height:92vh; overflow-y:auto;">
+    <div class="modal-card" style="max-width:880px; max-height:92vh; overflow-y:auto;">
       <div class="modal-header" style="position:sticky; top:0; background:var(--bg-surface1); z-index:10; padding-bottom:10px;">
         <div>
           <div style="display:flex; align-items:center; gap:8px;">
@@ -335,7 +380,10 @@ const lifecycleModalsHtml = `
           </div>
           <div style="font-family:var(--font-mono); font-size:10px; color:var(--cyan); margin-top:3px;" id="ld-signal-id">--</div>
         </div>
-        <button class="modal-close" onclick="closeModal('lifecycle-detail-modal')">&times;</button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-sm" onclick="LifecycleEngine.exportSelectedSignalJSON()">⬇ Export JSON</button>
+          <button class="modal-close" onclick="closeModal('lifecycle-detail-modal')">&times;</button>
+        </div>
       </div>
 
       <div style="padding:14px 0;">
@@ -363,10 +411,10 @@ const lifecycleModalsHtml = `
           </div>
         </div>
 
-        <!-- Section 1: Standardized Time Checkpoints -->
+        <!-- Section 1: Standardized Time Checkpoints (11 Milestones) -->
         <div style="margin-bottom:16px;">
           <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:6px;">
-            ⏱️ TIME-BASED DIRECTIONAL PERFORMANCE (15M TO 7D CHECKPOINTS)
+            ⏱️ TIME-BASED DIRECTIONAL PERFORMANCE (15M TO 7D STANDARDIZED CHECKPOINTS)
           </div>
           <div class="cp-grid" id="ld-checkpoints-grid"></div>
         </div>
@@ -401,10 +449,10 @@ const lifecycleModalsHtml = `
           </div>
         </div>
 
-        <!-- Section 3: What Happened So Far -->
+        <!-- Section 3: What Happened So Far (Dynamic Narrative) -->
         <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
           <div style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--cyan); margin-bottom:8px;">
-            💡 WHAT HAPPENED SO FAR (AUTOMATED NARRATIVE)
+            💡 WHAT HAPPENED SO FAR (OBSERVED EVENT NARRATIVE)
           </div>
           <div id="ld-summary-bullets"></div>
         </div>
@@ -413,30 +461,32 @@ const lifecycleModalsHtml = `
         <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--text-muted);">
-              📈 NORMALIZED PRICE PATH (SIGNAL = 0.0%)
+              📈 NORMALIZED PRICE PATH (ENTRY = 0.0%)
             </span>
-            <span class="c-dark" style="font-size:9px; font-family:var(--font-mono);">ELIMINATES LOOK-AHEAD BIAS</span>
+            <span class="c-dark" style="font-size:9px; font-family:var(--font-mono);">ZERO LOOK-AHEAD BIAS</span>
           </div>
-          <div id="ld-chart-container" style="width:100%; min-height:140px;"></div>
+          <div id="ld-chart-container" style="width:100%; min-height:150px;"></div>
         </div>
 
-        <!-- Section 5: Signal Replay Engine -->
+        <!-- Section 5: Strict No Look-Ahead Signal Replay -->
         <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--emerald);">
-              ▶ SIGNAL REPLAY (HISTORICAL TIMESTEP SCRUBBER)
+              ▶ STRICT NO LOOK-AHEAD REPLAY (STEP-BY-STEP SCRUBBER)
             </span>
             <span class="tabular c-dark" id="replay-step-progress" style="font-size:10px;">Step 1 of 1</span>
           </div>
+          <input type="range" id="replay-scrubber" class="replay-slider" min="0" max="0" value="0" oninput="LifecycleEngine.setReplayStep(parseInt(this.value))" />
           <div class="replay-control-bar tabular">
             <div style="display:flex; gap:6px;">
               <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(0)">⏮ T=0</button>
-              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayIndex - 1)">◀ Prev</button>
-              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayIndex + 1)">▶ Next</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayStepIndex - 1)">◀ Prev</button>
+              <button class="btn btn-sm btn-emerald" id="btn-replay-play" onclick="LifecycleEngine.toggleReplayPlay()">▶ Play</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayStepIndex + 1)">▶ Next</button>
               <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(Infinity)">⏭ Now</button>
             </div>
             <div>
-              <span id="replay-step-label" style="font-weight:700; color:var(--text);">T=0 (Detection)</span>:
+              <span id="replay-step-label" style="font-weight:700; color:var(--text);">T+0 (Detection)</span>:
               <span id="replay-step-price" style="font-weight:700;">$--</span>
               (<span id="replay-step-return">0.0%</span>)
             </div>
@@ -444,10 +494,10 @@ const lifecycleModalsHtml = `
           <div class="c-muted" id="replay-step-desc" style="font-family:var(--font-mono); font-size:11px;">Initial signal trigger.</div>
         </div>
 
-        <!-- Section 6: Event Timeline -->
+        <!-- Section 6: Chronological Event Timeline -->
         <div style="margin-bottom:16px;">
           <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:8px;">
-            📜 CHRONOLOGICAL EVENT TIMELINE
+            📜 CHRONOLOGICAL AUDIT TIMELINE
           </div>
           <div id="ld-timeline-container" style="max-height:220px; overflow-y:auto; padding:4px 0;"></div>
         </div>
@@ -455,13 +505,14 @@ const lifecycleModalsHtml = `
         <!-- Section 7: Post-Mortem Card (if resolved / rejected / expired) -->
         <div id="ld-postmortem-card" style="display:none; background:rgba(255, 71, 87, 0.08); border:1px solid rgba(255, 71, 87, 0.3); border-radius:6px; padding:12px; margin-bottom:16px;">
           <div style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--red); margin-bottom:6px;">
-            🦅 SIGNAL POST-MORTEM SUMMARY
+            🦅 SIGNAL POST-MORTEM AUDIT
           </div>
           <div style="font-family:var(--font-mono); font-size:11px; line-height:1.7;">
-            <div>• <strong>Final Lifecycle Status:</strong> <span id="ld-pm-status">--</span></div>
-            <div>• <strong>Reason for Invalidation / Close:</strong> <span id="ld-pm-reason">--</span></div>
+            <div>• <strong>Final Status:</strong> <span id="ld-pm-status">--</span></div>
+            <div>• <strong>Termination Reason:</strong> <span id="ld-pm-reason">--</span></div>
             <div>• <strong>Timestamp:</strong> <span id="ld-pm-time">--</span> (Duration: <span id="ld-pm-duration">--</span>)</div>
-            <div>• <strong>Final Price Change:</strong> <span id="ld-pm-return">--</span></div>
+            <div>• <strong>Realized Directional Return:</strong> <span id="ld-pm-return">--</span></div>
+            <ul id="ld-pm-bullets" style="margin-top:6px; padding-left:14px; color:var(--text-muted); list-style:none;"></ul>
           </div>
         </div>
 
@@ -481,11 +532,11 @@ const lifecycleModalsHtml = `
 
   <!-- COHORT ANALYTICS MODAL -->
   <div class="modal-backdrop" id="lifecycle-analytics-modal">
-    <div class="modal-card" style="max-width:720px;">
+    <div class="modal-card" style="max-width:880px;">
       <div class="modal-header">
         <div>
           <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">📊 SIGNAL COHORT PERFORMANCE ANALYTICS</h2>
-          <p class="c-dark" style="font-size:11px;">HISTORICAL DESCRIPTIVE OBSERVATIONS ACROSS SCORE & VOLUME BUCKETS</p>
+          <p class="c-dark" style="font-size:11px;">DESCRIPTIVE OBSERVATIONS ACROSS SCORE, RVOL, AND DIRECTIONAL COHORTS</p>
         </div>
         <button class="modal-close" onclick="closeModal('lifecycle-analytics-modal')">&times;</button>
       </div>
@@ -494,22 +545,23 @@ const lifecycleModalsHtml = `
           <table>
             <thead>
               <tr>
-                <th>Cohort Bucket</th>
-                <th>Count</th>
-                <th>Avg 4H %</th>
-                <th>Avg 8H %</th>
-                <th>Avg 1D %</th>
-                <th>Avg MFE %</th>
-                <th>Avg MAE %</th>
+                <th>Cohort Group</th>
+                <th>Sample Size</th>
+                <th>4H Return (Mean / Med)</th>
+                <th>8H Return (Mean / Med)</th>
+                <th>1D Return (Mean / Med)</th>
+                <th>MFE (Mean / Med)</th>
+                <th>MAE (Mean / Med)</th>
+                <th>Avg Time To Rejection</th>
               </tr>
             </thead>
             <tbody id="cohort-tbody">
-              <tr><td colspan="7" class="c-dark" style="text-align:center; padding:20px;">Computing cohort metrics...</td></tr>
+              <tr><td colspan="8" class="c-dark" style="text-align:center; padding:20px;">Computing cohort metrics...</td></tr>
             </tbody>
           </table>
         </div>
-        <div class="c-dark" style="font-size:10px; line-height:1.6;">
-          ⚠️ Note: Descriptive historical metrics. Does not constitute guaranteed future trading performance.
+        <div class="c-dark" style="font-size:10px; line-height:1.6; border-left:3px solid var(--amber); padding-left:8px;">
+          ⚠️ RESEARCH INTEGRITY DISCLAIMER: Descriptive historical statistics only. Derived strictly from local Bybit observations. Does not constitute predictive guarantees or financial advice.
         </div>
       </div>
     </div>
@@ -567,9 +619,10 @@ const lifecycleModalsHtml = `
           <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">DATA RETENTION PERIOD</label>
           <select id="lset-retention" class="search-input" style="width:100%;">
             <option value="7">7 Days</option>
-            <option value="30" selected>30 Days</option>
-            <option value="90">90 Days</option>
+            <option value="30">30 Days</option>
+            <option value="90" selected>90 Days (Default)</option>
             <option value="365">1 Year</option>
+            <option value="0">Unlimited</option>
           </select>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
@@ -579,10 +632,57 @@ const lifecycleModalsHtml = `
       </div>
     </div>
   </div>
+
+  <!-- LIFECYCLE IMPORT MODAL -->
+  <div class="modal-backdrop" id="lifecycle-import-modal">
+    <div class="modal-card" style="max-width:540px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">📥 IMPORT LIFECYCLE DATASET</h2>
+          <p class="c-dark" style="font-size:11px;">LOAD PREVIOUSLY EXPORTED SIGNAL DATASETS (.JSON)</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('lifecycle-import-modal')">&times;</button>
+      </div>
+      <div style="padding:14px 0; font-family:var(--font-mono); font-size:12px;">
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">SELECT JSON FILE</label>
+          <input type="file" id="import-json-file" accept=".json" class="search-input" style="width:100%;" onchange="handleImportFileSelect(this)" />
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">OR PASTE RAW JSON PAYLOAD</label>
+          <textarea id="import-json-text" class="search-input" rows="6" style="width:100%; font-size:11px;" placeholder="Paste JSON here..."></textarea>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:6px;">CONFLICT RESOLUTION MODE</label>
+          <div style="display:flex; gap:14px;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="import-mode" value="MERGE" checked />
+              <span>Merge & Update</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="import-mode" value="SKIP_DUPLICATES" />
+              <span>Skip Existing</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+              <input type="radio" name="import-mode" value="REPLACE" />
+              <span>Replace All</span>
+            </label>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--border); padding-top:12px;">
+          <button class="btn btn-sm" onclick="closeModal('lifecycle-import-modal')">Cancel</button>
+          <button class="btn btn-sm btn-emerald" onclick="executeImportSignals()">📥 Execute Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
 `;
 
-// Insert modals before the script tag
-html = html.replace('<!-- APPLICATION JAVASCRIPT LOGIC -->', () => `${lifecycleModalsHtml}\n\n  <!-- APPLICATION JAVASCRIPT LOGIC -->`);
+if (!html.includes('id="lifecycle-detail-modal"')) {
+  html = html.replace('<!-- APPLICATION JAVASCRIPT LOGIC -->', () => `${lifecycleModalsHtml}\n\n  <!-- APPLICATION JAVASCRIPT LOGIC -->`);
+} else {
+  html = html.replace(/<!-- DETAILED SIGNAL LIFECYCLE MODAL[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/, () => lifecycleModalsHtml.trim());
+}
 
 // 7. Inject LifecycleEngine JavaScript module into script
 const lifecycleJs = fs.readFileSync(path.join(rootDir, 'scripts', 'lifecycle_module.js'), 'utf-8');
@@ -656,162 +756,114 @@ const glueJs = `
       LifecycleEngine.settings.signalTTLHours = parseInt(document.getElementById('lset-ttl').value) || 72;
       LifecycleEngine.settings.invalidationPct = parseFloat(document.getElementById('lset-invalidation').value) || 3.0;
       LifecycleEngine.settings.cooldownMinutes = parseInt(document.getElementById('lset-cooldown').value) || 30;
-      LifecycleEngine.settings.retentionDays = parseInt(document.getElementById('lset-retention').value) || 30;
+      LifecycleEngine.settings.retentionDays = parseInt(document.getElementById('lset-retention').value) || 90;
       LifecycleEngine.saveSettings();
       closeModal('lifecycle-settings-modal');
       alert('Lifecycle settings saved.');
     }
 
     function renderCohortAnalytics() {
-      const tbody = document.getElementById('cohort-tbody');
-      if (!tbody) return;
+      LifecycleEngine.renderCohortAnalytics();
+    }
 
-      const cohorts = [
-        { label: 'Eagle Score 80–100 (High Conviction)', filter: s => s.initialSnapshot.signalScore >= 80 },
-        { label: 'Eagle Score 72–79 (Candidate)', filter: s => s.initialSnapshot.signalScore >= 72 && s.initialSnapshot.signalScore < 80 },
-        { label: 'RVOL ≥ 2.5x (Volume Explosion)', filter: s => s.initialSnapshot.relativeVolume >= 2.5 },
-        { label: 'LONG Candidates', filter: s => s.signalType.includes('LONG') },
-        { label: 'SHORT Candidates', filter: s => s.signalType.includes('SHORT') }
-      ];
+    function handleImportFileSelect(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('import-json-text').value = e.target.result;
+      };
+      reader.readAsText(file);
+    }
 
-      let html = '';
-      cohorts.forEach(c => {
-        const matches = LifecycleEngine.signals.filter(c.filter);
-        const count = matches.length;
-        if (count === 0) {
-          html += '<tr><td>' + c.label + '</td><td class="tabular">0</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td></tr>';
-          return;
-        }
-
-        const getAvg = extractor => {
-          const vals = matches.map(extractor).filter(v => v !== null && !isNaN(v));
-          return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : null;
-        };
-
-        const a4h = getAvg(s => s.checkpoints['4H']);
-        const a8h = getAvg(s => s.checkpoints['8H']);
-        const a1d = getAvg(s => s.checkpoints['1D']);
-        const aMFE = getAvg(s => s.mfePct);
-        const aMAE = getAvg(s => s.maePct);
-
-        html += '<tr>' +
-          '<td><strong>' + c.label + '</strong></td>' +
-          '<td class="tabular font-bold">' + count + '</td>' +
-          '<td class="tabular">' + (a4h !== null ? (a4h >= 0 ? '+' : '') + a4h + '%' : 'PENDING') + '</td>' +
-          '<td class="tabular">' + (a8h !== null ? (a8h >= 0 ? '+' : '') + a8h + '%' : 'PENDING') + '</td>' +
-          '<td class="tabular">' + (a1d !== null ? (a1d >= 0 ? '+' : '') + a1d + '%' : 'PENDING') + '</td>' +
-          '<td class="tabular c-emerald">' + (aMFE !== null ? '+' + aMFE + '%' : 'PENDING') + '</td>' +
-          '<td class="tabular c-red">' + (aMAE !== null ? aMAE + '%' : 'PENDING') + '</td>' +
-          '</tr>';
-      });
-
-      tbody.innerHTML = html;
+    function executeImportSignals() {
+      const text = document.getElementById('import-json-text').value.trim();
+      if (!text) {
+        alert('Please select a JSON file or paste JSON content.');
+        return;
+      }
+      const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'MERGE';
+      const result = LifecycleEngine.importSignalsJSON(text, mode);
+      if (result.success) {
+        alert('Successfully imported ' + result.count + ' signal record(s).');
+        closeModal('lifecycle-import-modal');
+      } else {
+        alert('Import Error: ' + result.error);
+      }
     }
 `;
 
-// Insert LifecycleEngine into <script>
-html = html.replace('// State Store', () => `${lifecycleJs}\n\n${glueJs}\n\n    // State Store`);
+if (!html.includes('GLUE & HOOKS FOR SIGNAL LIFECYCLE INTELLIGENCE')) {
+  html = html.replace(
+    '// ═════════════════════════════════════════════════════════════════════════\n    // STATE & CONFIG',
+    () => `${lifecycleJs}\n\n${glueJs}\n\n    // ═════════════════════════════════════════════════════════════════════════\n    // STATE & CONFIG`
+  );
+} else {
+  // Replace existing lifecycle engine block with fresh updated code
+  const startMarker = '// ═════════════════════════════════════════════════════════════════════════\r\n// 🦅 EAGLE FLASH — SIGNAL LIFECYCLE INTELLIGENCE ENGINE';
+  const altStartMarker = '// ═════════════════════════════════════════════════════════════════════════\n// 🦅 EAGLE FLASH — SIGNAL LIFECYCLE INTELLIGENCE ENGINE';
+  const endMarker = '// ═════════════════════════════════════════════════════════════════════════\r\n    // STATE & CONFIG';
+  const altEndMarker = '// ═════════════════════════════════════════════════════════════════════════\n    // STATE & CONFIG';
 
-// Hook bootstrap: init LifecycleEngine
-html = html.replace(
-  'loadStorage();',
-  () => 'loadStorage();\n      await LifecycleEngine.init();'
-);
+  let sIdx = html.indexOf(startMarker);
+  if (sIdx === -1) sIdx = html.indexOf(altStartMarker);
+  let eIdx = html.indexOf(endMarker);
+  if (eIdx === -1) eIdx = html.indexOf(altEndMarker);
 
-// Hook recalculateAllScores: automatic signal recording
-html = html.replace(
-  `        // Signal Generation
-        if (s.signalScore >= 72 && s.price24hChange > 1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
-          s.signal = 'LONG CANDIDATE';
-          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
-        } else if (s.signalScore >= 72 && s.price24hChange < -1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
-          s.signal = 'SHORT CANDIDATE';
-          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
-        } else if (s.relativeVolume >= 1.4 || s.signalScore >= 64) {
-          s.signal = 'WATCH';
-          s.signalConfidence = 'LOW';
-        } else {
-          s.signal = 'NO_SIGNAL';
-          s.signalConfidence = 'LOW';
-        }`,
-  () => `        // Signal Generation
-        if (s.signalScore >= 72 && s.price24hChange > 1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
-          s.signal = 'LONG CANDIDATE';
-          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
-          LifecycleEngine.recordSignal(s, { rvolThreshold: State.settings.rvolThreshold });
-        } else if (s.signalScore >= 72 && s.price24hChange < -1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
-          s.signal = 'SHORT CANDIDATE';
-          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
-          LifecycleEngine.recordSignal(s, { rvolThreshold: State.settings.rvolThreshold });
-        } else if (s.relativeVolume >= 1.4 || s.signalScore >= 64) {
-          s.signal = 'WATCH';
-          s.signalConfidence = 'LOW';
-        } else {
-          s.signal = 'NO_SIGNAL';
-          s.signalConfidence = 'LOW';
-        }`
-);
+  if (sIdx !== -1 && eIdx !== -1) {
+    html = html.slice(0, sIdx) + `${lifecycleJs}\n\n${glueJs}\n\n    ` + html.slice(eIdx);
+  }
+}
 
-// Hook WebSocket onmessage tick into LifecycleEngine
-html = html.replace(
-  'updateLiveTickerRow(s);',
-  () => 'updateLiveTickerRow(s);\n                LifecycleEngine.onMarketTick(s.symbol, s.lastPrice, s);'
-);
+// 8. Hook Diagnostics View
+const diagAddHtml = `
+      <!-- Lifecycle Diagnostics -->
+      <div style="margin-top:14px; margin-bottom:6px;">
+        <h3 style="font-size:13px; font-weight:800; font-family:var(--font-mono); color:var(--emerald);">🦅 SIGNAL LIFECYCLE INTELLIGENCE SUBSYSTEM</h3>
+      </div>
+      <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Lifecycle Engine</div>
+          <div class="kpi-val tabular c-emerald" id="diag-life-state">ONLINE</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">IndexedDB Health</div>
+          <div class="kpi-val tabular c-emerald" id="diag-life-db">EagleFlash_DB (OK)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Signals Tracked</div>
+          <div class="kpi-val tabular" id="diag-life-signals">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Snapshots Stored</div>
+          <div class="kpi-val tabular" id="diag-life-snapshots">0</div>
+        </div>
+      </div>
+`;
 
-// Hook switchTab for JOURNAL tab
-html = html.replace(
-  `      if (tabId === 'WATCHLIST') renderWatchlist();
-      if (tabId === 'HISTORY') renderHistory();
-      if (tabId === 'DIAGNOSTICS') renderDiagnostics();`,
-  () => `      if (tabId === 'WATCHLIST') renderWatchlist();
-      if (tabId === 'JOURNAL') LifecycleEngine.renderJournalTab();
-      if (tabId === 'HISTORY') renderHistory();
-      if (tabId === 'DIAGNOSTICS') renderDiagnostics();`
-);
+if (!html.includes('id="diag-life-state"')) {
+  html = html.replace(
+    '<div class="table-wrap" style="padding:14px; font-family:var(--font-mono); font-size:11px; line-height:1.8;">',
+    () => `${diagAddHtml}\n      <div class="table-wrap" style="padding:14px; font-family:var(--font-mono); font-size:11px; line-height:1.8;">`
+  );
+}
 
-// Hook openModal for analytics
-html = html.replace(
-  `function openModal(modalId) {
-      document.getElementById(modalId).classList.add('open');
-    }`,
-  () => `function openModal(modalId) {
-      if (modalId === 'lifecycle-analytics-modal') renderCohortAnalytics();
-      document.getElementById(modalId).classList.add('open');
-    }`
-);
-
-// Add optional lifecycle columns to renderScannerTable
-html = html.replace(
-  `<td class="tabular c-dark">\${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>`,
-  () => `<td class="tabular c-dark">\${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>
-            \${(() => {
-              const sig = LifecycleEngine.signals.find(x => x.symbol === s.symbol && ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(x.status));
-              if (!sig) return '<td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td><td class="c-dark lifecycle-col">—</td>';
-              const age = LifecycleEngine.formatAge(Date.now() - sig.detectedAt);
-              return '<td class="tabular font-bold lifecycle-col">' + age + '</td>' +
-                     '<td class="lifecycle-col">' + LifecycleEngine.formatPct(sig.checkpoints['4H']) + '</td>' +
-                     '<td class="lifecycle-col">' + LifecycleEngine.formatPct(sig.checkpoints['8H']) + '</td>' +
-                     '<td class="lifecycle-col">' + LifecycleEngine.formatPct(sig.checkpoints['1D']) + '</td>' +
-                     '<td class="lifecycle-col">' + LifecycleEngine.getStatusBadge(sig.status) + '</td>';
-            })()}`
-);
-
-// Add headers for lifecycle columns in table head
-html = html.replace(
-  `<th onclick="sortTable('distHigh')">From High</th>`,
-  () => `<th onclick="sortTable('distHigh')">From High</th>
-              <th class="lifecycle-col" onclick="sortTable('detectedAt')">Age</th>
-              <th class="lifecycle-col">4H</th>
-              <th class="lifecycle-col">8H</th>
-              <th class="lifecycle-col">1D</th>
-              <th class="lifecycle-col">Status</th>`
-);
-
-// Hook syncLifecycleColumnVisibility into bootstrap
-html = html.replace(
-  'await LifecycleEngine.init();',
-  () => 'await LifecycleEngine.init();\n      syncLifecycleColumnVisibility();'
-);
+// Hook renderDiagnostics function to populate lifecycle metrics
+if (!html.includes("document.getElementById('diag-life-signals')")) {
+  html = html.replace(
+    `function renderDiagnostics() {`,
+    `function renderDiagnostics() {
+      const dLifeSignals = document.getElementById('diag-life-signals');
+      if (dLifeSignals) dLifeSignals.innerText = LifecycleEngine.signals.length;
+      const dLifeSnapshots = document.getElementById('diag-life-snapshots');
+      if (dLifeSnapshots) {
+        const totalSnaps = LifecycleEngine.signals.reduce((a, s) => a + (s.snapshots ? s.snapshots.length : 0), 0);
+        dLifeSnapshots.innerText = totalSnaps;
+      }
+      const dLifeDb = document.getElementById('diag-life-db');
+      if (dLifeDb) dLifeDb.innerText = LifecycleEngine.db ? 'EagleFlash_DB (OK)' : 'localStorage (FALLBACK)';`
+  );
+}
 
 console.log('Writing updated eagle-flash.html...');
 fs.writeFileSync(targetFile, html, 'utf-8');
