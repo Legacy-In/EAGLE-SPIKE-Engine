@@ -1,0 +1,12 @@
+{
+  "name": "sigma-platform",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm --prefix apps/web install",
+    "dev": "npm --prefix apps/web run dev",
+    "build": "npm --prefix apps/web run build",
+    "start": "npm --prefix apps/web run start",
+    "test": "node --test tests/engine.test.mjs"
+  }
+}

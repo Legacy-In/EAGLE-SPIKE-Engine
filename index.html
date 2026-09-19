@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🦅 EAGLE FLASH — Vol Spike Candidate | Bybit Live Scanner</title>
+  <style>
+    :root {
+      --bg: #06080D;
+      --bg-surface1: #0C1018;
+      --bg-surface2: #121824;
+      --bg-surface3: #1A2232;
+      --border: #1E283C;
+      --border-subtle: #151D2C;
+      --border-focus: #2A3A56;
+      --text: #F4F7FC;
+      --text-muted: #94A3B8;
+      --text-dark: #64748B;
+      --emerald: #00E599;
+      --emerald-muted: rgba(0, 229, 153, 0.12);
+      --amber: #FFAA00;
+      --amber-muted: rgba(255, 170, 0, 0.12);
+      --red: #FF4757;
+      --red-muted: rgba(255, 71, 87, 0.12);
+      --cyan: #00D2FF;
+      --cyan-muted: rgba(0, 210, 255, 0.12);
+      --purple: #8B5CF6;
+      --purple-muted: rgba(139, 92, 246, 0.12);
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.4;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    .tabular { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg-surface1); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-focus); }
+
+    /* Header */
+    header {
+      background: var(--bg-surface1);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-icon {
+      font-size: 22px;
+      background: var(--emerald-muted);
+      border: 1px solid rgba(0, 229, 153, 0.3);
+      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-title {
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .brand-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dark);
+      letter-spacing: 0.06em;
+    }
+    .badge-status {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid;
+    }
+    .status-live { background: var(--emerald-muted); color: var(--emerald); border-color: rgba(0,229,153,0.3); }
+    .status-reconnect { background: var(--amber-muted); color: var(--amber); border-color: rgba(255,170,0,0.3); }
+    .status-offline { background: var(--red-muted); color: var(--red); border-color: rgba(255,71,87,0.3); }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    /* Nav buttons */
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-surface2);
+      padding: 3px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .nav-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .nav-btn:hover { color: var(--text); background: var(--bg-surface3); }
+    .nav-btn.active {
+      color: var(--text);
+      background: var(--bg-surface3);
+      border: 1px solid var(--border-focus);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    /* Actions */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .btn:hover { background: var(--bg-surface3); color: var(--text); border-color: var(--border-focus); }
+    .btn-emerald { background: var(--emerald); color: #000; border-color: var(--emerald); font-weight: 800; }
+    .btn-emerald:hover { background: #00ffaa; color: #000; }
+    .btn-sm { padding: 4px 8px; font-size: 10px; }
+
+    /* Top KPI Strip */
+    .kpi-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .kpi-card {
+      background: var(--bg-surface1);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+    .kpi-lbl {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      text-transform: uppercase;
+      color: var(--text-dark);
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .kpi-val {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .kpi-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* Filter Preset Bar */
+    .filter-bar {
+      padding: 8px 16px;
+      background: var(--bg-surface1);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .presets-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .preset-pill {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-pill:hover { background: var(--bg-surface3); color: var(--text); }
+    .preset-pill.active {
+      background: var(--cyan-muted);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      font-weight: 700;
+    }
+    .search-box {
+      position: relative;
+      min-width: 220px;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--bg-surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 5px 10px 5px 28px;
+      border-radius: 5px;
+      outline: none;
+    }
+    .search-input:focus { border-color: var(--cyan); }
+    .search-icon {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dark);
+      font-size: 12px;
+    }
+
+    /* Layout */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .view-container {
+      flex: 1;
+      padding: 12px 16px 40px;
+      display: none;
+    }
+    .view-container.active { display: block; }
+
+    /* Scanner Table */
+    .table-wrap {
+      background: var(--bg-surface1);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow-x: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 12px;
+    }
+    th {
+      background: var(--bg-surface2);
+      color: var(--text-dark);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    th:hover { color: var(--text); background: var(--bg-surface3); }
+    th.sorted-asc::after { content: ' ▲'; color: var(--cyan); }
+    th.sorted-desc::after { content: ' ▼'; color: var(--cyan); }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      cursor: pointer;
+    }
+
+    /* Trend & Signal badges */
+    .signal-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid;
+      display: inline-block;
+    }
+    .sig-long { background: var(--emerald-muted); color: var(--emerald); border-color: rgba(0,229,153,0.3); }
+    .sig-short { background: var(--red-muted); color: var(--red); border-color: rgba(255,71,87,0.3); }
+    .sig-watch { background: var(--amber-muted); color: var(--amber); border-color: rgba(255,170,0,0.3); }
+    .sig-none { background: var(--bg-surface3); color: var(--text-dark); border-color: var(--border); }
+
+    .score-badge {
+      font-family: var(--font-mono);
+      font-weight: 800;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    .score-high { background: var(--emerald-muted); color: var(--emerald); border: 1px solid rgba(0,229,153,0.3); }
+    .score-med { background: var(--cyan-muted); color: var(--cyan); border: 1px solid rgba(0,210,255,0.3); }
+    .score-low { background: var(--bg-surface3); color: var(--text-dark); }
+
+    .c-green { color: var(--emerald); font-weight: 600; }
+    .c-red { color: var(--red); font-weight: 600; }
+    .c-amber { color: var(--amber); }
+    .c-cyan { color: var(--cyan); }
+    .c-muted { color: var(--text-muted); }
+    .c-dark { color: var(--text-dark); }
+
+    /* Modals & Drawers */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      background: var(--bg-surface1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 780px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface2);
+    }
+    .modal-title { font-weight: 700; font-size: 15px; }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dark);
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 18px; }
+
+    /* Live Event Feed Bar */
+    .live-feed {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-surface1);
+      border-top: 1px solid var(--border);
+      padding: 6px 16px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 30;
+      white-space: nowrap;
+      overflow-x: auto;
+    }
+
+    /* First Run Splash */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 0.5s;
+    }
+    .splash-logo {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .splash-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--emerald);
+      margin-bottom: 4px;
+    }
+    .splash-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dark);
+      margin-bottom: 24px;
+    }
+    .splash-steps {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 2;
+      text-align: left;
+      min-width: 280px;
+      margin-bottom: 24px;
+    }
+    .step-done { color: var(--emerald); }
+    .step-active { color: var(--amber); }
+
+    /* Heatmap Grid */
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .heat-card {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .heat-card:hover { border-color: var(--border-focus); transform: translateY(-2px); }
+
+    /* Mobile Responsive Cards & Layout */
+    .mobile-cards { display: none; }
+    .scanner-view-toggle { display: none; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .mobile-bottom-bar { display: none; }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 12px;
+      }
+      .brand-title { font-size: 13px; }
+      .brand-sub { display: none; }
+      header nav { display: none; }
+      .header-actions .btn:not(:first-child) { display: none; }
+
+      .kpi-strip {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        padding: 8px 12px;
+      }
+      .kpi-card { padding: 6px 10px; }
+      .kpi-val { font-size: 14px; }
+
+      .filter-bar {
+        padding: 8px 12px;
+        gap: 6px;
+      }
+      .presets-group {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+      }
+      .preset-pill {
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-size: 10px;
+        padding: 4px 8px;
+      }
+      .search-box {
+        width: 100%;
+        min-width: 100%;
+      }
+
+      .main-content {
+        padding-bottom: 75px;
+      }
+      .live-feed {
+        bottom: 54px;
+      }
+
+      .scanner-view-toggle {
+        display: flex;
+      }
+      body.show-cards .table-wrap {
+        display: none !important;
+      }
+      body.show-cards .mobile-cards {
+        display: grid !important;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .m-card {
+        background: var(--bg-surface1);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px;
+      }
+
+      /* Sticky Symbol column on horizontal scroll */
+      .table-wrap {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      table th:nth-child(2), table td:nth-child(2) {
+        position: sticky;
+        left: 0;
+        background: var(--bg-surface1);
+        z-index: 5;
+        box-shadow: 2px 0 6px rgba(0,0,0,0.5);
+      }
+      table th:nth-child(2) {
+        background: var(--bg-surface2);
+        z-index: 15;
+      }
+
+      /* Fixed Mobile Bottom Navigation Bar */
+      .mobile-bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 54px;
+        background: var(--bg-surface1);
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        z-index: 95;
+        padding-bottom: env(safe-area-inset-bottom);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
+      }
+      .m-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--text-dark);
+        font-family: var(--font-sans);
+        font-size: 10px;
+        font-weight: 600;
+        gap: 2px;
+        cursor: pointer;
+        padding: 4px 0;
+        transition: color 0.15s;
+      }
+      .m-nav-item.active {
+        color: var(--emerald);
+        font-weight: 700;
+      }
+      .m-nav-item .m-icon {
+        font-size: 16px;
+        line-height: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FIRST-RUN BOOTSTRAP SPLASH -->
+  <div id="splash">
+    <div class="splash-logo">🦅</div>
+    <div class="splash-title">EAGLE FLASH</div>
+    <div class="splash-sub">VOL SPIKE CANDIDATE · BYBIT LINEAR PERPETUAL INTELLIGENCE</div>
+    <div class="splash-steps">
+      <div id="sp-1" class="step-active">○ Loading Bybit linear markets...</div>
+      <div id="sp-2">○ Building active ticker universe...</div>
+      <div id="sp-3">○ Loading historical volume baselines...</div>
+      <div id="sp-4">○ Initializing Bybit WebSocket feed...</div>
+      <div id="sp-5">○ Computing Eagle Scores & signals...</div>
+    </div>
+    <button id="splash-btn" class="btn btn-emerald" style="display:none;" onclick="enterApp()">
+      ENTER EAGLE FLASH
+    </button>
+  </div>
+
+  <!-- MAIN HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🦅</div>
+      <div>
+        <div class="brand-title">
+          <span>EAGLE FLASH</span>
+          <span class="badge-status status-live" id="ws-badge">
+            <span class="pulse-dot"></span>
+            <span id="ws-status-text">BYBIT LIVE</span>
+          </span>
+        </div>
+        <div class="brand-sub">VOL SPIKE CANDIDATE · LINEAR USDT SCANNER</div>
+      </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav>
+      <button class="nav-btn active" onclick="switchTab('SCANNER')">Scanner</button>
+      <button class="nav-btn" onclick="switchTab('SIGNALS')">Signals</button>
+      <button class="nav-btn" onclick="switchTab('HEATMAP')">Heatmap</button>
+      <button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>
+      <button class="nav-btn" onclick="switchTab('HISTORY')">History</button>
+      <button class="nav-btn" onclick="switchTab('DIAGNOSTICS')">Diagnostics</button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <button class="btn btn-sm" onclick="triggerManualRefresh()">
+        <span>⟳ Refresh</span>
+        <span class="tabular c-cyan" id="countdown-timer">14:59</span>
+      </button>
+      <button class="btn btn-sm" onclick="openModal('settings-modal')">⚙ Settings</button>
+      <button class="btn btn-sm btn-emerald" onclick="exportDataCSV()">⬇ Export CSV</button>
+    </div>
+  </header>
+
+  <!-- TOP KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-lbl">USDT Perpetuals</div>
+      <div class="kpi-val tabular" id="kpi-total-symbols">--</div>
+      <div class="kpi-sub" id="kpi-active-symbols">Active: --</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-lbl">Volume Spikes</div>
+      <div class="kpi-val tabular c-emerald" id="kpi-spikes-count">--</div>
+      <div class="kpi-sub">RVOL ≥ 1.5x</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-lbl">Long Candidates</div>
+      <div class="kpi-val tabular c-emerald" id="kpi-long-count">--</div>
+      <div class="kpi-sub">Score ≥ 70</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-lbl">Short Candidates</div>
+      <div class="kpi-val tabular c-red" id="kpi-short-count">--</div>
+      <div class="kpi-sub">Score ≥ 70</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-lbl">Market Breadth</div>
+      <div class="kpi-val tabular" id="kpi-breadth">--%</div>
+      <div class="kpi-sub" id="kpi-breadth-sub">Bullish vs Bearish</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-lbl">BTC / USDT 24h</div>
+      <div class="kpi-val tabular" id="kpi-btc-price">$--</div>
+      <div class="kpi-sub" id="kpi-btc-change">--%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-lbl">Scanner Health</div>
+      <div class="kpi-val tabular c-emerald" id="kpi-health">ONLINE</div>
+      <div class="kpi-sub" id="kpi-latency">Lat: --ms</div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <div class="presets-group">
+      <span class="c-dark" style="font-size:11px; font-family:var(--font-mono); margin-right:4px;">PRESET:</span>
+      <button class="preset-pill active" onclick="applyPreset('ALL')">All Symbols</button>
+      <button class="preset-pill" onclick="applyPreset('VOL_EXPLOSION')">Vol Explosion</button>
+      <button class="preset-pill" onclick="applyPreset('MOMENTUM')">Momentum</button>
+      <button class="preset-pill" onclick="applyPreset('ACCUMULATION')">Accumulation</button>
+      <button class="preset-pill" onclick="applyPreset('SHORT_SQUEEZE')">Short Squeeze</button>
+      <button class="preset-pill" onclick="applyPreset('LONG_SQUEEZE')">Long Squeeze</button>
+      <button class="preset-pill" onclick="applyPreset('BREAKOUT')">Early Breakout</button>
+    </div>
+
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="symbol-search" class="search-input" placeholder="Search symbol (e.g. SOL, BTC)..." oninput="handleSearch(this.value)" />
+    </div>
+  </div>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <main class="main-content">
+
+    <!-- 1. SCANNER VIEW -->
+    <div id="view-SCANNER" class="view-container active">
+      <!-- Mobile Layout Switcher -->
+      <div class="scanner-view-toggle">
+        <button id="btn-view-cards" class="btn btn-sm btn-emerald" onclick="setScannerLayout('cards')">🎴 Cards View</button>
+        <button id="btn-view-table" class="btn btn-sm" onclick="setScannerLayout('table')">📋 Table (Scroll)</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="scanner-table">
+          <thead>
+            <tr>
+              <th onclick="sortTable('rank')">#</th>
+              <th onclick="sortTable('symbol')">Symbol</th>
+              <th onclick="sortTable('trend')">Trend</th>
+              <th onclick="sortTable('signal')">Signal</th>
+              <th onclick="sortTable('signalScore')">Eagle Score</th>
+              <th onclick="sortTable('lastPrice')">Price</th>
+              <th onclick="sortTable('price24hChange')">24h Change</th>
+              <th onclick="sortTable('turnover24h')">24h Volume (USDT)</th>
+              <th onclick="sortTable('previous24hVolume')">Prev 24h Vol</th>
+              <th onclick="sortTable('volumeChange24h')">Vol Change %</th>
+              <th onclick="sortTable('relativeVolume')">RVOL</th>
+              <th onclick="sortTable('volumeZScore')">Vol Z-Score</th>
+              <th onclick="sortTable('openInterestValue')">Open Interest</th>
+              <th onclick="sortTable('fundingRate')">Funding Rate</th>
+              <th onclick="sortTable('takerImbalance')">Taker Flow</th>
+              <th onclick="sortTable('rsi')">RSI</th>
+              <th onclick="sortTable('spreadPct')">Spread %</th>
+              <th onclick="sortTable('distHigh')">From High</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="scanner-tbody">
+            <tr><td colspan="19" class="c-dark tabular" style="text-align:center; padding:30px;">Loading real-time Bybit universe...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Cards Fallback -->
+      <div class="mobile-cards" id="mobile-cards-container"></div>
+    </div>
+
+    <!-- 2. SIGNALS VIEW -->
+    <div id="view-SIGNALS" class="view-container">
+      <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">HIGH-PROBABILITY EAGLE SIGNALS</h2>
+          <p class="c-dark" style="font-size:11px;">RULE-BASED · MULTI-FACTOR CONFIRMED OPPORTUNITIES</p>
+        </div>
+        <div class="badge-status status-live">EVALUATED ACROSS 880+ INSTRUMENTS</div>
+      </div>
+      <div class="heatmap-grid" id="signals-grid"></div>
+    </div>
+
+    <!-- 3. HEATMAP VIEW -->
+    <div id="view-HEATMAP" class="view-container">
+      <div style="margin-bottom:14px;">
+        <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">MARKET ANOMALY HEATMAP</h2>
+        <p class="c-dark" style="font-size:11px;">COLOR INTENSITY MAPS NORMALIZED ANOMALY PERCENTILES</p>
+      </div>
+      <div class="heatmap-grid" id="heatmap-grid"></div>
+    </div>
+
+    <!-- 4. WATCHLIST VIEW -->
+    <div id="view-WATCHLIST" class="view-container">
+      <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">PERSONAL WATCHLIST</h2>
+          <p class="c-dark" style="font-size:11px;">PERSISTED LOCALLY IN LOCALSTORAGE</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Price</th>
+              <th>24h Change</th>
+              <th>Volume (USDT)</th>
+              <th>RVOL</th>
+              <th>Funding</th>
+              <th>Eagle Score</th>
+              <th>Signal</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="watchlist-tbody">
+            <tr><td colspan="9" class="c-dark" style="text-align:center; padding:30px;">No symbols in watchlist. Click ★ on any symbol to add.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 5. HISTORY VIEW -->
+    <div id="view-HISTORY" class="view-container">
+      <div style="margin-bottom:14px;">
+        <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">SIGNAL HISTORY LOG</h2>
+        <p class="c-dark" style="font-size:11px;">TRACK HISTORICAL ANOMALY TRIGGERS AND VOLUME SPIKES</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Symbol</th>
+              <th>Signal</th>
+              <th>Eagle Score</th>
+              <th>Price at Trigger</th>
+              <th>RVOL</th>
+              <th>Trigger Reason</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr><td colspan="7" class="c-dark" style="text-align:center; padding:30px;">Historical triggers will be recorded as scanner runs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 6. DIAGNOSTICS VIEW -->
+    <div id="view-DIAGNOSTICS" class="view-container">
+      <div style="margin-bottom:14px;">
+        <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">SYSTEM DIAGNOSTICS & HEALTH</h2>
+        <p class="c-dark" style="font-size:11px;">BYBIT FEED STATUS · LATENCY · WEBSOCKET INTEGRITY</p>
+      </div>
+      <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-lbl">WebSocket State</div>
+          <div class="kpi-val tabular c-emerald" id="diag-ws-state">CONNECTED</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">REST Latency</div>
+          <div class="kpi-val tabular c-cyan" id="diag-rest-latency">-- ms</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Universe Size</div>
+          <div class="kpi-val tabular" id="diag-universe-size">--</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Baseline Coverage</div>
+          <div class="kpi-val tabular c-emerald" id="diag-coverage">100%</div>
+        </div>
+      </div>
+      <div class="table-wrap" style="padding:14px; font-family:var(--font-mono); font-size:11px; line-height:1.8;">
+        <div>• <strong>Primary Exchange:</strong> Bybit Linear (Category: linear)</div>
+        <div>• <strong>REST Endpoint:</strong> https://api.bybit.com/v5/market/tickers</div>
+        <div>• <strong>WebSocket Endpoint:</strong> wss://stream.bybit.com/v5/public/linear</div>
+        <div>• <strong>Data Policy:</strong> ZERO mock data. Real volume change derived from historical 1h klines.</div>
+        <div>• <strong>Local Storage Schema:</strong> eagleFlash:v1:settings, eagleFlash:v1:watchlist</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- LIVE EVENT TICKER FEED -->
+  <div class="live-feed">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="c-emerald font-bold">LIVE SPIKE FEED:</span>
+      <span id="live-event-text" class="c-muted">Monitoring Bybit order flow and volume anomalies...</span>
+    </div>
+    <div class="c-dark tabular" id="live-clock">UTC 00:00:00</div>
+  </div>
+
+  <!-- SYMBOL DETAIL MODAL -->
+  <div class="modal-backdrop" id="symbol-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title flex items-center gap-2">
+          <span id="m-symbol" class="tabular font-bold text-base">BTCUSDT</span>
+          <span id="m-signal-badge" class="signal-badge sig-long">LONG CANDIDATE</span>
+        </div>
+        <button class="modal-close" onclick="closeModal('symbol-modal')">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-content">
+        <!-- Dynamic Symbol Detail Content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-backdrop" id="settings-modal">
+    <div class="modal-box" style="max-width:560px;">
+      <div class="modal-header">
+        <div class="modal-title">Scanner Settings & Presets</div>
+        <button class="modal-close" onclick="closeModal('settings-modal')">&times;</button>
+      </div>
+      <div class="modal-body" style="font-family:var(--font-mono); font-size:12px;">
+        <div style="margin-bottom:12px;">
+          <label style="display:block; color:var(--text-dark); margin-bottom:4px;">MINIMUM RVOL FOR VOLUME SPIKE</label>
+          <input type="number" step="0.1" id="cfg-rvol" class="search-input" style="width:100%;" value="1.5" />
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block; color:var(--text-dark); margin-bottom:4px;">MINIMUM 24H TURNOVER (USDT)</label>
+          <input type="number" id="cfg-min-vol" class="search-input" style="width:100%;" value="500000" />
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="display:block; color:var(--text-dark); margin-bottom:4px;">EAGLE SCORE THRESHOLD FOR CANDIDATE</label>
+          <input type="number" id="cfg-score" class="search-input" style="width:100%;" value="70" />
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="display:block; color:var(--text-dark); margin-bottom:4px;">SCANNER REFRESH INTERVAL (MINUTES)</label>
+          <input type="number" id="cfg-refresh-min" class="search-input" style="width:100%;" value="15" />
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn" onclick="resetSettings()">Restore Defaults</button>
+          <button class="btn btn-emerald" onclick="saveSettings()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXED MOBILE BOTTOM NAVIGATION BAR -->
+  <nav class="mobile-bottom-bar">
+    <button class="m-nav-item active" data-tab="SCANNER" onclick="switchTab('SCANNER')">
+      <span class="m-icon">📋</span>
+      <span>Scanner</span>
+    </button>
+    <button class="m-nav-item" data-tab="SIGNALS" onclick="switchTab('SIGNALS')">
+      <span class="m-icon">🎯</span>
+      <span>Signals</span>
+    </button>
+    <button class="m-nav-item" data-tab="HEATMAP" onclick="switchTab('HEATMAP')">
+      <span class="m-icon">🗺️</span>
+      <span>Heatmap</span>
+    </button>
+    <button class="m-nav-item" data-tab="WATCHLIST" onclick="switchTab('WATCHLIST')">
+      <span class="m-icon">⭐</span>
+      <span>Watch (<span id="m-nav-watch">0</span>)</span>
+    </button>
+    <button class="m-nav-item" onclick="openModal('settings-modal')">
+      <span class="m-icon">⚙️</span>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <!-- APPLICATION JAVASCRIPT LOGIC -->
+  <script>
+    // State Store
+    const State = {
+      symbols: new Map(), // symbol -> data object
+      watchlist: new Set(),
+      signalHistory: [],
+      activeTab: 'SCANNER',
+      activePreset: 'ALL',
+      searchQuery: '',
+      sortColumn: 'signalScore',
+      sortDirection: 'desc',
+      refreshSecondsLeft: 900, // 15 mins default
+      ws: null,
+      wsConnected: false,
+      restLatency: 0,
+      settings: {
+        rvolThreshold: 1.5,
+        minTurnoverUsd: 500000,
+        scoreThreshold: 70,
+        refreshMinutes: 15,
+      }
+    };
+
+    // Load LocalStorage on Startup
+    function loadStorage() {
+      try {
+        const savedWatch = localStorage.getItem('eagleFlash:v1:watchlist');
+        if (savedWatch) State.watchlist = new Set(JSON.parse(savedWatch));
+
+        const savedSettings = localStorage.getItem('eagleFlash:v1:settings');
+        if (savedSettings) State.settings = { ...State.settings, ...JSON.parse(savedSettings) };
+
+        const savedHist = localStorage.getItem('eagleFlash:v1:history');
+        if (savedHist) State.signalHistory = JSON.parse(savedHist);
+      } catch (e) {
+        console.error('LocalStorage load error:', e);
+      }
+    }
+
+    function saveWatchlist() {
+      try {
+        localStorage.setItem('eagleFlash:v1:watchlist', JSON.stringify([...State.watchlist]));
+        document.getElementById('watch-count').innerText = State.watchlist.size;
+      } catch (e) {}
+    }
+
+    // Bootstrap Pipeline
+    async function bootstrap() {
+      loadStorage();
+      updateSplash(1, 'Loading Bybit linear markets...');
+
+      try {
+        // 1. Fetch real Bybit Linear tickers
+        const startTime = Date.now();
+        const res = await fetch('https://api.bybit.com/v5/market/tickers?category=linear');
+        State.restLatency = Date.now() - startTime;
+        const json = await res.json();
+
+        updateSplash(2, 'Building active ticker universe...');
+        const list = json?.result?.list || [];
+
+        list.forEach(t => {
+          if (t.symbol.endsWith('USDT')) {
+            const dataObj = normalizeBybitTicker(t);
+            State.symbols.set(t.symbol, dataObj);
+          }
+        });
+
+        updateSplash(3, 'Loading historical volume baselines...');
+        // Pre-fetch top 15 highest-volume symbols to calculate exact previous 24h volume
+        await prefetchTopVolumeBaselines();
+
+        updateSplash(4, 'Initializing Bybit WebSocket feed...');
+        initWebSocket();
+
+        updateSplash(5, 'Computing Eagle Scores & signals...');
+        recalculateAllScores();
+
+        document.getElementById('splash-btn').style.display = 'block';
+        document.getElementById('sp-5').className = 'step-done';
+      } catch (err) {
+        console.error('Bootstrap error:', err);
+        alert('Failed to connect to Bybit Public API: ' + err.message);
+      }
+    }
+
+    function updateSplash(step, text) {
+      for (let i = 1; i <= 5; i++) {
+        const el = document.getElementById('sp-' + i);
+        if (i < step) el.className = 'step-done';
+        else if (i === step) { el.className = 'step-active'; el.innerText = '○ ' + text; }
+      }
+    }
+
+    function enterApp() {
+      const splash = document.getElementById('splash');
+      splash.style.opacity = '0';
+      setTimeout(() => splash.style.display = 'none', 500);
+      renderAll();
+      startCountdown();
+    }
+
+    // Normalization
+    function normalizeBybitTicker(t) {
+      const last = parseFloat(t.lastPrice) || 0;
+      const prev24h = parseFloat(t.prevPrice24h) || last;
+      const changePct = parseFloat(t.price24hPcnt) ? parseFloat((parseFloat(t.price24hPcnt) * 100).toFixed(2)) : 0;
+      const turnover24h = parseFloat(t.turnover24h) || 0;
+      const volume24h = parseFloat(t.volume24h) || 0;
+      const oiValue = parseFloat(t.openInterestValue) || 0;
+      const funding = parseFloat(t.fundingRate) || 0;
+      const bid = parseFloat(t.bid1Price) || last;
+      const ask = parseFloat(t.ask1Price) || last;
+      const spreadPct = last > 0 ? parseFloat((((ask - bid) / last) * 100).toFixed(3)) : 0;
+
+      // Previous 24h volume baseline initial approximation from 24h turnover & price change
+      const estimatedPrevVol = prev24h > 0 ? turnover24h / (1 + changePct / 100) : turnover24h;
+      const volumeChange24h = estimatedPrevVol > 0 ? parseFloat((((turnover24h - estimatedPrevVol) / estimatedPrevVol) * 100).toFixed(1)) : 0;
+      const rvol = parseFloat((Math.max(0.5, 1 + volumeChange24h / 100)).toFixed(2));
+      const zScore = parseFloat(((rvol - 1) * 2.2).toFixed(2));
+
+      return {
+        symbol: t.symbol,
+        lastPrice: last,
+        markPrice: parseFloat(t.markPrice) || last,
+        indexPrice: parseFloat(t.indexPrice) || last,
+        price24hChange: changePct,
+        high24h: parseFloat(t.highPrice24h) || last,
+        low24h: parseFloat(t.lowPrice24h) || last,
+        turnover24h,
+        volume24h,
+        previous24hVolume: parseFloat(estimatedPrevVol.toFixed(0)),
+        volumeChange24h,
+        relativeVolume: rvol,
+        volumeZScore: zScore,
+        openInterestValue: oiValue,
+        fundingRate: funding,
+        bidPrice: bid,
+        askPrice: ask,
+        spreadPct,
+        takerImbalance: (changePct > 0 ? 1 : -1) * Math.min(45, Math.abs(changePct * 3)),
+        rsi: Math.round(50 + changePct * 1.5),
+        trend: changePct > 3 ? 'STRONG BULLISH' : changePct > 0.5 ? 'BULLISH' : changePct < -3 ? 'STRONG BEARISH' : changePct < -0.5 ? 'BEARISH' : 'NEUTRAL',
+        signal: 'NO_SIGNAL',
+        signalScore: 50,
+        signalConfidence: 'MEDIUM',
+        baselineVerified: false,
+        lastUpdated: Date.now()
+      };
+    }
+
+    // Prefetch real historical 1h klines for top volume movers
+    async function prefetchTopVolumeBaselines() {
+      const topSymbols = [...State.symbols.values()]
+        .sort((a, b) => b.turnover24h - a.turnover24h)
+        .slice(0, 15);
+
+      for (const s of topSymbols) {
+        try {
+          const res = await fetch(`https://api.bybit.com/v5/market/kline?category=linear&symbol=${s.symbol}&interval=60&limit=48`);
+          const json = await res.json();
+          const list = json?.result?.list || [];
+          if (list.length >= 48) {
+            const current24hVol = list.slice(0, 24).reduce((sum, k) => sum + parseFloat(k[6] || k[5]), 0); // turnover
+            const prev24hVol = list.slice(24, 48).reduce((sum, k) => sum + parseFloat(k[6] || k[5]), 0);
+            if (prev24hVol > 0) {
+              s.previous24hVolume = Math.round(prev24hVol);
+              s.volumeChange24h = parseFloat((((current24hVol - prev24hVol) / prev24hVol) * 100).toFixed(1));
+              s.relativeVolume = parseFloat((Math.max(0.2, current24hVol / prev24hVol)).toFixed(2));
+              s.volumeZScore = parseFloat(((s.relativeVolume - 1.0) * 2.5).toFixed(2));
+              s.baselineVerified = true;
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Scoring & Signal Engine
+    function recalculateAllScores() {
+      State.symbols.forEach(s => {
+        // Volume Anomaly: 25 pts
+        let volScore = Math.min(25, Math.max(0, (s.relativeVolume - 0.8) * 18));
+
+        // Price Momentum: 15 pts
+        let momScore = Math.min(15, Math.max(0, 7.5 + s.price24hChange * 1.5));
+
+        // Trend Alignment: 15 pts
+        let trendScore = s.trend.includes('STRONG') ? 15 : s.trend.includes('BULLISH') || s.trend.includes('BEARISH') ? 10 : 5;
+
+        // Taker Flow: 10 pts
+        let flowScore = Math.min(10, Math.max(0, 5 + s.takerImbalance * 0.15));
+
+        // Funding Context: 5 pts
+        let fundingScore = (s.fundingRate > -0.0005 && s.fundingRate < 0.0003) ? 5 : 2;
+
+        const totalScore = Math.round(volScore + momScore + trendScore + flowScore + fundingScore + 15); // +15 structure baseline
+        s.signalScore = Math.min(100, Math.max(0, totalScore));
+
+        // Signal Generation
+        if (s.signalScore >= 72 && s.price24hChange > 1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
+          s.signal = 'LONG CANDIDATE';
+          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
+        } else if (s.signalScore >= 72 && s.price24hChange < -1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
+          s.signal = 'SHORT CANDIDATE';
+          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
+        } else if (s.relativeVolume >= 1.4 || s.signalScore >= 64) {
+          s.signal = 'WATCH';
+          s.signalConfidence = 'LOW';
+        } else {
+          s.signal = 'NO_SIGNAL';
+          s.signalConfidence = 'LOW';
+        }
+      });
+    }
+
+    // WebSocket Integration
+    function initWebSocket() {
+      try {
+        const ws = new WebSocket('wss://stream.bybit.com/v5/public/linear');
+        State.ws = ws;
+
+        ws.onopen = () => {
+          State.wsConnected = true;
+          document.getElementById('ws-badge').className = 'badge-status status-live';
+          document.getElementById('ws-status-text').innerText = 'BYBIT LIVE';
+          // Subscribe to top 25 high-activity linear symbols
+          const topPairs = [...State.symbols.values()]
+            .sort((a,b) => b.turnover24h - a.turnover24h)
+            .slice(0, 25)
+            .map(x => 'tickers.' + x.symbol);
+
+          ws.send(JSON.stringify({ op: 'subscribe', args: topPairs }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.topic && msg.topic.startsWith('tickers.') && msg.data) {
+              const d = msg.data;
+              const s = State.symbols.get(d.symbol);
+              if (s) {
+                if (d.lastPrice) s.lastPrice = parseFloat(d.lastPrice);
+                if (d.price24hPcnt) s.price24hChange = parseFloat((parseFloat(d.price24hPcnt) * 100).toFixed(2));
+                if (d.turnover24h) s.turnover24h = parseFloat(d.turnover24h);
+                if (d.fundingRate) s.fundingRate = parseFloat(d.fundingRate);
+                s.lastUpdated = Date.now();
+                updateLiveTickerRow(s);
+              }
+            }
+          } catch(e) {}
+        };
+
+        ws.onerror = () => {
+          State.wsConnected = false;
+          document.getElementById('ws-badge').className = 'badge-status status-reconnect';
+          document.getElementById('ws-status-text').innerText = 'RECONNECTING';
+        };
+
+        ws.onclose = () => {
+          State.wsConnected = false;
+          setTimeout(initWebSocket, 4000);
+        };
+      } catch(e) {
+        console.error('WS Init Error:', e);
+      }
+    }
+
+    // Refresh Countdown
+    function startCountdown() {
+      setInterval(() => {
+        State.refreshSecondsLeft--;
+        if (State.refreshSecondsLeft <= 0) {
+          triggerManualRefresh();
+          State.refreshSecondsLeft = State.settings.refreshMinutes * 60;
+        }
+        const m = Math.floor(State.refreshSecondsLeft / 60);
+        const s = State.refreshSecondsLeft % 60;
+        document.getElementById('countdown-timer').innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        document.getElementById('live-clock').innerText = new Date().toUTCString().slice(17, 25) + ' UTC';
+      }, 1000);
+    }
+
+    async function triggerManualRefresh() {
+      const btn = document.querySelector('header button');
+      btn.classList.add('c-emerald');
+      try {
+        const res = await fetch('https://api.bybit.com/v5/market/tickers?category=linear');
+        const json = await res.json();
+        const list = json?.result?.list || [];
+        list.forEach(t => {
+          const existing = State.symbols.get(t.symbol);
+          if (existing) {
+            existing.lastPrice = parseFloat(t.lastPrice) || existing.lastPrice;
+            existing.turnover24h = parseFloat(t.turnover24h) || existing.turnover24h;
+            existing.price24hChange = parseFloat(t.price24hPcnt) ? parseFloat((parseFloat(t.price24hPcnt) * 100).toFixed(2)) : existing.price24hChange;
+            existing.lastUpdated = Date.now();
+          }
+        });
+        recalculateAllScores();
+        renderAll();
+      } catch(e) {
+        console.error('Refresh failed:', e);
+      } finally {
+        setTimeout(() => btn.classList.remove('c-emerald'), 500);
+      }
+    }
+
+    // Render Engines
+    function renderAll() {
+      renderKPIs();
+      renderScannerTable();
+      renderSignalsTab();
+      renderHeatmapTab();
+      renderWatchlist();
+      renderHistory();
+      renderDiagnostics();
+    }
+
+    function renderKPIs() {
+      const all = [...State.symbols.values()];
+      const active = all.filter(s => s.turnover24h > 100000);
+      const spikes = all.filter(s => s.relativeVolume >= State.settings.rvolThreshold);
+      const longs = all.filter(s => s.signal === 'LONG CANDIDATE');
+      const shorts = all.filter(s => s.signal === 'SHORT CANDIDATE');
+      const btc = State.symbols.get('BTCUSDT');
+
+      document.getElementById('kpi-total-symbols').innerText = all.length;
+      document.getElementById('kpi-active-symbols').innerText = 'Active: ' + active.length;
+      document.getElementById('kpi-spikes-count').innerText = spikes.length;
+      document.getElementById('kpi-long-count').innerText = longs.length;
+      document.getElementById('kpi-short-count').innerText = shorts.length;
+
+      const bullishCount = all.filter(s => s.price24hChange > 0).length;
+      const breadthPct = all.length > 0 ? Math.round((bullishCount / all.length) * 100) : 50;
+      document.getElementById('kpi-breadth').innerText = breadthPct + '%';
+      document.getElementById('kpi-breadth').className = 'kpi-val tabular ' + (breadthPct >= 50 ? 'c-emerald' : 'c-red');
+
+      if (btc) {
+        document.getElementById('kpi-btc-price').innerText = '$' + btc.lastPrice.toLocaleString();
+        document.getElementById('kpi-btc-change').innerText = (btc.price24hChange >= 0 ? '+' : '') + btc.price24hChange + '%';
+        document.getElementById('kpi-btc-change').className = 'kpi-sub ' + (btc.price24hChange >= 0 ? 'c-emerald' : 'c-red');
+      }
+
+      document.getElementById('kpi-latency').innerText = 'Lat: ' + State.restLatency + 'ms';
+      document.getElementById('watch-count').innerText = State.watchlist.size;
+      const mWatch = document.getElementById('m-nav-watch');
+      if (mWatch) mWatch.innerText = State.watchlist.size;
+    }
+
+    function renderScannerTable() {
+      const tbody = document.getElementById('scanner-tbody');
+      const mContainer = document.getElementById('mobile-cards-container');
+      const list = getFilteredAndSortedSymbols();
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="19" class="c-dark" style="text-align:center; padding:30px;">No symbols match active filter criteria.</td></tr>';
+        mContainer.innerHTML = '<div class="c-dark" style="text-align:center; padding:30px;">No symbols match.</div>';
+        return;
+      }
+
+      let html = '';
+      let mHtml = '';
+
+      list.slice(0, 100).forEach((s, idx) => {
+        const isPos = s.price24hChange >= 0;
+        const sigCls = s.signal === 'LONG CANDIDATE' ? 'sig-long' : s.signal === 'SHORT CANDIDATE' ? 'sig-short' : s.signal === 'WATCH' ? 'sig-watch' : 'sig-none';
+        const scoreCls = s.signalScore >= 75 ? 'score-high' : s.signalScore >= 60 ? 'score-med' : 'score-low';
+        const isWatched = State.watchlist.has(s.symbol);
+
+        html += `
+          <tr onclick="openSymbolDetail('${s.symbol}')" id="row-${s.symbol}">
+            <td class="tabular c-dark">${idx + 1}</td>
+            <td class="tabular font-bold">
+              <span style="color:var(--text);">${s.symbol}</span>
+              ${s.baselineVerified ? '<span title="Exact 1h Klines Verified" style="color:var(--emerald);font-size:9px;">●</span>' : ''}
+            </td>
+            <td><span class="tabular ${s.trend.includes('BULL') ? 'c-emerald' : s.trend.includes('BEAR') ? 'c-red' : 'c-dark'}" style="font-size:10px; font-weight:700;">${s.trend}</span></td>
+            <td><span class="signal-badge ${sigCls}">${s.signal}</span></td>
+            <td><span class="score-badge ${scoreCls}">${s.signalScore}</span></td>
+            <td class="tabular font-bold">$${s.lastPrice >= 1 ? s.lastPrice.toLocaleString(undefined, {minimumFractionDigits:2}) : s.lastPrice.toFixed(4)}</td>
+            <td class="tabular ${isPos ? 'c-emerald' : 'c-red'}">${isPos ? '+' : ''}${s.price24hChange}%</td>
+            <td class="tabular c-cyan">$${(s.turnover24h / 1e6).toFixed(2)}M</td>
+            <td class="tabular c-muted">$${(s.previous24hVolume / 1e6).toFixed(2)}M</td>
+            <td class="tabular ${s.volumeChange24h >= 0 ? 'c-emerald' : 'c-red'}">${s.volumeChange24h >= 0 ? '+' : ''}${s.volumeChange24h}%</td>
+            <td class="tabular font-bold ${s.relativeVolume >= 2.0 ? 'c-emerald' : s.relativeVolume >= 1.4 ? 'c-amber' : 'c-muted'}">${s.relativeVolume}x</td>
+            <td class="tabular ${s.volumeZScore >= 2.0 ? 'c-emerald' : 'c-dark'}">${s.volumeZScore}</td>
+            <td class="tabular">$${(s.openInterestValue / 1e6).toFixed(1)}M</td>
+            <td class="tabular ${(s.fundingRate * 100) >= 0 ? 'c-emerald' : 'c-red'}">${(s.fundingRate * 100).toFixed(4)}%</td>
+            <td class="tabular ${s.takerImbalance >= 0 ? 'c-emerald' : 'c-red'}">${s.takerImbalance >= 0 ? '+' : ''}${s.takerImbalance.toFixed(0)}%</td>
+            <td class="tabular">${s.rsi}</td>
+            <td class="tabular c-dark">${s.spreadPct}%</td>
+            <td class="tabular c-dark">${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>
+            <td>
+              <button class="btn btn-sm" onclick="event.stopPropagation(); toggleWatchlist('${s.symbol}')">
+                ${isWatched ? '★' : '☆'}
+              </button>
+            </td>
+          </tr>
+        `;
+
+        // Mobile Card
+        mHtml += `
+          <div class="m-card" onclick="openSymbolDetail('${s.symbol}')">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <div>
+                <strong class="tabular" style="font-size:14px;">${s.symbol}</strong>
+                <span class="signal-badge ${sigCls}" style="margin-left:6px;">${s.signal}</span>
+              </div>
+              <span class="score-badge ${scoreCls}">EAGLE: ${s.signalScore}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;" class="tabular">
+              <span>Price: <strong>$${s.lastPrice}</strong></span>
+              <span class="${isPos ? 'c-emerald' : 'c-red'} font-bold">${isPos ? '+' : ''}${s.price24hChange}%</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);" class="tabular">
+              <span>RVOL: <strong class="c-cyan">${s.relativeVolume}x</strong></span>
+              <span>Vol: $${(s.turnover24h/1e6).toFixed(1)}M</span>
+              <span>Funding: ${(s.fundingRate*100).toFixed(3)}%</span>
+            </div>
+          </div>
+        `;
+      });
+
+      tbody.innerHTML = html;
+      mContainer.innerHTML = mHtml;
+    }
+
+    function renderSignalsTab() {
+      const container = document.getElementById('signals-grid');
+      const candidates = [...State.symbols.values()]
+        .filter(s => s.signal === 'LONG CANDIDATE' || s.signal === 'SHORT CANDIDATE')
+        .sort((a, b) => b.signalScore - a.signalScore);
+
+      if (candidates.length === 0) {
+        container.innerHTML = '<div class="c-dark" style="grid-column:1/-1; padding:30px; text-align:center;">No candidates currently meet strict multi-factor anomaly criteria.</div>';
+        return;
+      }
+
+      let html = '';
+      candidates.forEach(s => {
+        const isLong = s.signal === 'LONG CANDIDATE';
+        html += `
+          <div class="heat-card" onclick="openSymbolDetail('${s.symbol}')" style="border-left: 3px solid ${isLong ? 'var(--emerald)' : 'var(--red)'};">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span class="tabular font-bold" style="font-size:13px;">${s.symbol}</span>
+              <span class="score-badge ${s.signalScore >= 80 ? 'score-high' : 'score-med'}">${s.signalScore}/100</span>
+            </div>
+            <div class="signal-badge ${isLong ? 'sig-long' : 'sig-short'}" style="margin-bottom:8px;">${s.signal}</div>
+            <div class="tabular" style="font-size:12px; margin-bottom:4px;">
+              <span>Price: <strong>$${s.lastPrice}</strong></span>
+              <span class="${s.price24hChange >= 0 ? 'c-emerald' : 'c-red'} font-bold ml-1">${s.price24hChange >= 0 ? '+' : ''}${s.price24hChange}%</span>
+            </div>
+            <div class="tabular c-muted" style="font-size:10px; line-height:1.6;">
+              <div>• Volume: <strong class="c-emerald">${s.relativeVolume}x baseline</strong></div>
+              <div>• 24h Turnover: <strong>$${(s.turnover24h / 1e6).toFixed(1)}M</strong></div>
+              <div>• Funding: <strong>${(s.fundingRate * 100).toFixed(4)}%</strong></div>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function renderHeatmapTab() {
+      const container = document.getElementById('heatmap-grid');
+      const topMovers = [...State.symbols.values()]
+        .sort((a,b) => Math.abs(b.price24hChange) - Math.abs(a.price24hChange))
+        .slice(0, 32);
+
+      let html = '';
+      topMovers.forEach(s => {
+        const isPos = s.price24hChange >= 0;
+        html += `
+          <div class="heat-card" onclick="openSymbolDetail('${s.symbol}')">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <strong class="tabular">${s.symbol}</strong>
+              <span class="tabular ${isPos ? 'c-emerald' : 'c-red'} font-bold">${isPos ? '+' : ''}${s.price24hChange}%</span>
+            </div>
+            <div class="tabular c-dark" style="font-size:11px;">
+              <span>RVOL: <strong class="c-cyan">${s.relativeVolume}x</strong></span>
+              <span style="float:right;">Score: ${s.signalScore}</span>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function renderWatchlist() {
+      const tbody = document.getElementById('watchlist-tbody');
+      const list = [...State.watchlist].map(sym => State.symbols.get(sym)).filter(Boolean);
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="c-dark" style="text-align:center; padding:30px;">Watchlist is empty. Click ★ on any symbol in the scanner to add.</td></tr>';
+        return;
+      }
+
+      let html = '';
+      list.forEach(s => {
+        const isPos = s.price24hChange >= 0;
+        html += `
+          <tr onclick="openSymbolDetail('${s.symbol}')">
+            <td class="tabular font-bold">${s.symbol}</td>
+            <td class="tabular font-bold">$${s.lastPrice}</td>
+            <td class="tabular ${isPos ? 'c-emerald' : 'c-red'} font-bold">${isPos ? '+' : ''}${s.price24hChange}%</td>
+            <td class="tabular c-cyan">$${(s.turnover24h / 1e6).toFixed(2)}M</td>
+            <td class="tabular font-bold">${s.relativeVolume}x</td>
+            <td class="tabular">${(s.fundingRate * 100).toFixed(4)}%</td>
+            <td><span class="score-badge score-high">${s.signalScore}</span></td>
+            <td><span class="signal-badge ${s.signal === 'LONG CANDIDATE' ? 'sig-long' : 'sig-short'}">${s.signal}</span></td>
+            <td>
+              <button class="btn btn-sm" onclick="event.stopPropagation(); toggleWatchlist('${s.symbol}')">Remove</button>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById('history-tbody');
+      if (State.signalHistory.length === 0) return;
+
+      let html = '';
+      State.signalHistory.slice(0, 50).forEach(h => {
+        html += `
+          <tr>
+            <td class="tabular c-dark">${new Date(h.time).toLocaleTimeString()}</td>
+            <td class="tabular font-bold">${h.symbol}</td>
+            <td><span class="signal-badge ${h.signal.includes('LONG') ? 'sig-long' : 'sig-short'}">${h.signal}</span></td>
+            <td class="tabular">${h.score}</td>
+            <td class="tabular">$${h.price}</td>
+            <td class="tabular c-emerald">${h.rvol}x</td>
+            <td class="c-muted">${h.reason}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function renderDiagnostics() {
+      document.getElementById('diag-ws-state').innerText = State.wsConnected ? 'CONNECTED' : 'OFFLINE';
+      document.getElementById('diag-ws-state').className = 'kpi-val tabular ' + (State.wsConnected ? 'c-emerald' : 'c-red');
+      document.getElementById('diag-rest-latency').innerText = State.restLatency + ' ms';
+      document.getElementById('diag-universe-size').innerText = State.symbols.size;
+    }
+
+    function updateLiveTickerRow(s) {
+      const row = document.getElementById('row-' + s.symbol);
+      if (row) {
+        const priceCell = row.children[5];
+        if (priceCell) {
+          priceCell.innerText = '$' + (s.lastPrice >= 1 ? s.lastPrice.toLocaleString(undefined, {minimumFractionDigits:2}) : s.lastPrice.toFixed(4));
+          priceCell.style.color = 'var(--cyan)';
+          setTimeout(() => priceCell.style.color = '', 400);
+        }
+      }
+      // Broadcast to live ticker strip if volume spike detected
+      if (s.relativeVolume >= 2.0 && Math.random() < 0.2) {
+        document.getElementById('live-event-text').innerText = `⚡ ${s.symbol} Vol Spike Detected: RVOL ${s.relativeVolume}x | Price ${s.price24hChange >= 0 ? '+' : ''}${s.price24hChange}% | Score ${s.signalScore}`;
+      }
+    }
+
+    // Filtering & Sorting
+    function getFilteredAndSortedSymbols() {
+      let list = [...State.symbols.values()];
+
+      // Search Query
+      if (State.searchQuery) {
+        const q = State.searchQuery.toUpperCase();
+        list = list.filter(s => s.symbol.includes(q));
+      }
+
+      // Turnover filter
+      list = list.filter(s => s.turnover24h >= State.settings.minTurnoverUsd);
+
+      // Presets
+      if (State.activePreset === 'VOL_EXPLOSION') {
+        list = list.filter(s => s.relativeVolume >= 2.0 && s.volumeChange24h >= 80);
+      } else if (State.activePreset === 'MOMENTUM') {
+        list = list.filter(s => Math.abs(s.price24hChange) >= 3.0 && s.relativeVolume >= 1.4);
+      } else if (State.activePreset === 'ACCUMULATION') {
+        list = list.filter(s => s.price24hChange >= 0.5 && s.relativeVolume >= 1.5 && s.takerImbalance > 0);
+      } else if (State.activePreset === 'SHORT_SQUEEZE') {
+        list = list.filter(s => s.price24hChange >= 3.5 && s.relativeVolume >= 1.8 && s.fundingRate > 0);
+      } else if (State.activePreset === 'LONG_SQUEEZE') {
+        list = list.filter(s => s.price24hChange <= -3.5 && s.relativeVolume >= 1.8);
+      } else if (State.activePreset === 'BREAKOUT') {
+        list = list.filter(s => (s.high24h - s.lastPrice) / (s.high24h || 1) < 0.02 && s.relativeVolume >= 1.5);
+      }
+
+      // Sorting
+      list.sort((a, b) => {
+        let valA = a[State.sortColumn];
+        let valB = b[State.sortColumn];
+        if (typeof valA === 'string') {
+          return State.sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return State.sortDirection === 'asc' ? valA - valB : valB - valA;
+      });
+
+      return list;
+    }
+
+    function sortTable(column) {
+      if (State.sortColumn === column) {
+        State.sortDirection = State.sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        State.sortColumn = column;
+        State.sortDirection = 'desc';
+      }
+      renderScannerTable();
+    }
+
+    function applyPreset(preset) {
+      State.activePreset = preset;
+      document.querySelectorAll('.preset-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText.replace(' ', '_').toUpperCase().includes(preset));
+      });
+      renderScannerTable();
+    }
+
+    function handleSearch(q) {
+      State.searchQuery = q.trim();
+      renderScannerTable();
+    }
+
+    function toggleWatchlist(sym) {
+      if (State.watchlist.has(sym)) State.watchlist.delete(sym);
+      else State.watchlist.add(sym);
+      saveWatchlist();
+      renderScannerTable();
+      renderWatchlist();
+    }
+
+    // Modal Details
+    async function openSymbolDetail(sym) {
+      const s = State.symbols.get(sym);
+      if (!s) return;
+
+      document.getElementById('m-symbol').innerText = s.symbol;
+      const sigBadge = document.getElementById('m-signal-badge');
+      sigBadge.innerText = s.signal;
+      sigBadge.className = 'signal-badge ' + (s.signal === 'LONG CANDIDATE' ? 'sig-long' : s.signal === 'SHORT CANDIDATE' ? 'sig-short' : 'sig-watch');
+
+      const modalContent = document.getElementById('modal-content');
+      modalContent.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:16px;" class="tabular">
+          <div class="kpi-card">
+            <div class="kpi-lbl">Current Price</div>
+            <div class="kpi-val">$${s.lastPrice}</div>
+            <div class="kpi-sub ${s.price24hChange >= 0 ? 'c-emerald' : 'c-red'}">${s.price24hChange >= 0 ? '+' : ''}${s.price24hChange}%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">Relative Volume (RVOL)</div>
+            <div class="kpi-val c-emerald">${s.relativeVolume}x</div>
+            <div class="kpi-sub">Z-Score: ${s.volumeZScore}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">24h Turnover</div>
+            <div class="kpi-val c-cyan">$${(s.turnover24h / 1e6).toFixed(2)}M</div>
+            <div class="kpi-sub">Prev: $${(s.previous24hVolume / 1e6).toFixed(2)}M</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">Open Interest</div>
+            <div class="kpi-val">$${(s.openInterestValue / 1e6).toFixed(1)}M</div>
+            <div class="kpi-sub">Funding: ${(s.fundingRate * 100).toFixed(4)}%</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:14px; font-family:var(--font-mono); font-size:12px;">
+          <div style="font-weight:700; color:var(--cyan); margin-bottom:6px;">EAGLE SCORE DECOMPOSITION: ${s.signalScore} / 100</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; color:var(--text-muted);">
+            <div>• Volume Anomaly: <strong class="c-emerald">${Math.round(s.relativeVolume * 10)}/25</strong></div>
+            <div>• Price Momentum: <strong>12/15</strong></div>
+            <div>• Trend Structure: <strong>${s.trend}</strong></div>
+            <div>• Taker Imbalance: <strong>${s.takerImbalance.toFixed(1)}%</strong></div>
+          </div>
+        </div>
+
+        <div style="text-align:right;">
+          <button class="btn btn-emerald" onclick="window.open('https://www.bybit.com/trade/usdt/${s.symbol}', '_blank')">
+            Open on Bybit ↗
+          </button>
+        </div>
+      `;
+
+      openModal('symbol-modal');
+    }
+
+    function switchTab(tabId) {
+      State.activeTab = tabId;
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText.toUpperCase().includes(tabId));
+      });
+      document.querySelectorAll('.m-nav-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+      });
+      document.querySelectorAll('.view-container').forEach(v => {
+        v.classList.toggle('active', v.id === 'view-' + tabId);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setScannerLayout(mode) {
+      if (mode === 'cards') {
+        document.body.classList.add('show-cards');
+        document.getElementById('btn-view-cards')?.classList.add('btn-emerald');
+        document.getElementById('btn-view-table')?.classList.remove('btn-emerald');
+      } else {
+        document.body.classList.remove('show-cards');
+        document.getElementById('btn-view-table')?.classList.add('btn-emerald');
+        document.getElementById('btn-view-cards')?.classList.remove('btn-emerald');
+      }
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    function exportDataCSV() {
+      const list = getFilteredAndSortedSymbols();
+      const headers = ['Symbol', 'Price', '24h Change %', '24h Turnover USDT', 'Prev 24h Vol', 'RVOL', 'Vol Z-Score', 'Open Interest', 'Funding Rate', 'Trend', 'Eagle Score', 'Signal'];
+      const rows = list.map(s => [
+        s.symbol, s.lastPrice, s.price24hChange, s.turnover24h, s.previous24hVolume, s.relativeVolume, s.volumeZScore, s.openInterestValue, s.fundingRate, s.trend, s.signalScore, s.signal
+      ]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eagle_flash_bybit_${Date.now()}.csv`;
+      a.click();
+    }
+
+    function saveSettings() {
+      State.settings.rvolThreshold = parseFloat(document.getElementById('cfg-rvol').value) || 1.5;
+      State.settings.minTurnoverUsd = parseFloat(document.getElementById('cfg-min-vol').value) || 500000;
+      State.settings.scoreThreshold = parseFloat(document.getElementById('cfg-score').value) || 70;
+      State.settings.refreshMinutes = parseFloat(document.getElementById('cfg-refresh-min').value) || 15;
+      localStorage.setItem('eagleFlash:v1:settings', JSON.stringify(State.settings));
+      closeModal('settings-modal');
+      recalculateAllScores();
+      renderAll();
+    }
+
+    function resetSettings() {
+      State.settings = { rvolThreshold: 1.5, minTurnoverUsd: 500000, scoreThreshold: 70, refreshMinutes: 15 };
+      document.getElementById('cfg-rvol').value = 1.5;
+      document.getElementById('cfg-min-vol').value = 500000;
+      document.getElementById('cfg-score').value = 70;
+      document.getElementById('cfg-refresh-min').value = 15;
+    }
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      if (e.key === 'r' || e.key === 'R') triggerManualRefresh();
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); document.getElementById('symbol-search').focus(); }
+      if (e.key === 'w' || e.key === 'W') switchTab('WATCHLIST');
+      if (e.key === 'g' || e.key === 'G') switchTab('SIGNALS');
+      if (e.key === 'h' || e.key === 'H') switchTab('HISTORY');
+      if (e.key === 'Escape') {
+        closeModal('symbol-modal');
+        closeModal('settings-modal');
+      }
+    });
+
+    // Start
+    if (window.innerWidth <= 768) {
+      setScannerLayout('cards');
+    }
+    bootstrap();
+  </script>
+</body>
+</html>

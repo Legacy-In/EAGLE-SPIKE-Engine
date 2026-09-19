@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #05070B;
+  --foreground: #F8FAFC;
+}
+
+body {
+  background-color: #05070B;
+  color: #F8FAFC;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Tabular figures for numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom Bloomberg-style sleek dark scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0F17;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1C2538;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2D3B55;
+}
+
+/* Selection */
+::selection {
+  background: rgba(0, 229, 153, 0.25);
+  color: #FFFFFF;
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 15px rgba(0, 229, 153, 0.15);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 15px rgba(0, 210, 255, 0.15);
+}
+
+.glow-red {
+  box-shadow: 0 0 15px rgba(255, 71, 87, 0.15);
+}
