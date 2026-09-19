@@ -865,6 +865,108 @@ if (!html.includes("document.getElementById('diag-life-signals')")) {
   );
 }
 
+// 9. Hook Signal Generation in recalculateAllScores
+const recalcRegex = /if\s*\(s\.signalScore\s*>=\s*72\s*&&\s*s\.price24hChange\s*>\s*1\.5\s*&&\s*s\.relativeVolume\s*>=\s*State\.settings\.rvolThreshold\)\s*\{[\s\S]*?s\.signalConfidence\s*=\s*s\.signalScore\s*>=\s*82\s*\?\s*'HIGH'\s*:\s*'MEDIUM';\s*\}/;
+
+const newRecalcSignals = `if (s.signalScore >= 72 && s.price24hChange > 1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
+          s.signal = 'LONG CANDIDATE';
+          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
+          if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
+            LifecycleEngine.recordSignal(s, { rvolThreshold: State.settings.rvolThreshold });
+          }
+        } else if (s.signalScore >= 72 && s.price24hChange < -1.5 && s.relativeVolume >= State.settings.rvolThreshold) {
+          s.signal = 'SHORT CANDIDATE';
+          s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
+          if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
+            LifecycleEngine.recordSignal(s, { rvolThreshold: State.settings.rvolThreshold });
+          }
+        }`;
+
+if (recalcRegex.test(html)) {
+  console.log('Hooking recalculateAllScores signal generation...');
+  html = html.replace(recalcRegex, () => newRecalcSignals);
+}
+
+// 10. Hook renderSignalsTab to ensure any candidate shown in HIGH-PROBABILITY EAGLE SIGNALS is recorded
+const renderSignalsRegex = /function\s+renderSignalsTab\(\)\s*\{[\s\S]*?b\.signalScore\s*-\s*a\.signalScore\);/;
+
+const newRenderSignalsTab = `function renderSignalsTab() {
+      const container = document.getElementById('signals-grid');
+      const candidates = [...State.symbols.values()]
+        .filter(s => s.signal === 'LONG CANDIDATE' || s.signal === 'SHORT CANDIDATE')
+        .sort((a, b) => b.signalScore - a.signalScore);
+
+      // Ensure every qualifying high-probability candidate is recorded in the Signal Journal
+      if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
+        candidates.forEach(s => LifecycleEngine.recordSignal(s, { source: 'SIGNALS_TAB' }));
+      }`;
+
+if (renderSignalsRegex.test(html)) {
+  console.log('Hooking renderSignalsTab candidate recording...');
+  html = html.replace(renderSignalsRegex, () => newRenderSignalsTab);
+}
+
+// 11. Hook bootstrap to immediately harvest candidates on initial load
+const bootstrapRegex = /updateSplash\(5,\s*'Computing Eagle Scores & signals\.\.\.'\);[\s\r\n]*recalculateAllScores\(\);/;
+
+const newBootstrapEnd = `updateSplash(5, 'Computing Eagle Scores & signals...');
+        recalculateAllScores();
+        // Immediately record any high-probability signals identified during bootstrap
+        if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
+          State.symbols.forEach(s => {
+            if (s.signal === 'LONG CANDIDATE' || s.signal === 'SHORT CANDIDATE') {
+              LifecycleEngine.recordSignal(s, { source: 'BOOTSTRAP' });
+            }
+          });
+        }`;
+
+if (bootstrapRegex.test(html)) {
+  console.log('Hooking bootstrap candidate capture...');
+  html = html.replace(bootstrapRegex, () => newBootstrapEnd);
+}
+
+// 12. Hook switchTab for tab transitions
+const switchTabRegex = /function\s+switchTab\(tabId\)\s*\{[\s\S]*?window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'smooth'\s*\}\);\s*\}/;
+
+const newSwitchTab = `function switchTab(tabId) {
+      State.activeTab = tabId;
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText.toUpperCase().includes(tabId));
+      });
+      document.querySelectorAll('.m-nav-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+      });
+      document.querySelectorAll('.view-container').forEach(v => {
+        v.classList.toggle('active', v.id === 'view-' + tabId);
+      });
+      if (tabId === 'SIGNALS') renderSignalsTab();
+      if (tabId === 'HEATMAP') renderHeatmapTab();
+      if (tabId === 'WATCHLIST') renderWatchlist();
+      if (tabId === 'JOURNAL' && typeof LifecycleEngine !== 'undefined') LifecycleEngine.renderJournalTab();
+      if (tabId === 'HISTORY') renderHistory();
+      if (tabId === 'DIAGNOSTICS') renderDiagnostics();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }`;
+
+if (switchTabRegex.test(html)) {
+  console.log('Hooking switchTab navigation...');
+  html = html.replace(switchTabRegex, () => newSwitchTab);
+}
+
+// 13. Hook openModal for analytics
+const openModalRegex = /function\s+openModal\(id\)\s*\{[\s\S]*?document\.getElementById\(id\)\.classList\.add\('open'\);\s*\}/;
+const newOpenModal = `function openModal(id) {
+      if (id === 'lifecycle-analytics-modal' && typeof LifecycleEngine !== 'undefined') {
+        LifecycleEngine.renderCohortAnalytics();
+      }
+      document.getElementById(id).classList.add('open');
+    }`;
+
+if (openModalRegex.test(html)) {
+  console.log('Hooking openModal...');
+  html = html.replace(openModalRegex, () => newOpenModal);
+}
+
 console.log('Writing updated eagle-flash.html...');
 fs.writeFileSync(targetFile, html, 'utf-8');
 console.log('Done! Successfully injected Signal Lifecycle Intelligence.');

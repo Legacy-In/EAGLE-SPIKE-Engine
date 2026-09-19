@@ -790,6 +790,13 @@ const LifecycleEngine = {
 
   // 11. Render Signal Journal Tab View
   renderJournalTab() {
+    if (typeof State !== 'undefined' && State.symbols) {
+      State.symbols.forEach(s => {
+        if (s.signal === 'LONG CANDIDATE' || s.signal === 'SHORT CANDIDATE') {
+          this.recordSignal(s, { source: 'JOURNAL_SYNC' });
+        }
+      });
+    }
     this.renderKPIs();
     this.renderJournalTable();
   },
