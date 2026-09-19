@@ -612,6 +612,162 @@
         line-height: 1;
       }
     }
+  
+    /* ═══════════════════════════════════════════════════════
+       EAGLE FLASH — SIGNAL LIFECYCLE INTELLIGENCE STYLES
+       ═══════════════════════════════════════════════════════ */
+    .badge-count {
+      display: inline-block;
+      padding: 1px 6px;
+      font-size: 10px;
+      border-radius: 10px;
+      background: rgba(0, 229, 153, 0.2);
+      color: var(--emerald);
+      margin-left: 4px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+    .status-badge-active {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(0, 229, 153, 0.15);
+      border: 1px solid rgba(0, 229, 153, 0.3);
+      color: var(--emerald);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .status-badge-confirmed {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(0, 210, 255, 0.15);
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .status-badge-warning {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255, 170, 0, 0.15);
+      border: 1px solid rgba(255, 170, 0, 0.3);
+      color: var(--amber);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .status-badge-rejected {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255, 71, 87, 0.15);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      color: var(--red);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .status-badge-expired {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(100, 116, 139, 0.15);
+      border: 1px solid rgba(100, 116, 139, 0.3);
+      color: var(--text-dark);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .cp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .cp-card {
+      background: var(--bg-surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .cp-card.cp-pending {
+      opacity: 0.65;
+      border-style: dashed;
+    }
+    .cp-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dark);
+      font-weight: 700;
+    }
+    .cp-value {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .timeline-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      position: relative;
+      padding-bottom: 14px;
+    }
+    .timeline-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 14px;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--bg-surface3);
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+      z-index: 2;
+    }
+    .timeline-dot.dot-green { border-color: var(--emerald); background: var(--emerald-muted); }
+    .timeline-dot.dot-blue { border-color: var(--cyan); background: var(--cyan-muted); }
+    .timeline-dot.dot-red { border-color: var(--red); background: var(--red-muted); }
+    .timeline-dot.dot-amber { border-color: var(--amber); background: var(--amber-muted); }
+    .timeline-content {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+    .replay-control-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--bg-surface3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 12px 0;
+      flex-wrap: wrap;
+    }
+
   </style>
 </head>
 <body>
@@ -655,6 +811,7 @@
       <button class="nav-btn" onclick="switchTab('SIGNALS')">Signals</button>
       <button class="nav-btn" onclick="switchTab('HEATMAP')">Heatmap</button>
       <button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>
+      <button class="nav-btn" onclick="switchTab('JOURNAL')">Signal Journal <span class="badge-count" id="journal-count">0</span></button>
       <button class="nav-btn" onclick="switchTab('HISTORY')">History</button>
       <button class="nav-btn" onclick="switchTab('DIAGNOSTICS')">Diagnostics</button>
     </nav>
@@ -737,6 +894,9 @@
       <div class="scanner-view-toggle">
         <button id="btn-view-cards" class="btn btn-sm btn-emerald" onclick="setScannerLayout('cards')">🎴 Cards View</button>
         <button id="btn-view-table" class="btn btn-sm" onclick="setScannerLayout('table')">📋 Table (Scroll)</button>
+        <button id="btn-lifecycle-cols" class="btn btn-sm btn-emerald" onclick="toggleLifecycleColumns()" title="Toggle Lifecycle Columns (Age, 4H, 8H, 1D, Status)">
+          ⏱️ Lifecycle Cols: <span id="lbl-lifecycle-toggle">ON</span>
+        </button>
       </div>
 
       <div class="table-wrap">
@@ -760,7 +920,7 @@
               <th onclick="sortTable('takerImbalance')">Taker Flow</th>
               <th onclick="sortTable('rsi')">RSI</th>
               <th onclick="sortTable('spreadPct')">Spread %</th>
-              <th onclick="sortTable('distHigh')">From High</th>
+              <th onclick="sortTable('distHigh')">From High</th>${LifecycleEngine?.settings?.showLifecycleColumns ? '<th>Age</th><th>4H</th><th>8H</th><th>1D</th><th>Status</th>' : ''}
               <th>Action</th>
             </tr>
           </thead>
@@ -824,6 +984,124 @@
         </table>
       </div>
     </div>
+
+    
+    <!-- 4b. SIGNAL JOURNAL VIEW (SIGNAL LIFECYCLE INTELLIGENCE) -->
+    <div id="view-JOURNAL" class="view-container">
+      <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
+            <span>🦅 SIGNAL LIFECYCLE INTELLIGENCE JOURNAL</span>
+            <span class="badge-status status-live">IMMUTABLE OBSERVATIONS</span>
+          </h2>
+          <p class="c-dark" style="font-size:11px;">EVIDENCE-BASED POST-SIGNAL PERFORMANCE · STANDARDIZED CHECKPOINTS · MFE/MAE EXCURSIONS</p>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-sm" onclick="openModal('lifecycle-analytics-modal')">📊 Cohort Analytics</button>
+          <button class="btn btn-sm" onclick="openModal('lifecycle-settings-modal')">⚙ Settings</button>
+          <button class="btn btn-sm btn-emerald" onclick="LifecycleEngine.exportJournalCSV()">⬇ Export CSV</button>
+          <button class="btn btn-sm" onclick="LifecycleEngine.exportSignalsJSON()">⬇ Export JSON</button>
+        </div>
+      </div>
+
+      <!-- Lifecycle KPI Summary Strip -->
+      <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Total Signals</div>
+          <div class="kpi-val tabular" id="jkpi-total">0</div>
+          <div class="kpi-sub">Recorded</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Active Signals</div>
+          <div class="kpi-val tabular c-emerald" id="jkpi-active">0</div>
+          <div class="kpi-sub">Tracking live</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Confirmed</div>
+          <div class="kpi-val tabular c-cyan" id="jkpi-confirmed">0</div>
+          <div class="kpi-sub">Breakout verified</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg 4H Return</div>
+          <div class="kpi-val tabular" id="jkpi-avg4h">PENDING</div>
+          <div class="kpi-sub">Directional</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg 8H Return</div>
+          <div class="kpi-val tabular" id="jkpi-avg8h">PENDING</div>
+          <div class="kpi-sub">Directional</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg 1D Return</div>
+          <div class="kpi-val tabular" id="jkpi-avg1d">PENDING</div>
+          <div class="kpi-sub">Directional</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg MFE (Peak)</div>
+          <div class="kpi-val tabular c-emerald" id="jkpi-avgmfe">PENDING</div>
+          <div class="kpi-sub">Max Favorable</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg MAE (Adverse)</div>
+          <div class="kpi-val tabular c-red" id="jkpi-avgmae">PENDING</div>
+          <div class="kpi-sub">Max Adverse</div>
+        </div>
+      </div>
+
+      <!-- Journal Filter Bar -->
+      <div class="filter-bar" style="margin-bottom:12px;">
+        <div class="presets-group">
+          <span class="c-dark" style="font-size:11px; font-family:var(--font-mono); margin-right:4px;">STATUS:</span>
+          <button class="preset-pill active" onclick="setJournalFilter('ALL', this)">All</button>
+          <button class="preset-pill" onclick="setJournalFilter('ACTIVE', this)">Active</button>
+          <button class="preset-pill" onclick="setJournalFilter('CONFIRMED', this)">Confirmed</button>
+          <button class="preset-pill" onclick="setJournalFilter('WARNING', this)">Warning</button>
+          <button class="preset-pill" onclick="setJournalFilter('REJECTED', this)">Rejected</button>
+          <button class="preset-pill" onclick="setJournalFilter('EXPIRED', this)">Expired</button>
+        </div>
+        <div class="presets-group" style="margin-left:8px;">
+          <span class="c-dark" style="font-size:11px; font-family:var(--font-mono); margin-right:4px;">SIDE:</span>
+          <button class="preset-pill active" onclick="setJournalSide('ALL', this)">All</button>
+          <button class="preset-pill" onclick="setJournalSide('LONG', this)">Long</button>
+          <button class="preset-pill" onclick="setJournalSide('SHORT', this)">Short</button>
+        </div>
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="journal-search" class="search-input" placeholder="Search signal ID or symbol..." oninput="handleJournalSearch(this.value)" />
+        </div>
+      </div>
+
+      <!-- Journal Table -->
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th onclick="sortJournal('index')">#</th>
+              <th onclick="sortJournal('signalId')">Signal ID</th>
+              <th onclick="sortJournal('symbol')">Symbol</th>
+              <th onclick="sortJournal('signalType')">Signal</th>
+              <th onclick="sortJournal('detectedAt')">Detected (Local)</th>
+              <th onclick="sortJournal('detectedAt')">Age</th>
+              <th onclick="sortJournal('signalPrice')">Signal Price</th>
+              <th onclick="sortJournal('currentPrice')">Current Price</th>
+              <th onclick="sortJournal('checkpoints.4H')">4H %</th>
+              <th onclick="sortJournal('checkpoints.8H')">8H %</th>
+              <th onclick="sortJournal('checkpoints.1D')">1D %</th>
+              <th onclick="sortJournal('mfePct')">MFE %</th>
+              <th onclick="sortJournal('maePct')">MAE %</th>
+              <th onclick="sortJournal('status')">Status</th>
+              <th>Warning / Invalidation</th>
+              <th onclick="sortJournal('initialSnapshot.signalScore')">Score</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="journal-tbody">
+            <tr><td colspan="17" class="c-dark" style="text-align:center; padding:30px;">Loading Signal Lifecycle Journal...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
 
     <!-- 5. HISTORY VIEW -->
     <div id="view-HISTORY" class="view-container">
@@ -957,6 +1235,10 @@
       <span class="m-icon">🗺️</span>
       <span>Heatmap</span>
     </button>
+    <button class="m-nav-item" data-tab="JOURNAL" onclick="switchTab('JOURNAL')">
+      <span class="m-icon">🦅</span>
+      <span>Journal (<span id="m-journal-count">0</span>)</span>
+    </button>
     <button class="m-nav-item" data-tab="WATCHLIST" onclick="switchTab('WATCHLIST')">
       <span class="m-icon">⭐</span>
       <span>Watch (<span id="m-nav-watch">0</span>)</span>
@@ -967,8 +1249,1308 @@
     </button>
   </nav>
 
+  
+  <!-- DETAILED SIGNAL LIFECYCLE MODAL -->
+  <div class="modal-backdrop" id="lifecycle-detail-modal">
+    <div class="modal-card" style="max-width:850px; max-height:92vh; overflow-y:auto;">
+      <div class="modal-header" style="position:sticky; top:0; background:var(--bg-surface1); z-index:10; padding-bottom:10px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="tabular font-bold" id="ld-symbol" style="font-size:18px; color:var(--text);">--</span>
+            <span id="ld-signal-badge" class="signal-badge sig-long">--</span>
+            <span id="ld-status-badge">--</span>
+          </div>
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--cyan); margin-top:3px;" id="ld-signal-id">--</div>
+        </div>
+        <button class="modal-close" onclick="closeModal('lifecycle-detail-modal')">&times;</button>
+      </div>
+
+      <div style="padding:14px 0;">
+        <!-- Header Key Strip -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px; margin-bottom:14px;" class="tabular">
+          <div class="kpi-card">
+            <div class="kpi-lbl">Signal Entry Price</div>
+            <div class="kpi-val" id="ld-entry-price">$--</div>
+            <div class="kpi-sub" id="ld-detected">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">Current Price</div>
+            <div class="kpi-val" id="ld-current-price">$--</div>
+            <div class="kpi-sub" id="ld-return">--</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">Signal Age</div>
+            <div class="kpi-val tabular font-bold" id="ld-age">--</div>
+            <div class="kpi-sub">Since detection</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-lbl">Initial Score</div>
+            <div class="kpi-val c-emerald" id="ld-snap-score">--</div>
+            <div class="kpi-sub" id="ld-snap-rvol">RVOL: --</div>
+          </div>
+        </div>
+
+        <!-- Section 1: Standardized Time Checkpoints -->
+        <div style="margin-bottom:16px;">
+          <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:6px;">
+            ⏱️ TIME-BASED DIRECTIONAL PERFORMANCE (15M TO 7D CHECKPOINTS)
+          </div>
+          <div class="cp-grid" id="ld-checkpoints-grid"></div>
+        </div>
+
+        <!-- Section 2: Extremes (MFE & MAE) -->
+        <div style="margin-bottom:16px;">
+          <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:6px;">
+            🎯 EXTREMES (MAXIMUM FAVORABLE & ADVERSE EXCURSIONS)
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;" class="tabular">
+            <div class="kpi-card" style="border-left:3px solid var(--emerald);">
+              <div class="kpi-lbl">MFE (Maximum Favorable Excursion)</div>
+              <div class="kpi-val c-emerald" id="ld-mfe-pct">--%</div>
+              <div class="kpi-sub" id="ld-mfe-price">Peak: $--</div>
+              <div class="c-dark" style="font-size:9px; margin-top:2px;" id="ld-mfe-time">Time: --</div>
+            </div>
+            <div class="kpi-card" style="border-left:3px solid var(--red);">
+              <div class="kpi-lbl">MAE (Maximum Adverse Excursion)</div>
+              <div class="kpi-val c-red" id="ld-mae-pct">--%</div>
+              <div class="kpi-sub" id="ld-mae-price">Trough: $--</div>
+              <div class="c-dark" style="font-size:9px; margin-top:2px;" id="ld-mae-time">Time: --</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-lbl">Post-Signal High / Low</div>
+              <div style="font-size:12px; font-weight:700; margin-top:4px;">
+                High: <span class="c-emerald" id="ld-post-high">$--</span>
+              </div>
+              <div style="font-size:12px; font-weight:700;">
+                Low: <span class="c-red" id="ld-post-low">$--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: What Happened So Far -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--cyan); margin-bottom:8px;">
+            💡 WHAT HAPPENED SO FAR (AUTOMATED NARRATIVE)
+          </div>
+          <div id="ld-summary-bullets"></div>
+        </div>
+
+        <!-- Section 4: Normalized Price Progression Chart -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--text-muted);">
+              📈 NORMALIZED PRICE PATH (SIGNAL = 0.0%)
+            </span>
+            <span class="c-dark" style="font-size:9px; font-family:var(--font-mono);">ELIMINATES LOOK-AHEAD BIAS</span>
+          </div>
+          <div id="ld-chart-container" style="width:100%; min-height:140px;"></div>
+        </div>
+
+        <!-- Section 5: Signal Replay Engine -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--emerald);">
+              ▶ SIGNAL REPLAY (HISTORICAL TIMESTEP SCRUBBER)
+            </span>
+            <span class="tabular c-dark" id="replay-step-progress" style="font-size:10px;">Step 1 of 1</span>
+          </div>
+          <div class="replay-control-bar tabular">
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(0)">⏮ T=0</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayIndex - 1)">◀ Prev</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(LifecycleEngine.replayIndex + 1)">▶ Next</button>
+              <button class="btn btn-sm" onclick="LifecycleEngine.setReplayStep(Infinity)">⏭ Now</button>
+            </div>
+            <div>
+              <span id="replay-step-label" style="font-weight:700; color:var(--text);">T=0 (Detection)</span>:
+              <span id="replay-step-price" style="font-weight:700;">$--</span>
+              (<span id="replay-step-return">0.0%</span>)
+            </div>
+          </div>
+          <div class="c-muted" id="replay-step-desc" style="font-family:var(--font-mono); font-size:11px;">Initial signal trigger.</div>
+        </div>
+
+        <!-- Section 6: Event Timeline -->
+        <div style="margin-bottom:16px;">
+          <div class="c-dark" style="font-family:var(--font-mono); font-size:11px; font-weight:700; margin-bottom:8px;">
+            📜 CHRONOLOGICAL EVENT TIMELINE
+          </div>
+          <div id="ld-timeline-container" style="max-height:220px; overflow-y:auto; padding:4px 0;"></div>
+        </div>
+
+        <!-- Section 7: Post-Mortem Card (if resolved / rejected / expired) -->
+        <div id="ld-postmortem-card" style="display:none; background:rgba(255, 71, 87, 0.08); border:1px solid rgba(255, 71, 87, 0.3); border-radius:6px; padding:12px; margin-bottom:16px;">
+          <div style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--red); margin-bottom:6px;">
+            🦅 SIGNAL POST-MORTEM SUMMARY
+          </div>
+          <div style="font-family:var(--font-mono); font-size:11px; line-height:1.7;">
+            <div>• <strong>Final Lifecycle Status:</strong> <span id="ld-pm-status">--</span></div>
+            <div>• <strong>Reason for Invalidation / Close:</strong> <span id="ld-pm-reason">--</span></div>
+            <div>• <strong>Timestamp:</strong> <span id="ld-pm-time">--</span> (Duration: <span id="ld-pm-duration">--</span>)</div>
+            <div>• <strong>Final Price Change:</strong> <span id="ld-pm-return">--</span></div>
+          </div>
+        </div>
+
+        <!-- Detection Context Card -->
+        <div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:12px; font-family:var(--font-mono); font-size:11px;">
+          <div class="c-dark" style="font-weight:700; margin-bottom:6px;">IMMUTABLE DETECTION SNAPSHOT (T=0)</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px; color:var(--text-muted);">
+            <div>Open Interest: <strong id="ld-snap-oi">--</strong></div>
+            <div>Funding Rate: <strong id="ld-snap-funding">--</strong></div>
+            <div>Trend: <strong id="ld-snap-trend">--</strong></div>
+            <div>Taker Imbalance: <strong id="ld-snap-taker">--</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COHORT ANALYTICS MODAL -->
+  <div class="modal-backdrop" id="lifecycle-analytics-modal">
+    <div class="modal-card" style="max-width:720px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">📊 SIGNAL COHORT PERFORMANCE ANALYTICS</h2>
+          <p class="c-dark" style="font-size:11px;">HISTORICAL DESCRIPTIVE OBSERVATIONS ACROSS SCORE & VOLUME BUCKETS</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('lifecycle-analytics-modal')">&times;</button>
+      </div>
+      <div style="padding:14px 0; font-family:var(--font-mono); font-size:11px;" id="analytics-modal-body">
+        <div class="table-wrap" style="margin-bottom:14px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Cohort Bucket</th>
+                <th>Count</th>
+                <th>Avg 4H %</th>
+                <th>Avg 8H %</th>
+                <th>Avg 1D %</th>
+                <th>Avg MFE %</th>
+                <th>Avg MAE %</th>
+              </tr>
+            </thead>
+            <tbody id="cohort-tbody">
+              <tr><td colspan="7" class="c-dark" style="text-align:center; padding:20px;">Computing cohort metrics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="c-dark" style="font-size:10px; line-height:1.6;">
+          ⚠️ Note: Descriptive historical metrics. Does not constitute guaranteed future trading performance.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIFECYCLE SETTINGS MODAL -->
+  <div class="modal-backdrop" id="lifecycle-settings-modal">
+    <div class="modal-card" style="max-width:540px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono);">⚙️ SIGNAL LIFECYCLE SETTINGS</h2>
+          <p class="c-dark" style="font-size:11px;">RETENTION · SNAPSHOTS · REJECTION THRESHOLDS</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('lifecycle-settings-modal')">&times;</button>
+      </div>
+      <div style="padding:14px 0; font-family:var(--font-mono); font-size:12px;">
+        <div style="margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="lset-enabled" checked />
+            <span>Enable Signal Lifecycle Intelligence Tracking</span>
+          </label>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">SNAPSHOT INTERVAL</label>
+          <select id="lset-interval" class="search-input" style="width:100%;">
+            <option value="5">5 Minutes</option>
+            <option value="15" selected>15 Minutes (Default)</option>
+            <option value="30">30 Minutes</option>
+            <option value="60">1 Hour</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">SIGNAL TIME-TO-LIVE (TTL)</label>
+          <select id="lset-ttl" class="search-input" style="width:100%;">
+            <option value="12">12 Hours</option>
+            <option value="24">24 Hours</option>
+            <option value="48">48 Hours</option>
+            <option value="72" selected>72 Hours (Default)</option>
+            <option value="168">7 Days</option>
+          </select>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">INVALIDATION THRESHOLD (% ADVERSE MOVE)</label>
+          <input type="number" step="0.5" id="lset-invalidation" class="search-input" value="3.0" style="width:100%;" />
+        </div>
+        <div style="margin-bottom:12px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">DEDUPLICATION COOLDOWN (MINUTES)</label>
+          <select id="lset-cooldown" class="search-input" style="width:100%;">
+            <option value="15">15 Minutes</option>
+            <option value="30" selected>30 Minutes (Default)</option>
+            <option value="60">1 Hour</option>
+          </select>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label class="c-dark" style="display:block; font-size:11px; margin-bottom:4px;">DATA RETENTION PERIOD</label>
+          <select id="lset-retention" class="search-input" style="width:100%;">
+            <option value="7">7 Days</option>
+            <option value="30" selected>30 Days</option>
+            <option value="90">90 Days</option>
+            <option value="365">1 Year</option>
+          </select>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px;">
+          <button class="btn btn-sm btn-red" onclick="LifecycleEngine.clearAllSignals()">🗑️ Clear History</button>
+          <button class="btn btn-sm btn-emerald" onclick="saveLifecycleSettings()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- APPLICATION JAVASCRIPT LOGIC -->
   <script>
+    // ═════════════════════════════════════════════════════════════════════════
+// 🦅 EAGLE FLASH — SIGNAL LIFECYCLE INTELLIGENCE ENGINE
+// Production-grade real-time signal tracking, checkpoints, MFE/MAE,
+// event timeline, rejection engine, replay, and descriptive analytics.
+// ═════════════════════════════════════════════════════════════════════════
+
+const LifecycleConfig = {
+  DB_NAME: 'EagleFlash_LifecycleDB',
+  DB_VERSION: 1,
+  STORE_SIGNALS: 'signals',
+  STORE_SETTINGS: 'settings',
+  LS_SIGNALS_KEY: 'eagleFlash:v2:lifecycle:signals',
+  LS_SETTINGS_KEY: 'eagleFlash:v2:lifecycle:settings'
+};
+
+// Checkpoint definition in seconds
+const CHECKPOINTS = [
+  { id: '15M', seconds: 15 * 60 },
+  { id: '30M', seconds: 30 * 60 },
+  { id: '1H',  seconds: 60 * 60 },
+  { id: '2H',  seconds: 2 * 60 * 60 },
+  { id: '4H',  seconds: 4 * 60 * 60 },
+  { id: '8H',  seconds: 8 * 60 * 60 },
+  { id: '12H', seconds: 12 * 60 * 60 },
+  { id: '1D',  seconds: 24 * 60 * 60 },
+  { id: '2D',  seconds: 48 * 60 * 60 },
+  { id: '3D',  seconds: 72 * 60 * 60 },
+  { id: '7D',  seconds: 7 * 24 * 60 * 60 }
+];
+
+const LifecycleEngine = {
+  signals: [],
+  settings: {
+    enabled: true,
+    snapshotIntervalMinutes: 15,
+    signalTTLHours: 72,
+    cooldownMinutes: 30,
+    invalidationPct: 3.0,
+    retentionDays: 30,
+    maxStoredSignals: 500,
+    showLifecycleColumns: true
+  },
+  activeFilter: 'ALL',
+  activeSide: 'ALL',
+  searchQuery: '',
+  sortColumn: 'detectedAt',
+  sortDirection: 'desc',
+  selectedSignalId: null,
+  replayStepIndex: 0,
+  db: null,
+
+  // 1. Initializer & Persistence Layer
+  async init() {
+    await this.initStorage();
+    await this.loadSettings();
+    await this.loadSignals();
+    this.cleanExpiredRetention();
+    this.updateActiveCountBadge();
+  },
+
+  async initStorage() {
+    return new Promise((resolve) => {
+      try {
+        if (!window.indexedDB) {
+          console.warn('IndexedDB not supported, falling back to localStorage');
+          resolve();
+          return;
+        }
+        const req = indexedDB.open(LifecycleConfig.DB_NAME, LifecycleConfig.DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(LifecycleConfig.STORE_SIGNALS)) {
+            const store = db.createObjectStore(LifecycleConfig.STORE_SIGNALS, { keyPath: 'signalId' });
+            store.createIndex('symbol', 'symbol', { unique: false });
+            store.createIndex('detectedAt', 'detectedAt', { unique: false });
+            store.createIndex('status', 'status', { unique: false });
+          }
+          if (!db.objectStoreNames.contains(LifecycleConfig.STORE_SETTINGS)) {
+            db.createObjectStore(LifecycleConfig.STORE_SETTINGS, { keyPath: 'key' });
+          }
+        };
+        req.onsuccess = (e) => {
+          this.db = e.target.result;
+          resolve();
+        };
+        req.onerror = () => {
+          console.warn('IndexedDB error, using localStorage fallback');
+          resolve();
+        };
+      } catch (err) {
+        console.warn('Storage init fallback:', err);
+        resolve();
+      }
+    });
+  },
+
+  async loadSettings() {
+    try {
+      const saved = localStorage.getItem(LifecycleConfig.LS_SETTINGS_KEY);
+      if (saved) {
+        this.settings = { ...this.settings, ...JSON.parse(saved) };
+      }
+    } catch (e) {}
+  },
+
+  async saveSettings() {
+    try {
+      localStorage.setItem(LifecycleConfig.LS_SETTINGS_KEY, JSON.stringify(this.settings));
+      if (this.db) {
+        const tx = this.db.transaction(LifecycleConfig.STORE_SETTINGS, 'readwrite');
+        tx.objectStore(LifecycleConfig.STORE_SETTINGS).put({ key: 'config', ...this.settings });
+      }
+    } catch (e) {}
+  },
+
+  async loadSignals() {
+    if (this.db) {
+      try {
+        const tx = this.db.transaction(LifecycleConfig.STORE_SIGNALS, 'readonly');
+        const store = tx.objectStore(LifecycleConfig.STORE_SIGNALS);
+        const req = store.getAll();
+        req.onsuccess = () => {
+          const loaded = req.result || [];
+          if (loaded.length > 0) {
+            this.signals = loaded;
+          } else {
+            this.loadSignalsFromLocalStorage();
+          }
+        };
+        req.onerror = () => this.loadSignalsFromLocalStorage();
+        return;
+      } catch (e) {
+        this.loadSignalsFromLocalStorage();
+        return;
+      }
+    }
+    this.loadSignalsFromLocalStorage();
+  },
+
+  loadSignalsFromLocalStorage() {
+    try {
+      const saved = localStorage.getItem(LifecycleConfig.LS_SIGNALS_KEY);
+      if (saved) {
+        this.signals = JSON.parse(saved);
+      }
+    } catch (e) {}
+  },
+
+  async persistSignal(signal) {
+    try {
+      // LocalStorage backup
+      const serialized = JSON.stringify(this.signals.slice(0, this.settings.maxStoredSignals));
+      localStorage.setItem(LifecycleConfig.LS_SIGNALS_KEY, serialized);
+
+      if (this.db) {
+        const tx = this.db.transaction(LifecycleConfig.STORE_SIGNALS, 'readwrite');
+        tx.objectStore(LifecycleConfig.STORE_SIGNALS).put(signal);
+      }
+    } catch (e) {}
+  },
+
+  cleanExpiredRetention() {
+    const cutoff = Date.now() - (this.settings.retentionDays * 24 * 60 * 60 * 1000);
+    this.signals = this.signals.filter(s => s.detectedAt >= cutoff);
+  },
+
+  // 2. Signal ID Generation (EGL-YYYYMMDD-SYMBOL-###)
+  generateId(symbol, date = new Date()) {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    const cleanSym = symbol.replace(/USDT$/, '');
+    const todayPrefix = `EGL-${y}${m}${d}-${cleanSym}-`;
+    const todayCount = this.signals.filter(s => s.signalId && s.signalId.startsWith(todayPrefix)).length + 1;
+    const seq = String(todayCount).padStart(3, '0');
+    return `${todayPrefix}${seq}`;
+  },
+
+  // 3. Deduplication Protection
+  isDuplicate(symbol, signalType, now = Date.now()) {
+    const cooldownMs = this.settings.cooldownMinutes * 60 * 1000;
+    return this.signals.some(s => 
+      s.symbol === symbol &&
+      s.signalType === signalType &&
+      ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(s.status) &&
+      (now - s.detectedAt) < cooldownMs
+    );
+  },
+
+  // 4. Record Signal with Immutable Initial Snapshot
+  recordSignal(symData, activeFilters = {}) {
+    if (!this.settings.enabled) return null;
+    const isLong = symData.signal === 'LONG CANDIDATE';
+    const isShort = symData.signal === 'SHORT CANDIDATE';
+    if (!isLong && !isShort) return null;
+
+    const now = Date.now();
+    if (this.isDuplicate(symData.symbol, symData.signal, now)) {
+      return null;
+    }
+
+    const nowDate = new Date(now);
+    const signalId = this.generateId(symData.symbol, nowDate);
+    const signalPrice = symData.lastPrice;
+
+    // IMMUTABLE INITIAL SNAPSHOT — Deep freeze
+    const initialSnapshot = Object.freeze({
+      price: signalPrice,
+      price24hChange: symData.price24hChange,
+      high24h: symData.high24h || signalPrice,
+      low24h: symData.low24h || signalPrice,
+      turnover24h: symData.turnover24h,
+      previous24hVolume: symData.previous24hVolume,
+      volumeChange24h: symData.volumeChange24h,
+      relativeVolume: symData.relativeVolume,
+      volumeZScore: symData.volumeZScore,
+      openInterestValue: symData.openInterestValue,
+      fundingRate: symData.fundingRate,
+      takerImbalance: symData.takerImbalance,
+      rsi: symData.rsi,
+      spreadPct: symData.spreadPct,
+      trend: symData.trend,
+      signalScore: symData.signalScore,
+      signalConfidence: symData.signalConfidence,
+      activeFilters: { ...activeFilters }
+    });
+
+    const checkpoints = {};
+    CHECKPOINTS.forEach(cp => { checkpoints[cp.id] = null; });
+
+    const record = {
+      signalId,
+      symbol: symData.symbol,
+      signalType: symData.signal,
+      detectedAt: now,
+      detectedAtUTC: nowDate.toISOString(),
+      detectedAtLocal: nowDate.toLocaleString(),
+      signalPrice,
+      signalMarkPrice: signalPrice,
+      signalIndexPrice: signalPrice,
+      initialSnapshot,
+      status: 'ACTIVE',
+      currentPrice: signalPrice,
+      postSignalHigh: signalPrice,
+      postSignalHighTimestamp: now,
+      postSignalLow: signalPrice,
+      postSignalLowTimestamp: now,
+      mfePrice: signalPrice,
+      mfePct: 0.0,
+      mfeTimestamp: now,
+      timeToMFE: 0,
+      maePrice: signalPrice,
+      maePct: 0.0,
+      maeTimestamp: now,
+      timeToMAE: 0,
+      checkpoints,
+      warnings: [],
+      rejection: null,
+      timeline: [
+        {
+          timestamp: now,
+          eventType: 'SIGNAL_DETECTED',
+          description: `🦅 Signal Detected: ${symData.signal} at $${signalPrice} (Score ${symData.signalScore}, RVOL ${symData.relativeVolume}x)`,
+          price: signalPrice,
+          metrics: { score: symData.signalScore, rvol: symData.relativeVolume, oi: symData.openInterestValue }
+        }
+      ],
+      snapshots: [
+        {
+          timestamp: now,
+          price: signalPrice,
+          relativeVolume: symData.relativeVolume,
+          openInterestValue: symData.openInterestValue,
+          signalScore: symData.signalScore,
+          takerImbalance: symData.takerImbalance,
+          returnPct: 0.0
+        }
+      ],
+      lastSnapshotTime: now
+    };
+
+    this.signals.unshift(record);
+    if (this.signals.length > this.settings.maxStoredSignals) {
+      this.signals = this.signals.slice(0, this.settings.maxStoredSignals);
+    }
+
+    this.persistSignal(record);
+    this.updateActiveCountBadge();
+    return record;
+  },
+
+  // 5. Directional Return Calculation
+  calculateReturn(signalType, signalPrice, currentPrice) {
+    if (!signalPrice || !currentPrice) return 0;
+    if (signalType.includes('LONG')) {
+      return parseFloat((((currentPrice - signalPrice) / signalPrice) * 100).toFixed(2));
+    } else {
+      // Directional return for short
+      return parseFloat((((signalPrice - currentPrice) / signalPrice) * 100).toFixed(2));
+    }
+  },
+
+  // 6. Real-Time Market Tick Hook
+  onMarketTick(symbol, currentPrice, tickData = {}) {
+    if (!this.settings.enabled) return;
+    const now = Date.now();
+    let hasUpdates = false;
+
+    this.signals.forEach(s => {
+      if (s.symbol !== symbol) return;
+      if (!['ACTIVE', 'CONFIRMED', 'WARNING'].includes(s.status)) return;
+
+      s.currentPrice = currentPrice;
+      const isLong = s.signalType.includes('LONG');
+      const dirReturn = this.calculateReturn(s.signalType, s.signalPrice, currentPrice);
+
+      // Post-signal High / Low
+      if (!s.postSignalHigh || currentPrice > s.postSignalHigh) {
+        s.postSignalHigh = currentPrice;
+        s.postSignalHighTimestamp = now;
+      }
+      if (!s.postSignalLow || currentPrice < s.postSignalLow) {
+        s.postSignalLow = currentPrice;
+        s.postSignalLowTimestamp = now;
+      }
+
+      // MFE (Maximum Favorable Excursion)
+      if (s.mfePct === null || dirReturn > s.mfePct) {
+        s.mfePct = dirReturn;
+        s.mfePrice = currentPrice;
+        s.mfeTimestamp = now;
+        s.timeToMFE = now - s.detectedAt;
+        if (dirReturn >= 3.0 && s.status === 'ACTIVE') {
+          s.status = 'CONFIRMED';
+          s.timeline.push({
+            timestamp: now,
+            eventType: 'BREAKOUT_CONFIRMED',
+            description: `🔥 Move extended to +${dirReturn}% (MFE New Peak: $${currentPrice})`,
+            price: currentPrice,
+            metrics: { mfePct: dirReturn }
+          });
+        }
+      }
+
+      // MAE (Maximum Adverse Excursion)
+      if (s.maePct === null || dirReturn < s.maePct) {
+        s.maePct = dirReturn;
+        s.maePrice = currentPrice;
+        s.maeTimestamp = now;
+        s.timeToMAE = now - s.detectedAt;
+      }
+
+      // Checkpoints
+      const elapsedSec = (now - s.detectedAt) / 1000;
+      CHECKPOINTS.forEach(cp => {
+        if (elapsedSec >= cp.seconds && s.checkpoints[cp.id] === null) {
+          s.checkpoints[cp.id] = dirReturn;
+          s.timeline.push({
+            timestamp: now,
+            eventType: 'CHECKPOINT_REACHED',
+            description: `⏱️ Checkpoint ${cp.id}: ${dirReturn >= 0 ? '+' : ''}${dirReturn}% (Price $${currentPrice})`,
+            price: currentPrice,
+            metrics: { checkpoint: cp.id, returnPct: dirReturn }
+          });
+        }
+      });
+
+      // Warnings
+      this.evaluateWarnings(s, currentPrice, tickData, now);
+
+      // Invalidation & Rejection
+      this.evaluateRejection(s, currentPrice, dirReturn, now);
+
+      // Periodic Snapshots
+      const snapshotMs = this.settings.snapshotIntervalMinutes * 60 * 1000;
+      if (now - (s.lastSnapshotTime || s.detectedAt) >= snapshotMs) {
+        s.snapshots.push({
+          timestamp: now,
+          price: currentPrice,
+          relativeVolume: tickData.relativeVolume || s.initialSnapshot.relativeVolume,
+          openInterestValue: tickData.openInterestValue || s.initialSnapshot.openInterestValue,
+          signalScore: tickData.signalScore || s.initialSnapshot.signalScore,
+          takerImbalance: tickData.takerImbalance || 0,
+          returnPct: dirReturn
+        });
+        s.lastSnapshotTime = now;
+      }
+
+      this.persistSignal(s);
+      hasUpdates = true;
+    });
+
+    if (hasUpdates && document.getElementById('view-JOURNAL')?.classList.contains('active')) {
+      this.renderJournalTable();
+    }
+  },
+
+  // 7. Warning Detection Logic
+  evaluateWarnings(signal, currentPrice, tickData, now) {
+    const isLong = signal.signalType.includes('LONG');
+    const warnings = [];
+
+    // Taker flow weakening
+    if (tickData.takerImbalance != null) {
+      if (isLong && tickData.takerImbalance < -18) {
+        warnings.push({ reason: 'Aggressive taker selling pressure detected', trigger: 'TAKER_SELL' });
+      } else if (!isLong && tickData.takerImbalance > 18) {
+        warnings.push({ reason: 'Aggressive taker buying pressure against position', trigger: 'TAKER_BUY' });
+      }
+    }
+
+    // Volume fade
+    if (tickData.relativeVolume != null && tickData.relativeVolume < 0.95 && signal.initialSnapshot.relativeVolume >= 2.0) {
+      warnings.push({ reason: 'Volume expansion lost momentum (< 1.0x baseline)', trigger: 'VOL_FADE' });
+    }
+
+    // Adverse move warning (halfway to invalidation)
+    const currentReturn = this.calculateReturn(signal.signalType, signal.signalPrice, currentPrice);
+    if (currentReturn <= -(this.settings.invalidationPct * 0.5) && signal.status !== 'WARNING') {
+      warnings.push({ reason: `Adverse price movement (${currentReturn}%) nearing stop threshold`, trigger: 'ADVERSE_PRICE' });
+    }
+
+    if (warnings.length > 0) {
+      const lastWarn = signal.warnings[signal.warnings.length - 1];
+      const timeSinceLast = lastWarn ? now - lastWarn.timestamp : Infinity;
+      if (timeSinceLast > 15 * 60 * 1000) { // Cooldown between warning events
+        const w = warnings[0];
+        signal.warnings.push({
+          timestamp: now,
+          reason: w.reason,
+          price: currentPrice,
+          metrics: { trigger: w.trigger, price: currentPrice }
+        });
+        signal.status = 'WARNING';
+        signal.timeline.push({
+          timestamp: now,
+          eventType: 'WARNING_TRIGGERED',
+          description: `⚠️ WARNING: ${w.reason}`,
+          price: currentPrice,
+          metrics: { trigger: w.trigger }
+        });
+      }
+    }
+  },
+
+  // 8. Rejection & Post-Mortem Engine
+  evaluateRejection(signal, currentPrice, dirReturn, now) {
+    const elapsedHours = (now - signal.detectedAt) / (3600 * 1000);
+
+    // Invalidation / Rejection check
+    if (dirReturn <= -this.settings.invalidationPct) {
+      signal.status = 'REJECTED';
+      signal.rejection = {
+        rejectionTimestamp: now,
+        rejectionPrice: currentPrice,
+        rejectionReason: `Adverse move (${dirReturn}%) breached invalidation limit (-${this.settings.invalidationPct}%)`,
+        rejectionTrigger: 'PRICE_INVALIDATION',
+        timeToRejection: now - signal.detectedAt,
+        priceChangeAtRejection: dirReturn,
+        scoreAtRejection: signal.initialSnapshot.signalScore
+      };
+      signal.timeline.push({
+        timestamp: now,
+        eventType: 'SIGNAL_REJECTED',
+        description: `🔴 REJECTED: Invalidation breached at $${currentPrice} (${dirReturn}%)`,
+        price: currentPrice,
+        metrics: { dirReturn }
+      });
+      this.updateActiveCountBadge();
+      return;
+    }
+
+    // TTL Expiration check
+    if (elapsedHours >= this.settings.signalTTLHours) {
+      signal.status = 'EXPIRED';
+      signal.rejection = {
+        rejectionTimestamp: now,
+        rejectionPrice: currentPrice,
+        rejectionReason: `Signal TTL (${this.settings.signalTTLHours}h) expired`,
+        rejectionTrigger: 'TTL_EXPIRED',
+        timeToRejection: now - signal.detectedAt,
+        priceChangeAtRejection: dirReturn,
+        scoreAtRejection: signal.initialSnapshot.signalScore
+      };
+      signal.timeline.push({
+        timestamp: now,
+        eventType: 'SIGNAL_EXPIRED',
+        description: `⚪ EXPIRED: Lifespan reached ${this.settings.signalTTLHours}h (Final Return: ${dirReturn >= 0 ? '+' : ''}${dirReturn}%)`,
+        price: currentPrice,
+        metrics: { dirReturn }
+      });
+      this.updateActiveCountBadge();
+    }
+  },
+
+  // 9. Formatters & Helpers
+  formatAge(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor((totalSec % 86400) / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  },
+
+  formatPct(val) {
+    if (val === null || val === undefined) return '<span class="c-dark">PENDING</span>';
+    const isPos = val >= 0;
+    return `<span class="${isPos ? 'c-emerald' : 'c-red'} font-bold tabular">${isPos ? '+' : ''}${val.toFixed(2)}%</span>`;
+  },
+
+  getStatusBadge(status) {
+    switch (status) {
+      case 'ACTIVE': return '<span class="status-badge-active">🟢 ACTIVE</span>';
+      case 'CONFIRMED': return '<span class="status-badge-confirmed">🔥 CONFIRMED</span>';
+      case 'WARNING': return '<span class="status-badge-warning">⚠️ WARNING</span>';
+      case 'REJECTED': return '<span class="status-badge-rejected">🔴 REJECTED</span>';
+      case 'EXPIRED': return '<span class="status-badge-expired">⚪ EXPIRED</span>';
+      default: return `<span class="c-dark">${status}</span>`;
+    }
+  },
+
+  updateActiveCountBadge() {
+    const activeCount = this.signals.filter(s => ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(s.status)).length;
+    const badge1 = document.getElementById('journal-count');
+    const badge2 = document.getElementById('m-journal-count');
+    if (badge1) badge1.innerText = activeCount;
+    if (badge2) badge2.innerText = activeCount;
+  },
+
+  // 10. "What Happened So Far" Summary Generator
+  generateWhatHappenedSoFar(s) {
+    const isLong = s.signalType.includes('LONG');
+    const dirReturn = this.calculateReturn(s.signalType, s.signalPrice, s.currentPrice);
+    const bullets = [];
+
+    // 1. Price trajectory
+    if (dirReturn >= 2.0) {
+      bullets.push({ icon: '✓', color: 'var(--emerald)', text: `Price expanded favorably by +${dirReturn}% from initial detection.` });
+    } else if (dirReturn <= -1.5) {
+      bullets.push({ icon: '⚠', color: 'var(--amber)', text: `Price contracted by ${dirReturn}% against original signal entry.` });
+    } else {
+      bullets.push({ icon: '•', color: 'var(--text-muted)', text: `Price hovering near detection level (${dirReturn >= 0 ? '+' : ''}${dirReturn}%).` });
+    }
+
+    // 2. Extremes
+    bullets.push({ icon: '🚀', color: 'var(--cyan)', text: `MFE reached peak excursion of +${s.mfePct}% at $${s.mfePrice} (${this.formatAge(s.timeToMFE)} post-signal).` });
+    if (s.maePct <= -1.0) {
+      bullets.push({ icon: '📉', color: 'var(--amber)', text: `MAE saw adverse drawdown of ${s.maePct}% at $${s.maePrice}.` });
+    }
+
+    // 3. Warnings
+    if (s.warnings.length > 0) {
+      const latestWarn = s.warnings[s.warnings.length - 1];
+      bullets.push({ icon: '⚠️', color: 'var(--red)', text: `Warning triggered: ${latestWarn.reason}.` });
+    }
+
+    // 4. Status summary
+    if (s.status === 'REJECTED') {
+      bullets.push({ icon: '✕', color: 'var(--red)', text: `Signal was invalidated: ${s.rejection?.rejectionReason}.` });
+    } else if (s.status === 'CONFIRMED') {
+      bullets.push({ icon: '🔥', color: 'var(--emerald)', text: `Breakout confirmed with sustained multi-checkpoint positive returns.` });
+    }
+
+    return bullets;
+  },
+
+  // 11. Render Signal Journal Tab
+  renderJournalTab() {
+    this.renderKPIs();
+    this.renderJournalTable();
+  },
+
+  renderKPIs() {
+    const total = this.signals.length;
+    const active = this.signals.filter(s => ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(s.status)).length;
+    const confirmed = this.signals.filter(s => s.status === 'CONFIRMED').length;
+    const rejected = this.signals.filter(s => s.status === 'REJECTED').length;
+
+    // Averages across signals with data
+    const getAvg = (extractor) => {
+      const vals = this.signals.map(extractor).filter(v => v !== null && !isNaN(v));
+      if (vals.length === 0) return null;
+      return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2);
+    };
+
+    const avg4h = getAvg(s => s.checkpoints['4H']);
+    const avg8h = getAvg(s => s.checkpoints['8H']);
+    const avg1d = getAvg(s => s.checkpoints['1D']);
+    const avgMFE = getAvg(s => s.mfePct);
+    const avgMAE = getAvg(s => s.maePct);
+
+    document.getElementById('jkpi-total').innerText = total;
+    document.getElementById('jkpi-active').innerText = active;
+    document.getElementById('jkpi-confirmed').innerText = confirmed;
+    document.getElementById('jkpi-rejected').innerText = rejected;
+    document.getElementById('jkpi-avg4h').innerHTML = avg4h !== null ? this.formatPct(Number(avg4h)) : 'PENDING';
+    document.getElementById('jkpi-avg8h').innerHTML = avg8h !== null ? this.formatPct(Number(avg8h)) : 'PENDING';
+    document.getElementById('jkpi-avg1d').innerHTML = avg1d !== null ? this.formatPct(Number(avg1d)) : 'PENDING';
+    document.getElementById('jkpi-avgmfe').innerHTML = avgMFE !== null ? `<span class="c-emerald font-bold">+${avgMFE}%</span>` : 'PENDING';
+    document.getElementById('jkpi-avgmae').innerHTML = avgMAE !== null ? `<span class="c-red font-bold">${avgMAE}%</span>` : 'PENDING';
+  },
+
+  renderJournalTable() {
+    const tbody = document.getElementById('journal-tbody');
+    if (!tbody) return;
+
+    let list = [...this.signals];
+
+    // Filters
+    if (this.activeFilter !== 'ALL') {
+      list = list.filter(s => s.status === this.activeFilter);
+    }
+    if (this.activeSide !== 'ALL') {
+      list = list.filter(s => s.signalType.includes(this.activeSide));
+    }
+    if (this.searchQuery) {
+      const q = this.searchQuery.toLowerCase();
+      list = list.filter(s => s.symbol.toLowerCase().includes(q) || s.signalId.toLowerCase().includes(q));
+    }
+
+    if (list.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="16" class="c-dark" style="text-align:center; padding:40px; font-family:var(--font-mono);">
+        No signals in journal matching filter criteria.<br>Qualifying anomaly candidates (Score ≥ 72, RVOL ≥ 1.5x) are automatically captured here.
+      </td></tr>`;
+      return;
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      let valA = a[this.sortColumn];
+      let valB = b[this.sortColumn];
+      if (valA === undefined) valA = 0;
+      if (valB === undefined) valB = 0;
+      if (typeof valA === 'string') {
+        return this.sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      }
+      return this.sortDirection === 'asc' ? valA - valB : valB - valA;
+    });
+
+    let html = '';
+    const now = Date.now();
+
+    list.forEach((s, idx) => {
+      const age = this.formatAge(now - s.detectedAt);
+      const isLong = s.signalType.includes('LONG');
+      const sigBadge = `<span class="signal-badge ${isLong ? 'sig-long' : 'sig-short'}">${s.signalType}</span>`;
+      const statusBadge = this.getStatusBadge(s.status);
+      const mfeFormatted = s.mfePct !== null ? `<span class="c-emerald font-bold tabular">+${s.mfePct.toFixed(2)}%</span>` : '<span class="c-dark">—</span>';
+      const maeFormatted = s.maePct !== null ? `<span class="c-red font-bold tabular">${s.maePct.toFixed(2)}%</span>` : '<span class="c-dark">—</span>';
+
+      html += `
+        <tr onclick="LifecycleEngine.openDetailModal('${s.signalId}')" style="cursor:pointer;">
+          <td class="tabular c-dark">${idx + 1}</td>
+          <td class="tabular font-bold" style="color:var(--cyan); font-size:11px;">${s.signalId}</td>
+          <td class="tabular font-bold" style="color:var(--text);">${s.symbol}</td>
+          <td>${sigBadge}</td>
+          <td class="tabular c-muted" style="font-size:11px;">${s.detectedAtLocal.slice(11)}</td>
+          <td class="tabular font-bold">${age}</td>
+          <td class="tabular font-bold">$${s.signalPrice >= 1 ? s.signalPrice.toFixed(2) : s.signalPrice.toFixed(4)}</td>
+          <td class="tabular">$${s.currentPrice >= 1 ? s.currentPrice.toFixed(2) : s.currentPrice.toFixed(4)}</td>
+          <td>${this.formatPct(s.checkpoints['4H'])}</td>
+          <td>${this.formatPct(s.checkpoints['8H'])}</td>
+          <td>${this.formatPct(s.checkpoints['1D'])}</td>
+          <td>${mfeFormatted}</td>
+          <td>${maeFormatted}</td>
+          <td>${statusBadge}</td>
+          <td class="c-muted" style="font-size:10px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${s.rejection ? s.rejection.rejectionReason : s.warnings.length > 0 ? s.warnings[s.warnings.length - 1].reason : '—'}
+          </td>
+          <td class="tabular font-bold" style="color:var(--emerald);">${s.initialSnapshot.signalScore}</td>
+          <td>
+            <button class="btn btn-sm" onclick="event.stopPropagation(); LifecycleEngine.openDetailModal('${s.signalId}')">Inspect ↗</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+  },
+
+  // 12. Open Detailed Lifecycle Modal
+  openDetailModal(signalId) {
+    const s = this.signals.find(x => x.signalId === signalId);
+    if (!s) return;
+    this.selectedSignalId = signalId;
+    this.replayStepIndex = 0;
+
+    const isLong = s.signalType.includes('LONG');
+    const dirReturn = this.calculateReturn(s.signalType, s.signalPrice, s.currentPrice);
+    const returnColor = dirReturn >= 0 ? 'var(--emerald)' : 'var(--red)';
+
+    document.getElementById('ld-symbol').innerText = s.symbol;
+    document.getElementById('ld-signal-id').innerText = s.signalId;
+    document.getElementById('ld-signal-badge').className = `signal-badge ${isLong ? 'sig-long' : 'sig-short'}`;
+    document.getElementById('ld-signal-badge').innerText = s.signalType;
+    document.getElementById('ld-status-badge').innerHTML = this.getStatusBadge(s.status);
+    document.getElementById('ld-detected').innerText = `${s.detectedAtLocal} (${s.detectedAtUTC.slice(11, 19)} UTC)`;
+    document.getElementById('ld-age').innerText = this.formatAge(Date.now() - s.detectedAt);
+    document.getElementById('ld-entry-price').innerText = '$' + s.signalPrice;
+    document.getElementById('ld-current-price').innerText = '$' + s.currentPrice;
+    document.getElementById('ld-return').innerHTML = `<span style="color:${returnColor}; font-weight:700;">${dirReturn >= 0 ? '+' : ''}${dirReturn}%</span>`;
+
+    // 1. Time Checkpoints Grid
+    const cpContainer = document.getElementById('ld-checkpoints-grid');
+    let cpHtml = '';
+    CHECKPOINTS.forEach(cp => {
+      const val = s.checkpoints[cp.id];
+      const isPending = val === null;
+      cpHtml += `
+        <div class="cp-card ${isPending ? 'cp-pending' : ''}">
+          <div class="cp-label">${cp.id}</div>
+          <div class="cp-value tabular">${isPending ? '<span class="c-dark">PENDING</span>' : (val >= 0 ? '+' : '') + val.toFixed(2) + '%'}</div>
+        </div>
+      `;
+    });
+    cpContainer.innerHTML = cpHtml;
+
+    // 2. Extremes (MFE / MAE)
+    document.getElementById('ld-mfe-pct').innerText = (s.mfePct >= 0 ? '+' : '') + s.mfePct.toFixed(2) + '%';
+    document.getElementById('ld-mfe-price').innerText = '$' + s.mfePrice;
+    document.getElementById('ld-mfe-time').innerText = `Time to peak: ${this.formatAge(s.timeToMFE)}`;
+
+    document.getElementById('ld-mae-pct').innerText = (s.maePct || 0).toFixed(2) + '%';
+    document.getElementById('ld-mae-price').innerText = '$' + (s.maePrice || s.signalPrice);
+    document.getElementById('ld-mae-time').innerText = `Time to adverse: ${this.formatAge(s.timeToMAE || 0)}`;
+
+    document.getElementById('ld-post-high').innerText = '$' + (s.postSignalHigh || s.signalPrice);
+    document.getElementById('ld-post-low').innerText = '$' + (s.postSignalLow || s.signalPrice);
+
+    // 3. What Happened So Far Summary
+    const summaryContainer = document.getElementById('ld-summary-bullets');
+    const bullets = this.generateWhatHappenedSoFar(s);
+    summaryContainer.innerHTML = bullets.map(b => `
+      <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; font-size:12px;">
+        <span style="color:${b.color}; font-weight:700;">${b.icon}</span>
+        <span style="color:var(--text);">${b.text}</span>
+      </div>
+    `).join('');
+
+    // 4. Event Timeline
+    const timelineContainer = document.getElementById('ld-timeline-container');
+    timelineContainer.innerHTML = s.timeline.map((ev, i) => `
+      <div class="timeline-item">
+        <div class="timeline-dot ${ev.eventType.includes('REJECT') ? 'dot-red' : ev.eventType.includes('BREAKOUT') || ev.eventType.includes('DETECT') ? 'dot-green' : 'dot-blue'}"></div>
+        <div class="timeline-content">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:12px; color:var(--text);">${ev.eventType.replace(/_/g, ' ')}</strong>
+            <span class="tabular c-dark" style="font-size:10px;">${new Date(ev.timestamp).toLocaleTimeString()}</span>
+          </div>
+          <div class="c-muted" style="font-size:11px; margin-top:2px;">${ev.description}</div>
+        </div>
+      </div>
+    `).join('');
+
+    // 5. Initial Snapshot & Current State
+    document.getElementById('ld-snap-score').innerText = s.initialSnapshot.signalScore + ' / 100';
+    document.getElementById('ld-snap-rvol').innerText = s.initialSnapshot.relativeVolume + 'x';
+    document.getElementById('ld-snap-oi').innerText = '$' + (s.initialSnapshot.openInterestValue / 1e6).toFixed(1) + 'M';
+    document.getElementById('ld-snap-funding').innerText = (s.initialSnapshot.fundingRate * 100).toFixed(4) + '%';
+    document.getElementById('ld-snap-trend').innerText = s.initialSnapshot.trend;
+    document.getElementById('ld-snap-taker').innerText = (s.initialSnapshot.takerImbalance >= 0 ? '+' : '') + s.initialSnapshot.takerImbalance.toFixed(1) + '%';
+
+    // 6. Post-Mortem Card (if terminated)
+    const pmCard = document.getElementById('ld-postmortem-card');
+    if (['REJECTED', 'EXPIRED', 'RESOLVED', 'FAILED'].includes(s.status) && s.rejection) {
+      pmCard.style.display = 'block';
+      document.getElementById('ld-pm-status').innerText = s.status;
+      document.getElementById('ld-pm-reason').innerText = s.rejection.rejectionReason;
+      document.getElementById('ld-pm-time').innerText = new Date(s.rejection.rejectionTimestamp).toLocaleString();
+      document.getElementById('ld-pm-duration').innerText = this.formatAge(s.rejection.timeToRejection);
+      document.getElementById('ld-pm-return').innerText = (s.rejection.priceChangeAtRejection >= 0 ? '+' : '') + s.rejection.priceChangeAtRejection.toFixed(2) + '%';
+    } else {
+      pmCard.style.display = 'none';
+    }
+
+    // 7. Render Normalized Price Chart & Setup Replay
+    this.renderNormalizedChart(s);
+    this.setupReplay(s);
+
+    // Open Modal
+    document.getElementById('lifecycle-detail-modal').classList.add('open');
+  },
+
+  // 13. Normalized Price Chart (0% at signal entry)
+  renderNormalizedChart(signal) {
+    const container = document.getElementById('ld-chart-container');
+    if (!container) return;
+
+    // Use checkpoints + snapshots
+    const points = [{ label: 'T=0', returnPct: 0.0 }];
+    CHECKPOINTS.forEach(cp => {
+      if (signal.checkpoints[cp.id] !== null) {
+        points.push({ label: cp.id, returnPct: signal.checkpoints[cp.id] });
+      }
+    });
+
+    // Simple high-performance SVG line chart
+    const width = container.clientWidth || 500;
+    const height = 140;
+    const pad = 25;
+
+    const minPct = Math.min(-2, ...points.map(p => p.returnPct), signal.maePct || 0);
+    const maxPct = Math.max(3, ...points.map(p => p.returnPct), signal.mfePct || 0);
+    const range = (maxPct - minPct) || 1;
+
+    const getX = (i) => pad + (i / Math.max(1, points.length - 1)) * (width - 2 * pad);
+    const getY = (pct) => height - pad - ((pct - minPct) / range) * (height - 2 * pad);
+    const zeroY = getY(0);
+
+    const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(p.returnPct)}`).join(' ');
+
+    container.innerHTML = `
+      <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}">
+        <!-- Zero baseline -->
+        <line x1="${pad}" y1="${zeroY}" x2="${width - pad}" y2="${zeroY}" stroke="#2A3A56" stroke-dasharray="4" />
+        <text x="${width - pad + 2}" y="${zeroY + 3}" fill="#64748B" font-size="9" font-family="monospace">0%</text>
+
+        <!-- Price curve -->
+        <path d="${pathD}" fill="none" stroke="${signal.signalType.includes('LONG') ? '#00E599' : '#FF4757'}" stroke-width="2.5" />
+
+        <!-- Data points -->
+        ${points.map((p, i) => `
+          <circle cx="${getX(i)}" cy="${getY(p.returnPct)}" r="4" fill="${p.returnPct >= 0 ? '#00E599' : '#FF4757'}" />
+          <text x="${getX(i)}" y="${getY(p.returnPct) - 7}" fill="#F4F7FC" font-size="9" font-family="monospace" text-anchor="middle">
+            ${p.returnPct >= 0 ? '+' : ''}${p.returnPct}%
+          </text>
+          <text x="${getX(i)}" y="${height - 5}" fill="#94A3B8" font-size="9" font-family="monospace" text-anchor="middle">
+            ${p.label}
+          </text>
+        `).join('')}
+      </svg>
+    `;
+  },
+
+  // 14. Interactive Signal Replay (Eliminating Hindsight Bias)
+  setupReplay(signal) {
+    const replayTimeline = [{
+      timeLabel: 'T=0 (Detection)',
+      price: signal.signalPrice,
+      returnPct: 0.0,
+      description: 'Initial signal trigger. No future data available.'
+    }];
+
+    CHECKPOINTS.forEach(cp => {
+      if (signal.checkpoints[cp.id] !== null) {
+        replayTimeline.push({
+          timeLabel: cp.id,
+          price: (signal.signalPrice * (1 + signal.checkpoints[cp.id] / 100)).toFixed(4),
+          returnPct: signal.checkpoints[cp.id],
+          description: `Progressive checkpoint ${cp.id} reached.`
+        });
+      }
+    });
+
+    this.replayTimeline = replayTimeline;
+    this.replayIndex = 0;
+    this.renderReplayStep();
+  },
+
+  setReplayStep(idx) {
+    if (!this.replayTimeline) return;
+    this.replayIndex = Math.max(0, Math.min(idx, this.replayTimeline.length - 1));
+    this.renderReplayStep();
+  },
+
+  renderReplayStep() {
+    const step = this.replayTimeline[this.replayIndex];
+    if (!step) return;
+
+    document.getElementById('replay-step-label').innerText = step.timeLabel;
+    document.getElementById('replay-step-price').innerText = '$' + step.price;
+    document.getElementById('replay-step-return').innerHTML = `<span style="color:${step.returnPct >= 0 ? 'var(--emerald)' : 'var(--red)'}; font-weight:700;">${step.returnPct >= 0 ? '+' : ''}${step.returnPct}%</span>`;
+    document.getElementById('replay-step-desc').innerText = step.description;
+    document.getElementById('replay-step-progress').innerText = `Step ${this.replayIndex + 1} of ${this.replayTimeline.length}`;
+  },
+
+  // 15. Export Capabilities
+  exportJournalCSV() {
+    if (this.signals.length === 0) {
+      alert('No signals to export.');
+      return;
+    }
+    const headers = [
+      'Signal ID', 'Symbol', 'Signal Type', 'Detected (UTC)', 'Signal Price',
+      'Current Price', '15M %', '30M %', '1H %', '2H %', '4H %', '8H %', '12H %', '1D %',
+      'MFE %', 'MFE Price', 'MAE %', 'MAE Price', 'Status', 'Rejection Reason', 'Eagle Score'
+    ];
+
+    const rows = this.signals.map(s => [
+      s.signalId, s.symbol, s.signalType, s.detectedAtUTC, s.signalPrice,
+      s.currentPrice,
+      s.checkpoints['15M'] ?? 'PENDING',
+      s.checkpoints['30M'] ?? 'PENDING',
+      s.checkpoints['1H'] ?? 'PENDING',
+      s.checkpoints['2H'] ?? 'PENDING',
+      s.checkpoints['4H'] ?? 'PENDING',
+      s.checkpoints['8H'] ?? 'PENDING',
+      s.checkpoints['12H'] ?? 'PENDING',
+      s.checkpoints['1D'] ?? 'PENDING',
+      s.mfePct ?? '—', s.mfePrice ?? '—',
+      s.maePct ?? '—', s.maePrice ?? '—',
+      s.status, s.rejection ? s.rejection.rejectionReason : '—',
+      s.initialSnapshot.signalScore
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `eagle_flash_signal_journal_${Date.now()}.csv`;
+    a.click();
+  },
+
+  exportSignalsJSON() {
+    const jsonStr = JSON.stringify(this.signals, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `eagle_flash_signals_${Date.now()}.json`;
+    a.click();
+  },
+
+  clearAllSignals() {
+    if (confirm('🚨 Are you sure you want to permanently clear all signal history records? This cannot be undone.')) {
+      this.signals = [];
+      localStorage.removeItem(LifecycleConfig.LS_SIGNALS_KEY);
+      if (this.db) {
+        const tx = this.db.transaction(LifecycleConfig.STORE_SIGNALS, 'readwrite');
+        tx.objectStore(LifecycleConfig.STORE_SIGNALS).clear();
+      }
+      this.updateActiveCountBadge();
+      this.renderJournalTable();
+      alert('Signal history cleared.');
+    }
+  }
+};
+
+
+
+    // ═══════════════════════════════════════════════════════
+    // GLUE & HOOKS FOR SIGNAL LIFECYCLE INTELLIGENCE
+    // ═══════════════════════════════════════════════════════
+
+    function toggleLifecycleColumns() {
+      LifecycleEngine.settings.showLifecycleColumns = !LifecycleEngine.settings.showLifecycleColumns;
+      LifecycleEngine.saveSettings();
+      const lbl = document.getElementById('lbl-lifecycle-toggle');
+      if (lbl) lbl.innerText = LifecycleEngine.settings.showLifecycleColumns ? 'ON' : 'OFF';
+      renderScannerTable();
+    }
+
+    function setJournalFilter(filter, btn) {
+      LifecycleEngine.activeFilter = filter;
+      document.querySelectorAll('#view-JOURNAL .filter-bar .presets-group:first-child .preset-pill').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      LifecycleEngine.renderJournalTable();
+    }
+
+    function setJournalSide(side, btn) {
+      LifecycleEngine.activeSide = side;
+      document.querySelectorAll('#view-JOURNAL .filter-bar .presets-group:nth-child(2) .preset-pill').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      LifecycleEngine.renderJournalTable();
+    }
+
+    function handleJournalSearch(q) {
+      LifecycleEngine.searchQuery = q.trim();
+      LifecycleEngine.renderJournalTable();
+    }
+
+    function sortJournal(col) {
+      if (LifecycleEngine.sortColumn === col) {
+        LifecycleEngine.sortDirection = LifecycleEngine.sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        LifecycleEngine.sortColumn = col;
+        LifecycleEngine.sortDirection = 'desc';
+      }
+      LifecycleEngine.renderJournalTable();
+    }
+
+    function saveLifecycleSettings() {
+      LifecycleEngine.settings.enabled = document.getElementById('lset-enabled').checked;
+      LifecycleEngine.settings.snapshotIntervalMinutes = parseInt(document.getElementById('lset-interval').value) || 15;
+      LifecycleEngine.settings.signalTTLHours = parseInt(document.getElementById('lset-ttl').value) || 72;
+      LifecycleEngine.settings.invalidationPct = parseFloat(document.getElementById('lset-invalidation').value) || 3.0;
+      LifecycleEngine.settings.cooldownMinutes = parseInt(document.getElementById('lset-cooldown').value) || 30;
+      LifecycleEngine.settings.retentionDays = parseInt(document.getElementById('lset-retention').value) || 30;
+      LifecycleEngine.saveSettings();
+      closeModal('lifecycle-settings-modal');
+      alert('Lifecycle settings saved.');
+    }
+
+    function renderCohortAnalytics() {
+      const tbody = document.getElementById('cohort-tbody');
+      if (!tbody) return;
+
+      const cohorts = [
+        { label: 'Eagle Score 80–100 (High Conviction)', filter: s => s.initialSnapshot.signalScore >= 80 },
+        { label: 'Eagle Score 72–79 (Candidate)', filter: s => s.initialSnapshot.signalScore >= 72 && s.initialSnapshot.signalScore < 80 },
+        { label: 'RVOL ≥ 2.5x (Volume Explosion)', filter: s => s.initialSnapshot.relativeVolume >= 2.5 },
+        { label: 'LONG Candidates', filter: s => s.signalType.includes('LONG') },
+        { label: 'SHORT Candidates', filter: s => s.signalType.includes('SHORT') }
+      ];
+
+      let html = '';
+      cohorts.forEach(c => {
+        const matches = LifecycleEngine.signals.filter(c.filter);
+        const count = matches.length;
+        if (count === 0) {
+          html += '<tr><td>' + c.label + '</td><td class="tabular">0</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td></tr>';
+          return;
+        }
+
+        const getAvg = extractor => {
+          const vals = matches.map(extractor).filter(v => v !== null && !isNaN(v));
+          return vals.length > 0 ? (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : null;
+        };
+
+        const a4h = getAvg(s => s.checkpoints['4H']);
+        const a8h = getAvg(s => s.checkpoints['8H']);
+        const a1d = getAvg(s => s.checkpoints['1D']);
+        const aMFE = getAvg(s => s.mfePct);
+        const aMAE = getAvg(s => s.maePct);
+
+        html += '<tr>' +
+          '<td><strong>' + c.label + '</strong></td>' +
+          '<td class="tabular font-bold">' + count + '</td>' +
+          '<td class="tabular">' + (a4h !== null ? (a4h >= 0 ? '+' : '') + a4h + '%' : 'PENDING') + '</td>' +
+          '<td class="tabular">' + (a8h !== null ? (a8h >= 0 ? '+' : '') + a8h + '%' : 'PENDING') + '</td>' +
+          '<td class="tabular">' + (a1d !== null ? (a1d >= 0 ? '+' : '') + a1d + '%' : 'PENDING') + '</td>' +
+          '<td class="tabular c-emerald">' + (aMFE !== null ? '+' + aMFE + '%' : 'PENDING') + '</td>' +
+          '<td class="tabular c-red">' + (aMAE !== null ? aMAE + '%' : 'PENDING') + '</td>' +
+          '</tr>';
+      });
+
+      tbody.innerHTML = html;
+    }
+
+
     // State Store
     const State = {
       symbols: new Map(), // symbol -> data object
@@ -1017,6 +2599,7 @@
     // Bootstrap Pipeline
     async function bootstrap() {
       loadStorage();
+      await LifecycleEngine.init();
       updateSplash(1, 'Loading Bybit linear markets...');
 
       try {
@@ -1215,6 +2798,7 @@
                 if (d.fundingRate) s.fundingRate = parseFloat(d.fundingRate);
                 s.lastUpdated = Date.now();
                 updateLiveTickerRow(s);
+                LifecycleEngine.onMarketTick(s.symbol, s.lastPrice, s);
               }
             }
           } catch(e) {}
@@ -1359,7 +2943,16 @@
             <td class="tabular ${s.takerImbalance >= 0 ? 'c-emerald' : 'c-red'}">${s.takerImbalance >= 0 ? '+' : ''}${s.takerImbalance.toFixed(0)}%</td>
             <td class="tabular">${s.rsi}</td>
             <td class="tabular c-dark">${s.spreadPct}%</td>
-            <td class="tabular c-dark">${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>
+            <td class="tabular c-dark">${((s.high24h - s.lastPrice) / (s.high24h || 1) * 100).toFixed(1)}%</td>${LifecycleEngine.settings.showLifecycleColumns ? (() => {
+            const sig = LifecycleEngine.signals.find(x => x.symbol === s.symbol && ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(x.status));
+            if (!sig) return '<td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td><td class="c-dark">—</td>';
+            const age = LifecycleEngine.formatAge(Date.now() - sig.detectedAt);
+            return '<td class="tabular font-bold">' + age + '</td>' +
+                   '<td>' + LifecycleEngine.formatPct(sig.checkpoints['4H']) + '</td>' +
+                   '<td>' + LifecycleEngine.formatPct(sig.checkpoints['8H']) + '</td>' +
+                   '<td>' + LifecycleEngine.formatPct(sig.checkpoints['1D']) + '</td>' +
+                   '<td>' + LifecycleEngine.getStatusBadge(sig.status) + '</td>';
+          })() : ''}
             <td>
               <button class="btn btn-sm" onclick="event.stopPropagation(); toggleWatchlist('${s.symbol}')">
                 ${isWatched ? '★' : '☆'}
