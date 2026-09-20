@@ -12,10 +12,18 @@ class MacroService {
   private isFetching = false;
 
   constructor() {
-    this.fetchLiveMacro();
+    // Only fetch live macro on the server-side; Yahoo Finance blocks browser-side CORS requests
+    if (typeof window === 'undefined') {
+      this.fetchLiveMacro();
+    }
   }
 
   public async fetchLiveMacro(): Promise<void> {
+    // Strictly guard against execution in client browser to prevent CORS errors
+    if (typeof window !== 'undefined') {
+      return;
+    }
+
     const now = Date.now();
     if (this.isFetching || now - this.lastFetchTime < 60000) {
       return;
@@ -54,7 +62,7 @@ class MacroService {
   }
 
   public getMacroMetrics(): { metrics: MacroMetrics; provenance: DataProvenance<MacroMetrics> } {
-    if (Date.now() - this.lastFetchTime > 120000) {
+    if (typeof window === 'undefined' && Date.now() - this.lastFetchTime > 120000) {
       this.fetchLiveMacro();
     }
 
