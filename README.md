@@ -29,7 +29,7 @@
 
 ## 🌐 Live Access & Deployment
 
-- **GitHub Pages Static Terminal**: **[https://fahad0013.github.io/EAGLE-FLASH/](https://fahad0013.github.io/EAGLE-FLASH/)**
+- **GitHub Pages Static Terminal**: **(https://legacy-in.github.io/EAGLE-SPIKE-Engine)**
 - **Next.js Workstation Local Server**: `http://localhost:3000`
 - **Telegram Bot**: **[@eaglespike_bot](https://t.me/eaglespike_bot)**
 
@@ -168,4 +168,4 @@ Executes:
 ---
 
 ## 📄 License
-MIT © [fahad0013](https://github.com/fahad0013)
+MIT © 
