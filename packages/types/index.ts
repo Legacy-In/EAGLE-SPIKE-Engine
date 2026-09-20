@@ -136,6 +136,7 @@ export interface DerivativesMetrics {
     confidence: number;
     description: string;
   };
+  positioning?: BtcPositioningSnapshot;
 }
 
 // ============================================================================
@@ -516,3 +517,5 @@ export interface EconomicCalendarEvent {
   actualValue?: string;
   marketReactionBtcBps?: number;
 }
+
+export * from './positioning';

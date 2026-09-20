@@ -52,9 +52,21 @@ class SignalEngineService {
 
     // 3. Derivatives Factor (15%)
     const { metrics: deriv } = derivativesService.getMetrics();
-    let derivScore = 30;
-    if (deriv.fundingRate > 0 && deriv.fundingRate < 0.0002) derivScore += 30; // Baseline funding
-    if (deriv.oiPriceDivergence === 'ORGANIC_EXPANSION') derivScore += 25;
+    let derivScore = 20;
+    if (deriv.fundingRate > 0 && deriv.fundingRate < 0.0002) derivScore += 20; // Baseline funding
+    if (deriv.positioning) {
+      const pos = deriv.positioning;
+      if (pos.dataQuality.status === 'LIVE') {
+        const confWeight = Math.max(0.2, pos.confirmation.score / 100);
+        if (pos.interpretation.state === 'LEVERAGE_EXPANSION') derivScore += Math.round(35 * confWeight);
+        else if (pos.interpretation.state === 'SHORT_COVERING') derivScore += Math.round(20 * confWeight);
+        else if (pos.interpretation.state === 'BEARISH_EXPANSION') derivScore -= Math.round(35 * confWeight);
+        else if (pos.interpretation.state === 'LONG_LIQUIDATION') derivScore -= Math.round(30 * confWeight);
+        else if (pos.interpretation.state === 'DELEVERAGING') derivScore -= Math.round(15 * confWeight);
+      }
+    } else if (deriv.oiPriceDivergence === 'ORGANIC_EXPANSION') {
+      derivScore += 25;
+    }
     derivScore = Math.max(-100, Math.min(100, derivScore));
 
     // 4. On-Chain Factor (15%)

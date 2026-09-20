@@ -741,6 +741,173 @@ body {
               </div>
             </div>
 
+            <!-- BTC Price x OI Positioning Engine (Pro-V2) -->
+            <div class="bg-sigma-surface1 border border-sigma-border rounded-lg overflow-hidden font-mono shadow-xl text-xs">
+              <!-- Header & Telemetry -->
+              <div class="p-3 border-b border-sigma-border bg-gradient-to-r from-sigma-surface2 to-sigma-surface1 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-400"><rect width="16" height="16" x="4" y="4" rx="2"></rect><rect width="6" height="6" x="9" y="9" rx="1"></rect><path d="M15 2v2"></path><path d="M15 20v2"></path><path d="M2 15h2"></path><path d="M2 9h2"></path><path d="M20 15h2"></path><path d="M20 9h2"></path><path d="M9 2v2"></path><path d="M9 20v2"></path></svg>
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="font-bold text-sigma-textMain text-[11px] uppercase tracking-wider">Price × OI Positioning Engine</span>
+                      <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-700/50 text-cyan-300">PRO-V2</span>
+                    </div>
+                    <div class="text-[10px] text-sigma-textDark mt-0.5">Derivatives Leverage & Alignment Architecture</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] border bg-emerald-950/30 border-emerald-700/40 text-emerald-400">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span class="font-bold">LIVE</span>
+                  <span class="text-[9px] text-sigma-textDark">(38ms)</span>
+                </div>
+              </div>
+
+              <!-- Layer 1: Factual Observations -->
+              <div class="p-3 bg-sigma-surface2/70 border-b border-sigma-border">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-1.5 text-[10px] font-bold text-sigma-textDark uppercase tracking-wider">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sigma-cyan"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>
+                    <span>Layer 1: Factual Observations</span>
+                  </div>
+                  <span class="text-[9px] text-sigma-textDark">Zero Inference</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div class="bg-sigma-surface1/80 p-2 rounded border border-sigma-border/60">
+                    <div class="text-[9px] text-sigma-textDark uppercase">BTC Price Delta</div>
+                    <div class="flex items-baseline justify-between mt-1 font-mono"><span class="text-[10px] text-sigma-textMuted">5m:</span><span class="text-sigma-green">+0.32%</span></div>
+                    <div class="flex items-baseline justify-between mt-0.5 font-mono"><span class="text-[10px] text-sigma-textMuted">1h:</span><span class="text-sigma-green">+0.85%</span></div>
+                  </div>
+                  <div class="bg-sigma-surface1/80 p-2 rounded border border-sigma-border/60">
+                    <div class="text-[9px] text-sigma-textDark uppercase">Open Interest Δ</div>
+                    <div class="flex items-baseline justify-between mt-1 font-mono"><span class="text-[10px] text-sigma-textMuted">5m:</span><span class="text-cyan-400">+0.84%</span></div>
+                    <div class="flex items-baseline justify-between mt-0.5 font-mono"><span class="text-[10px] text-sigma-textMuted">1h:</span><span class="text-cyan-400">+1.85%</span></div>
+                  </div>
+                  <div class="bg-sigma-surface1/80 p-2 rounded border border-sigma-border/60">
+                    <div class="text-[9px] text-sigma-textDark uppercase">Volume & RVOL</div>
+                    <div class="flex items-baseline justify-between mt-1 font-mono"><span class="text-[10px] text-sigma-textMuted">RVOL:</span><span class="text-sigma-purple font-bold">1.82x</span></div>
+                    <div class="flex items-baseline justify-between mt-0.5 font-mono"><span class="text-[10px] text-sigma-textMuted">Taker:</span><span class="text-sigma-green font-bold">54.2%</span></div>
+                  </div>
+                  <div class="bg-sigma-surface1/80 p-2 rounded border border-sigma-border/60">
+                    <div class="text-[9px] text-sigma-textDark uppercase">Funding & 1h Liqs</div>
+                    <div class="flex items-baseline justify-between mt-1 font-mono"><span class="text-[10px] text-sigma-textMuted">Funding:</span><span class="text-sigma-cyan font-semibold">+0.0076%</span></div>
+                    <div class="flex items-baseline justify-between mt-0.5 font-mono"><span class="text-[10px] text-sigma-textMuted">1h Liqs:</span><span class="text-sigma-textMain">$2.40M</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Layer 2: Matrix State Banner -->
+              <div class="p-3 border-b border-emerald-700/60 bg-emerald-950/40">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-[10px] font-bold tracking-wider text-sigma-textDark uppercase">Layer 2: Matrix State</span>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border border-emerald-700/60 text-emerald-400 bg-sigma-surface1/80">
+                        LEVERAGE EXPANSION (Price ↑ + OI ↑)
+                      </span>
+                    </div>
+                    <p class="text-[11px] text-sigma-textMuted leading-relaxed max-w-2xl font-sans">
+                      Increasing BTC price (+0.85%) aligned with expanding derivatives Open Interest (+1.85%). Taker buyer flow (54.2%) and baseline funding (+0.0076%) confirm net fresh long commitments rather than squeeze dynamics.
+                    </p>
+                  </div>
+                  <div class="flex sm:flex-col items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-sigma-border/40 gap-1 min-w-[130px]">
+                    <div class="text-[9px] text-sigma-textDark uppercase">Setup State</div>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold border tracking-wider uppercase bg-emerald-500/20 text-emerald-400 border-emerald-500/40">
+                      CONFIRMED SETUP
+                    </span>
+                    <div class="flex items-center gap-1.5 text-[10px] mt-0.5">
+                      <span class="text-sigma-textDark">Confirmation:</span>
+                      <span class="font-bold text-sigma-green">74%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-2.5 w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 rounded-full" style="width:74%"></div>
+                </div>
+              </div>
+
+              <!-- Tab Nav -->
+              <div class="flex border-b border-sigma-border bg-sigma-surface2/50 text-[10px]">
+                <button onclick="switchPosTab('matrix')" id="btn-pos-matrix" class="flex-1 py-2 px-3 text-center border-b-2 font-bold transition-all uppercase tracking-wider border-cyan-400 text-cyan-300 bg-sigma-surface1/60">
+                  Matrix Quadrants
+                </button>
+                <button onclick="switchPosTab('confirmations')" id="btn-pos-confirmations" class="flex-1 py-2 px-3 text-center border-b-2 font-bold transition-all uppercase tracking-wider border-transparent text-sigma-textDark hover:text-sigma-textMain">
+                  9 Confirmations (74%)
+                </button>
+                <button onclick="switchPosTab('mtf')" id="btn-pos-mtf" class="flex-1 py-2 px-3 text-center border-b-2 font-bold transition-all uppercase tracking-wider border-transparent text-sigma-textDark hover:text-sigma-textMain">
+                  MTF Consensus (ALIGNED)
+                </button>
+              </div>
+
+              <!-- Tab 1: Matrix -->
+              <div id="pos-tab-matrix" class="p-3 space-y-2">
+                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                  <div class="p-2 rounded border bg-emerald-950/40 border-emerald-500/70 ring-1 ring-emerald-500/40">
+                    <div class="flex items-center justify-between font-bold">
+                      <span class="text-emerald-400">Price ↑ + OI ↑</span>
+                      <span class="text-[9px] px-1 rounded bg-emerald-500 text-black font-bold">ACTIVE</span>
+                    </div>
+                    <div class="text-[11px] font-semibold text-sigma-textMain mt-0.5">Leverage Expansion</div>
+                    <div class="text-[10px] text-sigma-textDark mt-1 leading-snug">Derivatives positioning expanding. Requires volume, taker dominance, & funding confirmation.</div>
+                  </div>
+                  <div class="p-2 rounded border bg-sigma-surface2/40 border-sigma-border/60 opacity-60">
+                    <div class="flex items-center justify-between font-bold"><span class="text-amber-400">Price ↑ + OI ↓</span></div>
+                    <div class="text-[11px] font-semibold text-sigma-textMain mt-0.5">Short Covering</div>
+                    <div class="text-[10px] text-sigma-textDark mt-1 leading-snug">Unwinding rally driven by short stops. Susceptible to stall if fresh spot demand lacks.</div>
+                  </div>
+                  <div class="p-2 rounded border bg-sigma-surface2/40 border-sigma-border/60 opacity-60">
+                    <div class="flex items-center justify-between font-bold"><span class="text-rose-400">Price ↓ + OI ↑</span></div>
+                    <div class="text-[11px] font-semibold text-sigma-textMain mt-0.5">Bearish Expansion</div>
+                    <div class="text-[10px] text-sigma-textDark mt-1 leading-snug">Fresh short derivative positioning adding into downward momentum. Watch absorption.</div>
+                  </div>
+                  <div class="p-2 rounded border bg-sigma-surface2/40 border-sigma-border/60 opacity-60">
+                    <div class="flex items-center justify-between font-bold"><span class="text-orange-400">Price ↓ + OI ↓</span></div>
+                    <div class="text-[11px] font-semibold text-sigma-textMain mt-0.5">Long Unwinding / Liqs</div>
+                    <div class="text-[10px] text-sigma-textDark mt-1 leading-snug">Deleveraging cascade. Longs closing out or liquidated. Often precedes mean-reversion.</div>
+                  </div>
+                </div>
+                <div class="p-2 bg-sigma-surface2/40 border border-sigma-border/50 rounded flex items-center justify-between text-[10px] text-sigma-textDark">
+                  <span class="font-semibold text-sigma-cyan">Core Positioning Rule:</span>
+                  <span>Derivatives never dictate direction alone; confirmation layers validate continuation.</span>
+                </div>
+              </div>
+
+              <!-- Tab 2: 9 Confirmations -->
+              <div id="pos-tab-confirmations" class="hidden p-3 space-y-2">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-[10px]">
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">1. Price Trend</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">2. Volume Expansion</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">3. RVOL (1.82x)</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">4. Taker Flow (54%)</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">5. OI Velocity</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">6. Liquidations Align</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-amber-500/15 border-amber-500/40 text-amber-300">WEAK</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">7. Funding Regime</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">8. Market Structure</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                  <div class="p-2 bg-sigma-surface2/60 border border-sigma-border rounded flex items-center justify-between"><span class="text-sigma-textMuted">9. MTF Consensus</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold border bg-emerald-500/15 border-emerald-500/40 text-emerald-400">CONFIRMED</span></div>
+                </div>
+                <div class="p-2 bg-sigma-surface2/40 border border-sigma-border/50 rounded flex items-center justify-between text-[10px] text-sigma-textDark">
+                  <span class="text-sigma-textMuted">Synthesis:</span>
+                  <span class="font-semibold text-sigma-textMain">7 of 9 layers aligned with derivatives positioning. Directional long bias confirmed.</span>
+                </div>
+              </div>
+
+              <!-- Tab 3: MTF -->
+              <div id="pos-tab-mtf" class="hidden p-3 space-y-2">
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-1.5 text-[10px]">
+                  <div class="bg-sigma-surface2/60 border border-sigma-border/80 p-2 rounded flex flex-col items-center justify-between text-center"><div class="font-bold text-sigma-cyan text-[11px]">1m</div><div class="mt-1 font-mono text-[10px]"><div class="text-sigma-green font-semibold">P: +0.12%</div><div class="text-cyan-400 font-semibold">OI: +0.28%</div></div><div class="mt-1.5 w-full"><span class="block w-full py-0.5 rounded text-[8px] font-bold border uppercase bg-emerald-500/20 text-emerald-400 border-emerald-500/40">CONFIRMED</span></div></div>
+                  <div class="bg-sigma-surface2/60 border border-sigma-border/80 p-2 rounded flex flex-col items-center justify-between text-center"><div class="font-bold text-sigma-cyan text-[11px]">5m</div><div class="mt-1 font-mono text-[10px]"><div class="text-sigma-green font-semibold">P: +0.35%</div><div class="text-cyan-400 font-semibold">OI: +0.84%</div></div><div class="mt-1.5 w-full"><span class="block w-full py-0.5 rounded text-[8px] font-bold border uppercase bg-emerald-500/20 text-emerald-400 border-emerald-500/40">CONFIRMED</span></div></div>
+                  <div class="bg-sigma-surface2/60 border border-sigma-border/80 p-2 rounded flex flex-col items-center justify-between text-center"><div class="font-bold text-sigma-cyan text-[11px]">15m</div><div class="mt-1 font-mono text-[10px]"><div class="text-sigma-green font-semibold">P: +0.52%</div><div class="text-cyan-400 font-semibold">OI: +1.12%</div></div><div class="mt-1.5 w-full"><span class="block w-full py-0.5 rounded text-[8px] font-bold border uppercase bg-emerald-500/20 text-emerald-400 border-emerald-500/40">CONFIRMED</span></div></div>
+                  <div class="bg-sigma-surface2/60 border border-sigma-border/80 p-2 rounded flex flex-col items-center justify-between text-center"><div class="font-bold text-sigma-cyan text-[11px]">30m</div><div class="mt-1 font-mono text-[10px]"><div class="text-sigma-green font-semibold">P: +0.44%</div><div class="text-cyan-400 font-semibold">OI: +0.95%</div></div><div class="mt-1.5 w-full"><span class="block w-full py-0.5 rounded text-[8px] font-bold border uppercase bg-emerald-500/20 text-emerald-400 border-emerald-500/40">CONFIRMED</span></div></div>
+                  <div class="bg-sigma-surface2/60 border border-sigma-border/80 p-2 rounded flex flex-col items-center justify-between text-center"><div class="font-bold text-sigma-cyan text-[11px]">1h</div><div class="mt-1 font-mono text-[10px]"><div class="text-sigma-green font-semibold">P: +0.82%</div><div class="text-cyan-400 font-semibold">OI: +1.85%</div></div><div class="mt-1.5 w-full"><span class="block w-full py-0.5 rounded text-[8px] font-bold border uppercase bg-emerald-500/20 text-emerald-400 border-emerald-500/40">CONFIRMED</span></div></div>
+                  <div class="bg-sigma-surface2/60 border border-sigma-border/80 p-2 rounded flex flex-col items-center justify-between text-center"><div class="font-bold text-sigma-cyan text-[11px]">4h</div><div class="mt-1 font-mono text-[10px]"><div class="text-sigma-green font-semibold">P: +1.45%</div><div class="text-cyan-400 font-semibold">OI: +3.12%</div></div><div class="mt-1.5 w-full"><span class="block w-full py-0.5 rounded text-[8px] font-bold border uppercase bg-emerald-500/20 text-emerald-400 border-emerald-500/40">CONFIRMED</span></div></div>
+                </div>
+                <div class="p-2 bg-sigma-surface2/40 border border-sigma-border/50 rounded flex items-center justify-between text-[10px] text-sigma-textDark">
+                  <span>MTF Consensus:</span>
+                  <span class="font-bold uppercase text-sigma-green">ALIGNED MULTI-TIMEFRAME CONSENSUS</span>
+                </div>
+              </div>
+            </div>
+
             <!-- On-Chain & Macro Regime -->
             <div class="bg-sigma-surface1 border border-sigma-border rounded-lg p-4">
               <div class="flex items-center justify-between mb-3">
@@ -1253,6 +1420,22 @@ body {
     let btcChange = 2.41;
     let wsSocket = null;
     let backtestChart = null;
+
+    // Positioning Engine Tab Switcher
+    function switchPosTab(tab) {
+      ['matrix', 'confirmations', 'mtf'].forEach(t => {
+        const el = document.getElementById('pos-tab-' + t);
+        const btn = document.getElementById('btn-pos-' + t);
+        if (el) el.className = (t === tab) ? 'p-3 space-y-2' : 'hidden p-3 space-y-2';
+        if (btn) {
+          if (t === tab) {
+            btn.className = 'flex-1 py-2 px-3 text-center border-b-2 font-bold transition-all uppercase tracking-wider border-cyan-400 text-cyan-300 bg-sigma-surface1/60';
+          } else {
+            btn.className = 'flex-1 py-2 px-3 text-center border-b-2 font-bold transition-all uppercase tracking-wider border-transparent text-sigma-textDark hover:text-sigma-textMain';
+          }
+        }
+      });
+    }
 
     // 1. Workspace Switcher (1:1 with Next.js useSigmaStore)
     function switchWorkspace(wsId) {

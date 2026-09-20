@@ -42,6 +42,7 @@ export async function GET() {
       timestamp: Date.now(),
       market,
       derivatives: derivatives.metrics,
+      positioning: derivatives.metrics.positioning,
       onchain: onchain.metrics,
       etf: etf.metrics,
       macro: macro.metrics,
