@@ -950,6 +950,30 @@ body {
                   <span class="font-bold uppercase text-sigma-green">ALIGNED MULTI-TIMEFRAME CONSENSUS</span>
                 </div>
               </div>
+
+              <!-- 5. Actionable Trade Signal Callout -->
+              <div class="p-3 bg-sigma-surface2 border-t border-sigma-border">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                  <div class="space-y-0.5">
+                    <div class="flex items-center gap-2">
+                      <span class="text-[10px] font-bold text-sigma-textDark uppercase tracking-wider">Derived Trade Signal:</span>
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border bg-emerald-500/20 text-emerald-400 border-emerald-500/50">
+                        🟢 LONG (DERIVATIVES CONFIRMED)
+                      </span>
+                    </div>
+                    <div class="text-[11px] text-sigma-textMuted flex flex-wrap items-center gap-3 mt-1 font-mono">
+                      <span>Trigger: <strong class="text-sigma-textMain">$80,850</strong></span>
+                      <span>SL: <strong class="text-sigma-red">$79,637</strong></span>
+                      <span>TP1: <strong class="text-sigma-green">$82,871</strong></span>
+                      <span>R:R: <strong class="text-sigma-cyan">1 : 2.5</strong></span>
+                    </div>
+                  </div>
+                  <button onclick="executePaperTrade('LONG', 0.25)" class="w-full sm:w-auto px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 shadow-md bg-sigma-green text-black hover:bg-sigma-green/90">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <span>EXECUTE LONG (0.25 BTC)</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             <!-- On-Chain & Macro Regime -->

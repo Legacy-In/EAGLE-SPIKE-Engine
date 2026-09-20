@@ -27,6 +27,7 @@ import {
   PositioningState,
   SetupState,
 } from '../../../../packages/types';
+import { useSigmaStore } from '../../store/useSigmaStore';
 
 interface BtcPositioningPanelProps {
   positioning?: BtcPositioningSnapshot;
@@ -790,6 +791,87 @@ export const BtcPositioningPanel: React.FC<BtcPositioningPanelProps> = ({
           </div>
         </div>
       )}
+
+      {/* 5. ACTIONABLE TRADE SIGNAL CALLOUT */}
+      {(() => {
+        const isBullish =
+          stateKey === 'LEVERAGE_EXPANSION' ||
+          stateKey === 'SHORT_COVERING' ||
+          stateKey === 'OI_ACCELERATION';
+        const isBearish =
+          stateKey === 'BEARISH_EXPANSION' ||
+          stateKey === 'LONG_LIQUIDATION';
+        const isConfirmed = (conf?.score || 0) >= 55;
+        const currentP = obs?.currentPrice || obs?.price || 80850;
+
+        return (
+          <div className="p-3 bg-sigma-surface2 border-t border-sigma-border">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-sigma-textDark uppercase tracking-wider">
+                    Derived Trade Signal:
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide border ${
+                      isConfirmed && isBullish
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                        : isConfirmed && isBearish
+                        ? 'bg-rose-500/20 text-rose-400 border-rose-500/50'
+                        : 'bg-slate-800 text-slate-400 border-slate-700'
+                    }`}
+                  >
+                    {isConfirmed && isBullish
+                      ? '🟢 LONG (DERIVATIVES CONFIRMED)'
+                      : isConfirmed && isBearish
+                      ? '🔴 SHORT (DERIVATIVES CONFIRMED)'
+                      : '⚪ ACCUMULATING / WATCH'}
+                  </span>
+                </div>
+                <div className="text-[11px] text-sigma-textMuted flex flex-wrap items-center gap-3 mt-1 font-mono">
+                  <span>
+                    Trigger:{' '}
+                    <strong className="text-sigma-textMain">
+                      ${currentP.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </strong>
+                  </span>
+                  <span>
+                    SL:{' '}
+                    <strong className={isBullish ? 'text-sigma-red' : 'text-sigma-green'}>
+                      ${(isBullish ? currentP * 0.985 : currentP * 1.015).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </strong>
+                  </span>
+                  <span>
+                    TP1:{' '}
+                    <strong className={isBullish ? 'text-sigma-green' : 'text-sigma-cyan'}>
+                      ${(isBullish ? currentP * 1.025 : currentP * 0.975).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </strong>
+                  </span>
+                  <span>
+                    R:R: <strong className="text-sigma-cyan">1 : 2.5</strong>
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => useSigmaStore.getState().setOrderTicketOpen(true)}
+                className={`w-full sm:w-auto px-3 py-1.5 rounded text-xs font-bold font-mono transition-all flex items-center justify-center gap-1.5 shadow-md ${
+                  isBullish
+                    ? 'bg-sigma-green text-black hover:bg-sigma-green/90'
+                    : isBearish
+                    ? 'bg-sigma-red text-white hover:bg-sigma-red/90'
+                    : 'bg-sigma-surface3 text-sigma-textMain hover:bg-sigma-border'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>
+                  {isBullish ? 'EXECUTE LONG (0.25 BTC)' : isBearish ? 'EXECUTE SHORT (0.25 BTC)' : 'OPEN ORDER TICKET'}
+                </span>
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
