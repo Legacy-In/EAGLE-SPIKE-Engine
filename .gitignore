@@ -27,3 +27,4 @@ Thumbs.db
 
 # Temporary cache
 .cache/
+*.tsbuildinfo
