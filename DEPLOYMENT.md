@@ -53,12 +53,11 @@ npm run build
 
 ---
 
-## 4. Process Management (PM2)
+## 4. 24/7 Process Management (PM2)
 
-Using PM2 ensures automatic restarts on crashes and system reboot persistence:
+Using PM2 ensures automatic restarts on crashes, reboot persistence, and 24/7 autonomous operation for the Web App, Telegram Bot, and Cloud Market Scanner:
 
-### Option A: Webhook Server (Recommended for VPS with Public IP / Domain)
-Create `ecosystem.config.js`:
+### The 3-in-1 Production Ecosystem (`ecosystem.config.cjs`)
 ```javascript
 module.exports = {
   apps: [
@@ -67,48 +66,42 @@ module.exports = {
       script: 'npm',
       args: 'run start',
       cwd: './apps/web',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 3000
-      },
+      env: { NODE_ENV: 'production', PORT: 3000 },
       instances: 1,
       autorestart: true,
       max_memory_restart: '1G'
-    }
-  ]
-};
-```
-
-Launch with PM2:
-```bash
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
-```
-
-### Option B: Webhook + Telegram Long-Polling Daemon
-If running without a public inbound webhook URL, run the background polling daemon alongside the server:
-```javascript
-module.exports = {
-  apps: [
-    {
-      name: 'eagle-flash-web',
-      script: 'npm',
-      args: 'run start',
-      cwd: './apps/web',
-      env: { NODE_ENV: 'production', PORT: 3000 }
     },
     {
-      name: 'eagle-flash-telegram-poll',
-      script: 'node',
-      args: 'scripts/telegram_poll.mjs',
+      name: 'eagle-flash-telegram-bot',
+      script: 'scripts/telegram_poll.mjs',
       cwd: './',
       env: { NODE_ENV: 'production' },
+      autorestart: true,
+      restart_delay: 5000
+    },
+    {
+      name: 'eagle-flash-cloud-scanner',
+      script: 'scripts/server_scanner.mjs',
+      cwd: './',
+      env: { NODE_ENV: 'production', SCAN_INTERVAL_MS: 30000 },
       autorestart: true,
       restart_delay: 5000
     }
   ]
 };
+```
+
+### Launch Everything with 1 Command:
+```bash
+# Start all 3 services (Web App + Telegram Bot + 24/7 Cloud Scanner)
+npm run start:all
+
+# Save for auto-start on server reboot
+pm2 save
+pm2 startup
+
+# Monitor live logs
+pm2 logs
 ```
 
 ---
