@@ -1,26 +1,32 @@
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const rootDir = process.cwd();
 
 console.log('Building 1:1 Unified Next.js Institutional Workstation for GitHub Pages & Static Hosting...');
 
-// 1. Read Tailwind CSS from apps/web/.next
-const cssPath = path.join(rootDir, 'apps', 'web', '.next', 'static', 'css', 'e5023fafd0085de5.css');
+// 1. Ensure compiled Tailwind CSS exists and is up-to-date
+const compiledCssPath = path.join(rootDir, 'apps', 'web', 'public', 'compiled-tailwind.css');
 let tailwindCss = '';
-if (fs.existsSync(cssPath)) {
-  tailwindCss = fs.readFileSync(cssPath, 'utf-8');
-  console.log('Loaded compiled Next.js Tailwind CSS (' + tailwindCss.length + ' bytes).');
-} else {
-  console.warn('Warning: Could not find compiled CSS file. Checking for any css file in .next/static/css');
-  const cssDir = path.join(rootDir, 'apps', 'web', '.next', 'static', 'css');
-  if (fs.existsSync(cssDir)) {
-    const files = fs.readdirSync(cssDir).filter(f => f.endsWith('.css'));
-    if (files.length > 0) {
-      tailwindCss = fs.readFileSync(path.join(cssDir, files[0]), 'utf-8');
-      console.log('Loaded alternative CSS: ' + files[0]);
-    }
+
+if (!fs.existsSync(compiledCssPath) || fs.statSync(compiledCssPath).size < 1000) {
+  try {
+    console.log('Compiling standalone production Tailwind CSS...');
+    execSync(
+      'npx.cmd --prefix apps/web tailwindcss -i apps/web/app/globals.css --content "./index.html,./apps/web/app/**/*.{js,ts,jsx,tsx},./apps/web/components/**/*.{js,ts,jsx,tsx}" -o apps/web/public/compiled-tailwind.css --minify',
+      { cwd: rootDir, stdio: 'pipe' }
+    );
+  } catch (err) {
+    console.warn('Tailwind CLI build notice:', err?.message);
   }
+}
+
+if (fs.existsSync(compiledCssPath)) {
+  tailwindCss = fs.readFileSync(compiledCssPath, 'utf-8');
+  console.log(`Loaded compiled Tailwind CSS (${tailwindCss.length} bytes).`);
+} else {
+  console.warn('Warning: compiled-tailwind.css not found, will rely on Tailwind CDN script.');
 }
 
 // 2. Ensure eagle-flash.html exists at root and dist-eagle-flash
@@ -40,7 +46,45 @@ const unifiedHtml = `<!DOCTYPE html>
   <title>SIGMA — Institutional BTC Quantitative Intelligence & Trading Platform</title>
   <meta name="description" content="Institutional-grade Bitcoin market intelligence, multi-factor signals, order flow analytics, derivatives positioning, risk management, and execution workstation." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>Σ</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            sigma: {
+              bg: '#05070B',
+              surface1: '#0B0F17',
+              surface2: '#111724',
+              surface3: '#182030',
+              border: '#1C2538',
+              borderSubtle: '#141B2B',
+              borderFocus: '#283754',
+              textMain: '#F8FAFC',
+              textMuted: '#94A3B8',
+              textDark: '#64748B',
+              green: '#00E599',
+              greenMuted: 'rgba(0, 229, 153, 0.12)',
+              red: '#FF4757',
+              redMuted: 'rgba(255, 71, 87, 0.12)',
+              amber: '#FFAA00',
+              amberMuted: 'rgba(255, 170, 0, 0.12)',
+              cyan: '#00D2FF',
+              cyanMuted: 'rgba(0, 210, 255, 0.12)',
+              purple: '#8B5CF6',
+              purpleMuted: 'rgba(139, 92, 246, 0.14)',
+            },
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Space Mono', 'monospace'],
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
 ${tailwindCss}
