@@ -52,16 +52,54 @@ export class AlertDispatcher {
   }
 
   /**
-   * Dispatches a spike alert with deduplication and cooldown checks.
+   * Resolves configured target chat and channel IDs from environment variables.
    */
-  public async dispatchAlert(chatId: string | number, payload: TelegramAlertPayload): Promise<boolean> {
+  public getRecipientChatIds(explicitChatId?: string | number): string[] {
+    if (explicitChatId !== undefined && explicitChatId !== null && String(explicitChatId).trim() !== '') {
+      return [String(explicitChatId).trim()];
+    }
+
+    const targets: string[] = [];
+    const envTargets = [
+      process.env.TELEGRAM_CHAT_ID,
+      process.env.TELEGRAM_CHANNEL_ID,
+      process.env.TELEGRAM_AUTHORIZED_CHATS,
+    ];
+
+    for (const val of envTargets) {
+      if (val && typeof val === 'string' && val.trim() !== '') {
+        const parts = val.split(',').map((p) => p.trim()).filter((p) => p.length > 0);
+        for (const p of parts) {
+          if (!targets.includes(p)) targets.push(p);
+        }
+      }
+    }
+
+    return targets;
+  }
+
+  /**
+   * Dispatches a spike alert with deduplication and cooldown checks.
+   * If chatId is omitted, automatically routes to all configured environment channels/chats.
+   */
+  public async dispatchAlert(
+    chatId: string | number | undefined,
+    payload: TelegramAlertPayload,
+    options: { force?: boolean } = {}
+  ): Promise<boolean> {
+    const recipients = this.getRecipientChatIds(chatId);
+    if (recipients.length === 0) {
+      console.warn('⚠️ No Telegram recipient chat or channel configured in TELEGRAM_CHAT_ID or TELEGRAM_CHANNEL_ID.');
+      return false;
+    }
+
     const dedupKey = `${payload.symbol}_${payload.state}`;
     const now = Date.now();
     const lastSent = this.alertHistory.get(dedupKey) || 0;
-    const cooldown = (payload.cooldownSeconds ? payload.cooldownSeconds * 1000 : this.defaultCooldownMs);
+    const cooldown = payload.cooldownSeconds ? payload.cooldownSeconds * 1000 : this.defaultCooldownMs;
 
-    // 1. Cooldown & Deduplication check
-    if (now - lastSent < cooldown) {
+    // 1. Cooldown & Deduplication check (unless force is true)
+    if (!options.force && now - lastSent < cooldown) {
       // Cooldown active, suppress duplicate alert
       return false;
     }
@@ -70,20 +108,70 @@ export class AlertDispatcher {
     this.cleanRateLimitTimestamps(now);
     if (this.globalSentTimestamps.length >= this.maxGlobalPerMinute) {
       console.warn('⚠️ Global Telegram rate limit hit, queueing alert for batching');
-      this.queueForBatch(chatId, payload);
+      for (const recipient of recipients) {
+        this.queueForBatch(recipient, payload);
+      }
       return false;
     }
 
-    // 3. Format and Send Message
+    // 3. Format and Send Message to each target
     const messageText = AlertDispatcher.formatAlertMessage(payload);
-    const success = await telegramService.sendMessage(chatId, messageText);
+    let anySuccess = false;
 
-    if (success) {
+    for (const target of recipients) {
+      try {
+        const success = await telegramService.sendMessage(target, messageText);
+        if (success) {
+          anySuccess = true;
+        }
+      } catch (err: any) {
+        console.error(`❌ Failed to dispatch alert to chat ${target}:`, err?.message);
+      }
+    }
+
+    if (anySuccess) {
       this.alertHistory.set(dedupKey, now);
       this.globalSentTimestamps.push(now);
     }
 
-    return success;
+    return anySuccess;
+  }
+
+  /**
+   * Dispatches a batch of signals in one concise message to avoid spamming the channel.
+   */
+  public async dispatchBatchSummary(
+    items: TelegramAlertPayload[],
+    chatId?: string | number
+  ): Promise<boolean> {
+    if (!items || items.length === 0) return false;
+    const recipients = this.getRecipientChatIds(chatId);
+    if (recipients.length === 0) return false;
+
+    let text = `⚡ <b>EAGLE FLASH — SPIKE SCANNER SIGNALS</b>\n\n`;
+    text += `<b>${items.length} high-confidence spikes detected across Bybit, MEXC, and WEEX:</b>\n\n`;
+
+    items.slice(0, 8).forEach((item, idx) => {
+      const isBull = item.returns5m >= 0;
+      const dirSign = isBull ? '+' : '';
+      text +=
+        `<b>${idx + 1}. ${item.symbol}</b> [Score: <b>${item.eagleScore}/100</b>]\n` +
+        `• 5M: ${dirSign}${item.returns5m}% | RVOL: <b>${item.rvol}x</b>\n` +
+        `• Phase: <code>${item.state}</code> | Quality: <code>${item.spikeQuality}</code>\n\n`;
+    });
+
+    if (items.length > 8) {
+      text += `<i>...and ${items.length - 8} more candidates active in terminal.</i>\n\n`;
+    }
+
+    text += `⚠️ <i>Spike detection is market intelligence, not financial advice.</i>`;
+
+    let anySuccess = false;
+    for (const target of recipients) {
+      const ok = await telegramService.sendMessage(target, text);
+      if (ok) anySuccess = true;
+    }
+    return anySuccess;
   }
 
   /**

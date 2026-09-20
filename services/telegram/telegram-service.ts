@@ -108,14 +108,14 @@ export class TelegramService {
 
     const commands = [
       { command: 'start', description: 'Overview & quick access dashboard' },
-      { command: 'status', description: 'System health & market feeds status' },
-      { command: 'btc', description: 'Bitcoin macro regime & volatility' },
+      { command: 'signals', description: 'Recent high-confidence signals from the lifecycle engine' },
+      { command: 'top', description: 'Top ranked spikes sorted by Eagle Score' },
       { command: 'spikes', description: 'Active high-volume spike anomalies' },
-      { command: 'top', description: 'Top momentum gainers & turnover' },
+      { command: 'btc', description: 'Bitcoin macro regime & volatility' },
+      { command: 'status', description: 'System health & market feeds status' },
       { command: 'long', description: 'High-probability Long candidates' },
       { command: 'short', description: 'High-probability Short candidates' },
       { command: 'watchlist', description: 'Your tracked symbols' },
-      { command: 'signals', description: 'Signal Journal recent alerts' },
       { command: 'history', description: 'Historical spike outcomes & analytics' },
       { command: 'health', description: 'Diagnostics, latencies & data freshness' },
       { command: 'settings', description: 'Configure alert thresholds & cooldowns' },
