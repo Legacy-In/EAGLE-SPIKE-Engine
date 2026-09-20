@@ -80,6 +80,13 @@ const STATE_CONFIG: Record<
     border: 'border-purple-600/60',
     desc: 'Non-linear positioning velocity. Exponential derivative commitments entering order books.',
   },
+  OI_CONTRACTION: {
+    label: 'OI CONTRACTION (Deleveraging)',
+    bg: 'bg-orange-950/40',
+    text: 'text-orange-400',
+    border: 'border-orange-700/60',
+    desc: 'Systemic reduction in open interest across major derivative venues.',
+  },
   EXHAUSTION_WATCH: {
     label: 'EXHAUSTION WATCH',
     bg: 'bg-yellow-950/40',
@@ -260,7 +267,9 @@ export const BtcPositioningPanel: React.FC<BtcPositioningPanelProps> = ({
         <div className="p-2.5 bg-sigma-surface3/80 border-b border-sigma-border text-[10px] text-sigma-textMuted flex flex-wrap items-center justify-between gap-2">
           <div>
             <span className="text-sigma-textDark">Source: </span>
-            <span className="text-sigma-cyan font-semibold">{dq.sourceExchange}</span>
+            <span className="text-sigma-cyan font-semibold">
+              {(dq as any).exchangeSource || (dq as any).sourceExchange || 'BYBIT'}
+            </span>
           </div>
           <div>
             <span className="text-sigma-textDark">Telemetry Latency: </span>
@@ -779,9 +788,7 @@ export const BtcPositioningPanel: React.FC<BtcPositioningPanelProps> = ({
               className={`font-bold uppercase ${
                 mtf?.state === 'ALIGNED'
                   ? 'text-sigma-green'
-                  : mtf?.state === 'STRONG_ALIGNMENT'
-                  ? 'text-cyan-400'
-                  : mtf?.state === 'DIVERGENT'
+                  : mtf?.state === 'CONTRADICTING'
                   ? 'text-sigma-red'
                   : 'text-amber-400'
               }`}

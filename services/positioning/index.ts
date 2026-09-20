@@ -292,7 +292,7 @@ export class BtcPositioningEngine {
       return {
         state: 'EXHAUSTION_WATCH',
         stateLabel: 'COI DIVERGENCE / EXHAUSTION WATCH',
-        matrixQuadrant: 'FLAT',
+        matrixQuadrant: 'NEUTRAL',
         oiIntensity,
         narrative: 'Open interest is expanding heavily without commensurate price displacement. Indicates absorption or impending volatility expansion.',
       };
@@ -302,7 +302,7 @@ export class BtcPositioningEngine {
       return {
         state: 'DELEVERAGING',
         stateLabel: 'PASSIVE DELEVERAGING',
-        matrixQuadrant: 'FLAT',
+        matrixQuadrant: 'NEUTRAL',
         oiIntensity,
         narrative: 'Open interest is draining from the venue without aggressive directional bias.',
       };
@@ -311,7 +311,7 @@ export class BtcPositioningEngine {
     return {
       state: 'NEUTRAL',
       stateLabel: 'NEUTRAL EQUILIBRIUM',
-      matrixQuadrant: 'FLAT',
+      matrixQuadrant: 'NEUTRAL',
       oiIntensity: 'NORMAL',
       narrative: 'Price and derivatives open interest are fluctuating within standard equilibrium bounds.',
     };

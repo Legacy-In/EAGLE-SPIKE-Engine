@@ -2390,7 +2390,7 @@ const LifecycleEngine = {
     enabled: true,
     snapshotIntervalMinutes: 15,
     signalTTLHours: 72,
-    cooldownMinutes: 30,
+    cooldownMinutes: 15,
     invalidationPct: 3.0,
     retentionDays: 30,
     maxStoredSignals: 500,
@@ -2548,9 +2548,23 @@ const LifecycleEngine = {
   // 4. Record Signal with Immutable Initial Snapshot
   recordSignal(symData, activeFilters = {}) {
     if (!this.settings.enabled) return null;
-    const isLong = symData.signal === 'LONG CANDIDATE';
-    const isShort = symData.signal === 'SHORT CANDIDATE';
-    if (!isLong && !isShort) return null;
+    const score = symData.signalScore || 0;
+    const rvol = symData.relativeVolume || 1.0;
+    const oiDelta = symData.oiChangePct || 0;
+    const isTriggerRule = score >= 65 && rvol >= 2.0 && oiDelta >= 3.0;
+
+    let isLong = symData.signal === 'LONG CANDIDATE';
+    let isShort = symData.signal === 'SHORT CANDIDATE';
+
+    if (!isLong && !isShort) {
+      if (isTriggerRule) {
+        isLong = (symData.returns5m || 0) >= 0 || (symData.price24hChange || 0) >= 0;
+        isShort = !isLong;
+        symData.signal = isLong ? 'LONG CANDIDATE' : 'SHORT CANDIDATE';
+      } else {
+        return null;
+      }
+    }
 
     const now = Date.now();
     if (this.isDuplicate(symData.symbol, symData.signal, now)) {
@@ -3643,70 +3657,90 @@ const LifecycleEngine = {
 
       try {
         const startTime = Date.now();
-        // Concurrently fetch Bybit Linear and MEXC Contract tickers
-        const bybitPromise = fetch('https://api.bybit.com/v5/market/tickers?category=linear')
-          .then(r => r.json())
-          .catch(e => { console.warn('Bybit REST failed:', e); return null; });
+        let ingestedFromBackend = false;
 
-        const mexcKey = State.settings.mexcApiKey || '6c164b31390e4c0484cdda7f9d6dd0ea';
-        const mexcPromise = (State.settings.mexcEnabled !== false)
-          ? fetch('/api/mexc/tickers?apiKey=' + encodeURIComponent(mexcKey))
-              .then(r => r.json())
-              .catch(e => { console.warn('MEXC REST route failed:', e); return null; })
-          : Promise.resolve(null);
-
-        const weexKey = State.settings.weexApiKey || 'weex_48ca99a066414970ce63820f55970691';
-        const weexPromise = (State.settings.weexEnabled !== false)
-          ? fetch('/api/weex/tickers?apiKey=' + encodeURIComponent(weexKey))
-              .then(r => r.json())
-              .catch(e => { console.warn('WEEX REST route failed:', e); return null; })
-          : Promise.resolve(null);
-
-        const [bybitJson, mexcJson, weexJson] = await Promise.all([bybitPromise, mexcPromise, weexPromise]);
-        State.restLatency = Date.now() - startTime;
-
-        updateSplash(2, 'Building multi-exchange ticker universe...');
-        
-        // 1. Ingest Bybit Linear Tickers
-        if (bybitJson?.result?.list) {
-          bybitJson.result.list.forEach(t => {
-            if (t.symbol.endsWith('USDT')) {
-              const dataObj = normalizeBybitTicker(t);
-              dataObj.exchange = 'BYBIT';
-              State.symbols.set(t.symbol, dataObj);
+        try {
+          const snapRes = await fetch('/api/scanner/snapshot', { signal: AbortSignal.timeout(3500) });
+          if (snapRes.ok) {
+            const snapJson = await snapRes.json();
+            if (snapJson.success && snapJson.data?.tickers?.length > 100) {
+              snapJson.data.tickers.forEach(t => State.symbols.set(t.symbol, t));
+              State.restLatency = snapJson.data.latencyMs || (Date.now() - startTime);
+              State.mexcTickersCount = snapJson.data.mexcCount || 0;
+              State.weexTickersCount = snapJson.data.weexCount || 0;
+              ingestedFromBackend = true;
             }
-          });
+          }
+        } catch (backendErr) {
+          // Fallback to direct exchange endpoints below
         }
 
-        // 2. Ingest MEXC Contract Tickers
-        if (mexcJson?.data && Array.isArray(mexcJson.data)) {
-          State.mexcLatency = mexcJson.latency || 140;
-          State.mexcTickersCount = mexcJson.count || mexcJson.data.length;
-          mexcJson.data.forEach(t => {
-            if (t.symbol && t.symbol.endsWith('USDT')) {
-              const dataObj = normalizeMexcTicker(t);
-              State.symbols.set(t.symbol, dataObj);
-            }
-          });
-          const mBadge = document.getElementById('mexc-status-text');
-          if (mBadge) mBadge.innerText = 'MEXC LIVE (' + State.mexcTickersCount + ')';
-        }
+        if (!ingestedFromBackend) {
+          // Concurrently fetch Bybit Linear and MEXC Contract tickers
+          const bybitPromise = fetch('https://api.bybit.com/v5/market/tickers?category=linear')
+            .then(r => r.json())
+            .catch(e => { console.warn('Bybit REST failed:', e); return null; });
 
-        // 3. Ingest WEEX Contract Tickers
-        if (weexJson?.data && Array.isArray(weexJson.data)) {
-          State.weexLatency = weexJson.latency || 120;
-          State.weexTickersCount = weexJson.count || weexJson.data.length;
-          weexJson.data.forEach(t => {
-            if (t.symbol && t.symbol.endsWith('USDT')) {
-              // Avoid overwriting if primary pair exists
-              const key = State.symbols.has(t.symbol) ? t.symbol + '_WEEX' : t.symbol;
-              const dataObj = normalizeWeexTicker(t);
-              dataObj.symbol = key;
-              State.symbols.set(key, dataObj);
-            }
-          });
-          const wBadge = document.getElementById('weex-status-text');
-          if (wBadge) wBadge.innerText = 'WEEX LIVE (' + State.weexTickersCount + ')';
+          const mexcKey = State.settings.mexcApiKey || '6c164b31390e4c0484cdda7f9d6dd0ea';
+          const mexcPromise = (State.settings.mexcEnabled !== false)
+            ? fetch('/api/mexc/tickers?apiKey=' + encodeURIComponent(mexcKey))
+                .then(r => r.json())
+                .catch(e => { console.warn('MEXC REST route failed:', e); return null; })
+            : Promise.resolve(null);
+
+          const weexKey = State.settings.weexApiKey || 'weex_48ca99a066414970ce63820f55970691';
+          const weexPromise = (State.settings.weexEnabled !== false)
+            ? fetch('/api/weex/tickers?apiKey=' + encodeURIComponent(weexKey))
+                .then(r => r.json())
+                .catch(e => { console.warn('WEEX REST route failed:', e); return null; })
+            : Promise.resolve(null);
+
+          const [bybitJson, mexcJson, weexJson] = await Promise.all([bybitPromise, mexcPromise, weexPromise]);
+          State.restLatency = Date.now() - startTime;
+
+          updateSplash(2, 'Building multi-exchange ticker universe...');
+          
+          // 1. Ingest Bybit Linear Tickers
+          if (bybitJson?.result?.list) {
+            bybitJson.result.list.forEach(t => {
+              if (t.symbol.endsWith('USDT')) {
+                const dataObj = normalizeBybitTicker(t);
+                dataObj.exchange = 'BYBIT';
+                State.symbols.set(t.symbol, dataObj);
+              }
+            });
+          }
+
+          // 2. Ingest MEXC Contract Tickers
+          if (mexcJson?.data && Array.isArray(mexcJson.data)) {
+            State.mexcLatency = mexcJson.latency || 140;
+            State.mexcTickersCount = mexcJson.count || mexcJson.data.length;
+            mexcJson.data.forEach(t => {
+              if (t.symbol && t.symbol.endsWith('USDT')) {
+                const dataObj = normalizeMexcTicker(t);
+                State.symbols.set(t.symbol, dataObj);
+              }
+            });
+            const mBadge = document.getElementById('mexc-status-text');
+            if (mBadge) mBadge.innerText = 'MEXC LIVE (' + State.mexcTickersCount + ')';
+          }
+
+          // 3. Ingest WEEX Contract Tickers
+          if (weexJson?.data && Array.isArray(weexJson.data)) {
+            State.weexLatency = weexJson.latency || 120;
+            State.weexTickersCount = weexJson.count || weexJson.data.length;
+            weexJson.data.forEach(t => {
+              if (t.symbol && t.symbol.endsWith('USDT')) {
+                // Avoid overwriting if primary pair exists
+                const key = State.symbols.has(t.symbol) ? t.symbol + '_WEEX' : t.symbol;
+                const dataObj = normalizeWeexTicker(t);
+                dataObj.symbol = key;
+                State.symbols.set(key, dataObj);
+              }
+            });
+            const wBadge = document.getElementById('weex-status-text');
+            if (wBadge) wBadge.innerText = 'WEEX LIVE (' + State.weexTickersCount + ')';
+          }
         }
 
         updateSplash(3, 'Loading historical volume baselines...');
@@ -4448,10 +4482,33 @@ function showScoreBreakdown(symbol) {
     return;
   }
 
+  const tableWrap = document.querySelector('.table-wrap');
+  if (tableWrap && !tableWrap._hasVirtualScrollListener) {
+    tableWrap._hasVirtualScrollListener = true;
+    tableWrap.addEventListener('scroll', () => {
+      requestAnimationFrame(() => renderScannerTable());
+    }, { passive: true });
+  }
+
+  const scrollTop = tableWrap ? tableWrap.scrollTop : 0;
+  const viewportHeight = tableWrap ? tableWrap.clientHeight : 700;
+  const rowHeight = 38;
+  const totalRows = list.length;
+  const visibleCount = Math.ceil(viewportHeight / rowHeight);
+  const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - 8);
+  const endIndex = Math.min(totalRows, startIndex + visibleCount + 18);
+
+  const topPadding = startIndex * rowHeight;
+  const bottomPadding = Math.max(0, (totalRows - endIndex) * rowHeight);
+
   let html = '';
+  if (topPadding > 0) {
+    html += '<tr style="height:' + topPadding + 'px"><td colspan="26" style="padding:0; border:0; height:' + topPadding + 'px"></td></tr>';
+  }
   let mHtml = '';
 
-  list.slice(0, 100).forEach((s, idx) => {
+  list.slice(startIndex, endIndex).forEach((s, localIdx) => {
+    const idx = startIndex + localIdx;
     const isPos = s.price24hChange >= 0;
     const isPos5m = (s.returns5m || 0) >= 0;
     const isPos15m = (s.returns15m || 0) >= 0;
@@ -4537,6 +4594,10 @@ function showScoreBreakdown(symbol) {
       '</div>' +
     '</div>';
   });
+
+  if (bottomPadding > 0) {
+    html += '<tr style="height:' + bottomPadding + 'px"><td colspan="26" style="padding:0; border:0; height:' + bottomPadding + 'px"></td></tr>';
+  }
 
   tbody.innerHTML = html;
   mContainer.innerHTML = mHtml;
@@ -4804,7 +4865,11 @@ function showScoreBreakdown(symbol) {
       const sortBy = document.getElementById('sig-sort-by')?.value || 'EAGLE_SCORE';
 
       let candidates = allSymbols.filter(s => {
-        if (s.signalScore < 70 && s.signal !== 'LONG CANDIDATE' && s.signal !== 'SHORT CANDIDATE') return false;
+        const isTriggered = (s.signalScore >= 65 && (s.relativeVolume || 1) >= 2.0 && (s.oiChangePct || 0) >= 3.0);
+        if (isTriggered && s.signal === 'NO_SIGNAL') {
+          s.signal = (s.returns5m >= 0 || s.price24hChange >= 0) ? 'LONG CANDIDATE' : 'SHORT CANDIDATE';
+        }
+        if (!isTriggered && s.signalScore < 70 && s.signal !== 'LONG CANDIDATE' && s.signal !== 'SHORT CANDIDATE') return false;
         if (fEx !== 'ALL' && s.exchange !== fEx) return false;
         if (fSide === 'LONG' && s.signal !== 'LONG CANDIDATE') return false;
         if (fSide === 'SHORT' && s.signal !== 'SHORT CANDIDATE') return false;

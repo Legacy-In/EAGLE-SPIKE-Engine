@@ -3,6 +3,8 @@
  * Core TypeScript Domain Types & Interfaces
  */
 
+import { BtcPositioningSnapshot } from './positioning';
+
 // ============================================================================
 // 1. DATA PROVENANCE & HEALTH
 // ============================================================================
