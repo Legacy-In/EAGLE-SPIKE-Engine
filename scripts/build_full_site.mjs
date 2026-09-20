@@ -348,7 +348,15 @@ const healthHtml = `
         <span class="badge bb">CONNECTED</span>
       </div>
       <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:#00b4d8; margin:6px 0;" id="ping-mexc">64 ms</div>
-      <div style="font-family:'Space Mono',monospace; font-size:9px; color:var(--text3);">1,180+ Spike Coins Perpetual Feed</div>
+      <div style="font-family:'Space Mono',monospace; font-size:9px; color:var(--text3);">1,060+ Spike Coins Perpetual Feed</div>
+    </div>
+    <div style="background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700;">WEEX Contract V3 Stream</span>
+        <span class="badge bb">CONNECTED</span>
+      </div>
+      <div style="font-family:'Space Mono',monospace; font-size:18px; font-weight:700; color:#af7ac5; margin:6px 0;" id="ping-weex">58 ms</div>
+      <div style="font-family:'Space Mono',monospace; font-size:9px; color:var(--text3);">990+ Spike Coins Perpetual Feed</div>
     </div>
     <div style="background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -556,7 +564,7 @@ const masterHeaderHtml = `
     </div>
     <div class="bybit-feed-pill">
       <span class="dot dg"></span>
-      <span id="bybit-live-label">880+ Bybit · 1,180+ MEXC Live</span>
+      <span id="bybit-live-label">880+ Bybit · 1,060+ MEXC · 990+ WEEX Live</span>
     </div>
     <button class="hdr-btn" onclick="globalRefreshAll()" title="Refresh All Data">
       <span>⟳</span>
