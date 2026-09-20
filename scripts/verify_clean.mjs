@@ -3,6 +3,7 @@ import fs from 'fs';
 const files = [
   'apps/web/public/eagle-flash.html',
   'dist-eagle-flash/index.html',
+  'eagle-flash.html',
   'index.html'
 ];
 
