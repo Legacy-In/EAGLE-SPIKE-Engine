@@ -1,7 +1,11 @@
 # EAGLE FLASH — Quantitative Scoring Methodology
 
-## Model Version: `score_v2.1.0`
-## Feature Engine Version: `features_v3.0.1`
+## Model Version: `score_v2.1.0` | Centralized Model Config: `v1.2.0`
+## Feature Engine Version: `features_v3.1.0`
+
+---
+
+## 1. Overview: The 8-Factor Explainable Eagle Score
 
 The **Eagle Score** is a 0 to 100 quantitative metric measuring multi-factor volume and volatility expansion in crypto perpetual futures. It is strictly explainable and decomposed into 8 orthogonal market features:
 
@@ -60,31 +64,53 @@ Distinguishes organic capital accumulation from transient scalping:
 - $\Delta\text{OI}_{15M} \ge 0.5\% \implies 6 \text{ pts}$
 - $\Delta\text{OI}_{15M} < 0.5\% \implies 3 \text{ pts}$
 
-### Factor 6: Liquidity & Spread Quality (0 - 5 pts)
-Ensures executable price discovery without severe market impact:
-- $24\text{H Turnover} \ge \$3\text{M}$ and $\text{Spread} \le 0.04\% \implies 5 \text{ pts}$
-- $24\text{H Turnover} \ge \$800\text{K}$ and $\text{Spread} \le 0.08\% \implies 4 \text{ pts}$
-- $24\text{H Turnover} \ge \$250\text{K} \implies 3 \text{ pts}$
-- Low Liquidity / Illiquid $\implies 1 \text{ pt}$
+### Factor 6: Liquidity & Order Book Spread (0 - 5 pts)
+Rewards instruments with sufficient turnover to minimize market impact:
+- $Turnover_{24H} \ge \$3\text{M} \text{ and Spread} \le 0.04\% \implies 5 \text{ pts}$
+- $Turnover_{24H} \ge \$800\text{k} \text{ and Spread} \le 0.08\% \implies 4 \text{ pts}$
+- $Turnover_{24H} \ge \$250\text{k} \implies 3 \text{ pts}$
+- Thin Book Trap ($Turnover < \$250\text{k} \text{ or Spread} > 0.15\%$) $\implies 1 \text{ pt}$
 
 ### Factor 7: Bitcoin Macro Regime Alignment (0 - 5 pts)
-Adjusts score according to market-wide tailwinds:
-- Long aligned with `BULLISH` BTC or Short aligned with `BEARISH` BTC $\implies 5 \text{ pts}$
-- `NEUTRAL` or `HIGH_VOLATILITY` $\implies 3 \text{ pts}$
-- Trading against systemic `RISK_OFF` trend $\implies 1 \text{ pt}$
+Incorporates macro market backdrop:
+- Aligned Trend (Bullish BTC + Long Candidate OR Bearish BTC + Short Candidate) $\implies 5 \text{ pts}$
+- Neutral BTC Regime $\implies 3 \text{ pts}$
+- Counter-Trend $\implies 1 \text{ pt}$
 
-### Factor 8: Data Freshness & Completeness (0 - 5 pts)
-- Feed age $< 5\text{s} \implies 5 \text{ pts}$
-- Feed age $< 10\text{s} \implies 4 \text{ pts}$
-- Feed age $< 30\text{s} \implies 3 \text{ pts}$
-- Stale Feed $> 30\text{s} \implies 1 \text{ pt}$
+### Factor 8: Data Freshness & Quality (0 - 5 pts)
+Evaluates latency of the underlying feeds:
+- Age $\le 5000\text{ms} \implies 5 \text{ pts}$
+- Age $\le 30000\text{ms} \implies 3 \text{ pts}$
+- Age $> 30000\text{ms} \implies 1 \text{ pt}$
 
 ---
 
-## Data Confidence Metric (0 - 100%)
-Maintained separately from Eagle Score:
-- **WebSocket Health**: 25%
-- **Ticker Freshness**: 30%
-- **Order Book Presence**: 15%
-- **Derivatives/OI Freshness**: 15%
-- **API Latency (<250ms)**: 15%
+## 2. Three Distinct Evaluation Scores
+
+EAGLE FLASH strictly isolates three distinct evaluation concepts:
+
+| Dimension | Measure | Range | Meaning |
+| :--- | :--- | :--- | :--- |
+| **A) Eagle Score** | Model Satisfaction | $0 - 100$ | How strongly the market event satisfies the configured multi-factor signal model. |
+| **B) Signal Quality** | Structural Reliability | `HIGH`, `MEDIUM`, `LOW`, `EXHAUSTION_RISK` | Structural classification based on order flow alignment, spread liquidity, and absence of delta divergence. |
+| **C) Data Confidence** | Data Provenance | `HIGH` ($\ge 85\%$), `MEDIUM` ($70-84\%$), `LOW` ($< 70\%$) | Reliability, completeness, and freshness of the underlying WebSocket/REST exchange data. |
+
+> **Critical Distinction**: A candidate can exhibit an **Eagle Score of 86**, a **Signal Quality of HIGH**, but a **Data Confidence of LOW**. This alerts the trader that while the pattern looks structurally bullish, the feed latency is degraded and should be treated with caution.
+
+---
+
+## 3. Anomaly Score vs. Eagle Score
+
+EAGLE FLASH maintains an absolute distinction between **Market Anomalies** and **Trading Signals**:
+
+- **Anomaly Score ($0-100$)**:
+  Measures *how statistically unusual* the current market behavior is relative to cross-market distributions ($\sigma$ z-scores for price, volume, RVOL, trade activity, and open interest).
+- **Eagle Score ($0-100$)**:
+  Measures *how strongly* the market behavior satisfies the quantitative trading signal model.
+
+**Example**:
+- $\text{Anomaly Score} = 94$
+- $\text{Eagle Score} = 58$
+
+**Interpretation**:
+> *"Very unusual market activity (extreme volume or thin-liquidity price wick), but insufficient order flow confirmation or liquidity to constitute a high-quality Eagle signal."*

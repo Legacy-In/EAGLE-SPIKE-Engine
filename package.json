@@ -7,6 +7,6 @@
     "dev": "npm --prefix apps/web run dev",
     "build": "npm --prefix apps/web run build",
     "start": "npm --prefix apps/web run start",
-    "test": "npx.cmd --yes tsx --test tests/spike-intelligence.test.ts && node --test tests/lifecycle.test.mjs tests/engine.test.mjs && node scripts/security_audit.mjs && node scripts/verify_clean.mjs"
+    "test": "npx.cmd --yes tsx --test tests/spike-intelligence.test.ts tests/signals-heatmap.test.ts && node --test tests/lifecycle.test.mjs tests/engine.test.mjs && node scripts/security_audit.mjs && node scripts/verify_clean.mjs"
   }
 }
