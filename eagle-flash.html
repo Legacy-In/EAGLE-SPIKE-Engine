@@ -3600,6 +3600,7 @@ const LifecycleEngine = {
       searchQuery: '',
       sortColumn: 'signalScore',
       sortDirection: 'desc',
+      scannerDisplayLimit: 100,
       refreshSecondsLeft: 900, // 15 mins default
       ws: null,
       wsConnected: false,
@@ -4482,33 +4483,47 @@ function showScoreBreakdown(symbol) {
     return;
   }
 
-  const tableWrap = document.querySelector('.table-wrap');
-  if (tableWrap && !tableWrap._hasVirtualScrollListener) {
-    tableWrap._hasVirtualScrollListener = true;
-    tableWrap.addEventListener('scroll', () => {
-      requestAnimationFrame(() => renderScannerTable());
-    }, { passive: true });
+  if (!window._scannerInfiniteScrollAttached) {
+    window._scannerInfiniteScrollAttached = true;
+    const handleScannerScroll = () => {
+      const scannerView = document.getElementById('view-SCANNER');
+      if (!scannerView || !scannerView.classList.contains('active')) return;
+      const scrollBottom = window.innerHeight + window.scrollY;
+      const docHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+      if (scrollBottom >= docHeight - 700) {
+        const curList = getFilteredAndSortedSymbols();
+        const curLimit = State.scannerDisplayLimit || 100;
+        if (curLimit < curList.length) {
+          State.scannerDisplayLimit = Math.min(curList.length, curLimit + 100);
+          renderScannerTable();
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScannerScroll, { passive: true });
+
+    const tableWrap = document.querySelector('.table-wrap');
+    if (tableWrap) {
+      tableWrap.addEventListener('scroll', () => {
+        if (tableWrap.scrollHeight - tableWrap.scrollTop - tableWrap.clientHeight < 300) {
+          const curList = getFilteredAndSortedSymbols();
+          const curLimit = State.scannerDisplayLimit || 100;
+          if (curLimit < curList.length) {
+            State.scannerDisplayLimit = Math.min(curList.length, curLimit + 100);
+            renderScannerTable();
+          }
+        }
+      }, { passive: true });
+    }
   }
 
-  const scrollTop = tableWrap ? tableWrap.scrollTop : 0;
-  const viewportHeight = tableWrap ? tableWrap.clientHeight : 700;
-  const rowHeight = 38;
+  const limit = State.scannerDisplayLimit || 100;
   const totalRows = list.length;
-  const visibleCount = Math.ceil(viewportHeight / rowHeight);
-  const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - 8);
-  const endIndex = Math.min(totalRows, startIndex + visibleCount + 18);
-
-  const topPadding = startIndex * rowHeight;
-  const bottomPadding = Math.max(0, (totalRows - endIndex) * rowHeight);
+  const displayRows = list.slice(0, limit);
 
   let html = '';
-  if (topPadding > 0) {
-    html += '<tr style="height:' + topPadding + 'px"><td colspan="26" style="padding:0; border:0; height:' + topPadding + 'px"></td></tr>';
-  }
   let mHtml = '';
 
-  list.slice(startIndex, endIndex).forEach((s, localIdx) => {
-    const idx = startIndex + localIdx;
+  displayRows.forEach((s, idx) => {
     const isPos = s.price24hChange >= 0;
     const isPos5m = (s.returns5m || 0) >= 0;
     const isPos15m = (s.returns15m || 0) >= 0;
@@ -4595,12 +4610,34 @@ function showScoreBreakdown(symbol) {
     '</div>';
   });
 
-  if (bottomPadding > 0) {
-    html += '<tr style="height:' + bottomPadding + 'px"><td colspan="26" style="padding:0; border:0; height:' + bottomPadding + 'px"></td></tr>';
+  if (totalRows > limit) {
+    html += '<tr><td colspan="26" style="text-align:center; padding:16px; background:rgba(15,23,42,0.6); border-top:1px solid var(--border); font-family:var(--font-mono);">' +
+      '<span style="color:var(--text-muted); font-size:12px; margin-right:12px;">Showing <strong>' + displayRows.length + '</strong> of <strong>' + totalRows + '</strong> symbols</span>' +
+      '<button class="btn btn-sm btn-emerald" onclick="loadMoreScannerRows(100)" style="cursor:pointer; margin-right:8px;">⬇ Load 100 More</button>' +
+      '<button class="btn btn-sm" onclick="loadAllScannerRows()" style="cursor:pointer;">⚡ Load All (' + totalRows + ')</button>' +
+    '</td></tr>';
+
+    mHtml += '<div style="text-align:center; padding:16px; background:var(--bg-surface1); border:1px solid var(--border); border-radius:6px; margin-top:8px; font-family:var(--font-mono);">' +
+      '<div style="color:var(--text-muted); font-size:12px; margin-bottom:8px;">Showing <strong>' + displayRows.length + '</strong> of <strong>' + totalRows + '</strong> symbols</div>' +
+      '<button class="btn btn-sm btn-emerald" onclick="loadMoreScannerRows(100)" style="margin-right:8px;">⬇ Load 100 More</button>' +
+      '<button class="btn btn-sm" onclick="loadAllScannerRows()">⚡ Load All (' + totalRows + ')</button>' +
+    '</div>';
   }
 
   tbody.innerHTML = html;
   mContainer.innerHTML = mHtml;
+}
+
+function loadMoreScannerRows(step) {
+  const list = getFilteredAndSortedSymbols();
+  State.scannerDisplayLimit = Math.min(list.length, (State.scannerDisplayLimit || 100) + (step || 100));
+  renderScannerTable();
+}
+
+function loadAllScannerRows() {
+  const list = getFilteredAndSortedSymbols();
+  State.scannerDisplayLimit = list.length;
+  renderScannerTable();
 }
 
     
@@ -5458,6 +5495,7 @@ function showScoreBreakdown(symbol) {
     
     function setExchangeFilter(exchange, btn) {
       State.activeExchange = exchange;
+      State.scannerDisplayLimit = 100;
       localStorage.setItem('eagleFlash:v1:activeExchange', exchange);
       document.querySelectorAll('.ex-pill').forEach(b => b.classList.remove('active'));
       if (btn) btn.classList.add('active');
@@ -5468,6 +5506,7 @@ function showScoreBreakdown(symbol) {
 
     function applyPreset(preset) {
       State.activePreset = preset;
+      State.scannerDisplayLimit = 100;
       document.querySelectorAll('.preset-pill').forEach(btn => {
         btn.classList.toggle('active', btn.innerText.replace(' ', '_').toUpperCase().includes(preset));
       });
@@ -5476,6 +5515,7 @@ function showScoreBreakdown(symbol) {
 
     function handleSearch(q) {
       State.searchQuery = q.trim();
+      State.scannerDisplayLimit = 100;
       renderScannerTable();
     }
 
