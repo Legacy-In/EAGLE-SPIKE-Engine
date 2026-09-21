@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
       data: {
         activeSignals,
         historicalSignals,
+        historicalRecords: historicalSignals,
         stats: {
           totalLogged: activeSignals.length + historicalSignals.length,
           activeCount: activeSignals.length,

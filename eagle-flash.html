@@ -1973,7 +1973,7 @@
       <div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
-            📜 RESOLVED BIG-CAP TRADES LOG &amp; AUDIT TRAIL
+            📜 RESOLVED BIG-CAP TRADES LOG &amp; AUDIT TRAIL <span id="bigcap-history-count">(0)</span>
           </h3>
           <span style="font-size:10px; font-family:var(--font-mono); color:var(--text-dark);">
             45m Cooldown Enforced Post-Closure
@@ -4513,10 +4513,25 @@ const LifecycleEngine = {
           if (this.realtimeChannel) {
             EagleSupabase.client.removeChannel(this.realtimeChannel);
           }
+          const terminalStates = ['TP_HIT', 'SL_HIT', 'INVALIDATED', 'EXPIRED'];
           this.realtimeChannel = EagleSupabase.client
             .channel('public:big_cap_signals')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'big_cap_signals' }, () => {
-              this.syncDb();
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'big_cap_signals' }, (payload) => {
+              const { eventType, new: newRec } = payload;
+              if (eventType === 'UPDATE' && newRec && terminalStates.includes(newRec.status)) {
+                // Remove from active locks
+                this.activeSignals = this.activeSignals.filter(s => s.signal_id !== newRec.signal_id && s.id !== newRec.id);
+                // Dynamically prepend to resolved audit trail table
+                const exists = this.historicalSignals.some(s => s.signal_id === newRec.signal_id || s.id === newRec.id);
+                if (!exists) {
+                  this.historicalSignals.unshift(newRec);
+                } else {
+                  this.historicalSignals = this.historicalSignals.map(s => (s.signal_id === newRec.signal_id || s.id === newRec.id) ? newRec : s);
+                }
+                this.render();
+              } else {
+                this.syncDb();
+              }
             })
             .subscribe();
         } catch (e) {
@@ -4527,6 +4542,21 @@ const LifecycleEngine = {
       async syncDb() {
         try {
           let records = null;
+          // 1. Try local API first (historicalRecords array from GET /api/bigcap)
+          try {
+            const apiResp = await fetch('/api/bigcap');
+            if (apiResp.ok) {
+              const apiJson = await apiResp.json();
+              if (apiJson.success && apiJson.data) {
+                this.activeSignals = apiJson.data.activeSignals || [];
+                this.historicalSignals = apiJson.data.historicalRecords || apiJson.data.historicalSignals || [];
+                this.render();
+                return;
+              }
+            }
+          } catch (err) {}
+
+          // 2. Try Supabase Client
           if (EagleSupabase.client) {
             const { data, error } = await EagleSupabase.client
               .from('big_cap_signals')
@@ -4538,6 +4568,7 @@ const LifecycleEngine = {
             }
           }
 
+          // 3. Direct PostgREST fallback
           if (!records) {
             try {
               const resp = await fetch(SUPABASE_CONFIG.url + '/rest/v1/big_cap_signals?select=*&order=detected_at.desc&limit=100', {
@@ -4777,10 +4808,13 @@ const LifecycleEngine = {
         }
 
         // Render Historical Table
+        const histCountEl = document.getElementById('bigcap-history-count');
+        if (histCountEl) histCountEl.innerText = '(' + this.historicalSignals.length + ')';
+
         const histTbody = document.getElementById('bigcap-history-tbody');
         if (histTbody) {
           if (this.historicalSignals.length === 0) {
-            histTbody.innerHTML = '<tr><td colspan="9" class="c-dark" style="text-align:center; padding:20px;">No resolved big-cap positions recorded in Supabase yet. Monitoring for TP/SL executions.</td></tr>';
+            histTbody.innerHTML = '<tr><td colspan="9" class="c-dark" style="text-align:center; padding:24px; font-family:var(--font-mono); font-size:11px;">[NO RESOLVED BIG-CAP TRADES IN AUDIT WINDOW]</td></tr>';
           } else {
             let histHtml = '';
             this.historicalSignals.forEach(h => {

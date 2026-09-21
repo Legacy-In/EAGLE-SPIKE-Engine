@@ -50,6 +50,7 @@ interface BigCapSignal {
 interface BigCapData {
   activeSignals: BigCapSignal[];
   historicalSignals: BigCapSignal[];
+  historicalRecords: BigCapSignal[];
   stats: {
     totalLogged: number;
     activeCount: number;
@@ -86,13 +87,18 @@ export const BigCapSpikeSection: React.FC = () => {
     }
   }
 
-  // 1. Fetch strict DB-backed state from API
+  // 1. Fetch strict DB-backed state from GET /api/bigcap (historicalRecords array)
   const fetchData = async () => {
     try {
       const res = await fetch(`/api/bigcap?symbol=${selectedSymbol}`);
       const json = await res.json();
       if (json.success && json.data) {
-        setData(json.data);
+        const hist = json.data.historicalRecords || json.data.historicalSignals || [];
+        setData({
+          ...json.data,
+          historicalRecords: hist,
+          historicalSignals: hist,
+        });
       }
     } catch (err) {
       console.warn('BigCap data fetch notice:', err);
@@ -108,20 +114,70 @@ export const BigCapSpikeSection: React.FC = () => {
     return () => clearInterval(interval);
   }, [selectedSymbol]);
 
-  // 3. Supabase Realtime channel subscription
+  // 3. Supabase Realtime channel subscription with dynamic PREPEND on terminal state transition
   useEffect(() => {
     const client = supabaseRef.current;
     if (!client) return;
 
     let channel: any = null;
     try {
+      const terminalStates = ['TP_HIT', 'SL_HIT', 'INVALIDATED', 'EXPIRED'];
       channel = client
         .channel('public:big_cap_signals_web')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'big_cap_signals' },
           (payload: any) => {
-            fetchData();
+            const { eventType, new: newRec } = payload;
+            if (eventType === 'UPDATE' && newRec && terminalStates.includes(newRec.status)) {
+              setData((prev) => {
+                if (!prev) return prev;
+                // 1. Remove from activeSignals
+                const updatedActive = (prev.activeSignals || []).filter(
+                  (s) => s.signal_id !== newRec.signal_id && s.id !== newRec.id
+                );
+                // 2. Prepend to historicalRecords table
+                const currentHistory = prev.historicalRecords || prev.historicalSignals || [];
+                const exists = currentHistory.some(
+                  (s) => s.signal_id === newRec.signal_id || s.id === newRec.id
+                );
+                const updatedHistory = exists
+                  ? currentHistory.map((s) =>
+                      s.signal_id === newRec.signal_id || s.id === newRec.id ? newRec : s
+                    )
+                  : [newRec, ...currentHistory];
+
+                // 3. Recalculate net session stats in real time
+                const closed = updatedHistory.filter(
+                  (s) => s.status === 'TP_HIT' || s.status === 'SL_HIT'
+                );
+                const tpCount = closed.filter((s) => s.status === 'TP_HIT').length;
+                const winRate =
+                  closed.length > 0
+                    ? parseFloat(((tpCount / closed.length) * 100).toFixed(1))
+                    : 0;
+                const netPnl = closed.reduce(
+                  (acc, s) => acc + (parseFloat(s.realized_pnl_pct as any) || 0),
+                  0
+                );
+
+                return {
+                  ...prev,
+                  activeSignals: updatedActive,
+                  historicalSignals: updatedHistory,
+                  historicalRecords: updatedHistory,
+                  stats: {
+                    totalLogged: updatedActive.length + updatedHistory.length,
+                    activeCount: updatedActive.length,
+                    closedCount: closed.length,
+                    winRate,
+                    netPnlPct: parseFloat(netPnl.toFixed(2)),
+                  },
+                };
+              });
+            } else {
+              fetchData();
+            }
           }
         )
         .subscribe((status: string) => {
@@ -178,7 +234,11 @@ export const BigCapSpikeSection: React.FC = () => {
   }, []);
 
   const activeSignals = useMemo(() => data?.activeSignals || [], [data]);
-  const historicalSignals = useMemo(() => data?.historicalSignals || [], [data]);
+  const historicalRecords = useMemo(
+    () => data?.historicalRecords || data?.historicalSignals || [],
+    [data]
+  );
+  const historicalSignals = historicalRecords;
   const stats = useMemo(
     () => data?.stats || { totalLogged: 0, activeCount: 0, closedCount: 0, winRate: 0, netPnlPct: 0 },
     [data]
@@ -529,7 +589,7 @@ export const BigCapSpikeSection: React.FC = () => {
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h3 className="font-mono text-xs font-bold text-sigma-textMuted uppercase tracking-wider flex items-center gap-2">
             <Clock className="w-4 h-4 text-sigma-cyan" />
-            RESOLVED BIG-CAP TRADES LOG &amp; AUDIT TRAIL ({historicalSignals.length})
+            RESOLVED BIG-CAP TRADES LOG &amp; AUDIT TRAIL ({historicalRecords.length})
           </h3>
           <span className="text-[11px] font-mono text-sigma-textDark">
             Strict Supabase Query: `status IN (TP_HIT, SL_HIT, INVALIDATED, EXPIRED)`
@@ -552,14 +612,14 @@ export const BigCapSpikeSection: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-sigma-border/50 text-sigma-textMuted">
-              {historicalSignals.length === 0 ? (
+              {historicalRecords.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-8 text-center text-sigma-textDark font-mono text-xs">
-                    No resolved positions recorded in Supabase database yet. Monitoring for TP/SL executions.
+                    [NO RESOLVED BIG-CAP TRADES IN AUDIT WINDOW]
                   </td>
                 </tr>
               ) : (
-                historicalSignals.map((h) => {
+                historicalRecords.map((h) => {
                   const isLong = h.direction === 'LONG';
                   const pnl = parseFloat(h.realized_pnl_pct as any) || 0;
                   const isWin = h.status === 'TP_HIT';
