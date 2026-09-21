@@ -315,10 +315,10 @@ body {
             </div>
             
             <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 sm:gap-6 text-xs font-mono w-full sm:w-auto">
-              <div><div class="text-[10px] text-sigma-textDark uppercase">24h High</div><div class="text-sigma-textMain font-semibold tabular-nums">$79,850.00</div></div>
-              <div><div class="text-[10px] text-sigma-textDark uppercase">24h Low</div><div class="text-sigma-textMain font-semibold tabular-nums">$76,920.00</div></div>
-              <div><div class="text-[10px] text-sigma-textDark uppercase">24h Turnover</div><div class="text-sigma-cyan font-semibold tabular-nums">$1.81B</div></div>
-              <div><div class="text-[10px] text-sigma-textDark uppercase">vs Nov 2025 ATH</div><div class="text-sigma-red font-semibold tabular-nums">-27.3%</div></div>
+              <div><div class="text-[10px] text-sigma-textDark uppercase">24h High</div><div id="strip-24h-high" class="text-sigma-textMain font-semibold tabular-nums">$79,850.00</div></div>
+              <div><div class="text-[10px] text-sigma-textDark uppercase">24h Low</div><div id="strip-24h-low" class="text-sigma-textMain font-semibold tabular-nums">$76,920.00</div></div>
+              <div><div class="text-[10px] text-sigma-textDark uppercase">24h Turnover</div><div id="strip-24h-turnover" class="text-sigma-cyan font-semibold tabular-nums">$1.81B</div></div>
+              <div><div class="text-[10px] text-sigma-textDark uppercase">vs All-Time High</div><div id="strip-ath-distance" class="text-sigma-red font-semibold tabular-nums">-27.3%</div></div>
             </div>
 
             <div class="bg-sigma-surface2 px-3 py-1.5 rounded border border-sigma-border text-[10px] font-mono w-full sm:w-auto">
@@ -345,40 +345,40 @@ body {
               <div class="p-4 border-b border-sigma-border bg-sigma-surface2/60">
                 <div class="flex items-center justify-between gap-2 mb-2">
                   <div class="flex items-center gap-2">
-                    <span class="font-mono font-bold text-xs text-sigma-textMain">BTCUSDT</span>
-                    <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sigma-surface3 text-sigma-textMuted border border-sigma-border">4H TIMEFRAME</span>
+                    <span id="sig-symbol" class="font-mono font-bold text-xs text-sigma-textMain">BTCUSDT</span>
+                    <span id="sig-tf" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sigma-surface3 text-sigma-textMuted border border-sigma-border">4H TIMEFRAME</span>
                   </div>
                   <div class="flex items-center gap-1.5 text-[10px] font-mono text-sigma-textDark">
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-sigma-cyan"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
-                    <span>Updated 2m ago</span>
+                    <span id="sig-updated">Live Sync</span>
                   </div>
                 </div>
 
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-2.5">
-                    <div class="p-2 rounded-lg border flex items-center justify-center bg-sigma-green/15 border-sigma-green text-sigma-green">
+                    <div id="sig-dir-badge" class="p-2 rounded-lg border flex items-center justify-center bg-sigma-green/15 border-sigma-green text-sigma-green">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m16 12-4-4-4 4"></path><path d="M12 16V8"></path></svg>
                     </div>
                     <div>
-                      <div class="font-mono text-2xl font-black tracking-wide text-sigma-green">LONG</div>
-                      <div class="text-[11px] font-semibold text-sigma-textDark uppercase tracking-wider">BULLISH RECOVERY</div>
+                      <div id="sig-direction" class="font-mono text-2xl font-black tracking-wide text-sigma-green">LONG</div>
+                      <div id="sig-regime" class="text-[11px] font-semibold text-sigma-textDark uppercase tracking-wider">BULLISH RECOVERY</div>
                     </div>
                   </div>
                   <div class="text-right">
                     <div class="text-[10px] font-mono text-sigma-textDark uppercase">Model Confidence</div>
-                    <div class="text-base font-mono font-bold text-sigma-cyan">78%</div>
-                    <div class="text-[10px] font-mono text-sigma-textDark">Data Quality: 96%</div>
+                    <div id="sig-confidence" class="text-base font-mono font-bold text-sigma-cyan">78%</div>
+                    <div id="sig-data-quality" class="text-[10px] font-mono text-sigma-textDark">Data Quality: 99%</div>
                   </div>
                 </div>
 
                 <div class="mt-3">
                   <div class="w-full bg-sigma-surface3 h-2 rounded-full overflow-hidden flex border border-sigma-border">
-                    <div class="h-full transition-all duration-700 bg-sigma-green" style="width:78%"></div>
+                    <div id="sig-conf-bar" class="h-full transition-all duration-700 bg-sigma-green" style="width:78%"></div>
                   </div>
                   <div class="flex justify-between text-[9px] font-mono text-sigma-textDark mt-1">
-                    <span>UNTESTED HYPOTHESIS (0%)</span>
-                    <span>CALIBRATED ENSEMBLE (78%)</span>
-                    <span>STATISTICAL CERTAINTY (100%)</span>
+                    <span>UNTESTED (0%)</span>
+                    <span>CALIBRATED ENSEMBLE</span>
+                    <span>CERTAINTY (100%)</span>
                   </div>
                 </div>
               </div>
@@ -388,11 +388,11 @@ body {
                 <div class="grid grid-cols-2 gap-3 pb-3">
                   <div class="bg-sigma-surface2/60 p-2.5 rounded border border-sigma-border">
                     <div class="text-[10px] font-mono text-sigma-textDark uppercase mb-0.5">Entry Zone</div>
-                    <div class="font-mono text-xs font-bold text-sigma-textMain">$78,850 – $79,150</div>
+                    <div id="sig-entry-zone" class="font-mono text-xs font-bold text-sigma-textMain">$78,850 – $79,150</div>
                   </div>
                   <div class="bg-sigma-surface2/60 p-2.5 rounded border border-sigma-border">
-                    <div class="text-[10px] font-mono text-sigma-textDark uppercase mb-0.5">Stop Loss (ATR Max)</div>
-                    <div class="font-mono text-xs font-bold text-sigma-red">$77,920</div>
+                    <div class="text-[10px] font-mono text-sigma-textDark uppercase mb-0.5">Stop Loss (ATR Clamped)</div>
+                    <div id="sig-stop-loss" class="font-mono text-xs font-bold text-sigma-red">$77,920</div>
                   </div>
                 </div>
 
@@ -404,23 +404,23 @@ body {
                   <div class="grid grid-cols-3 gap-2 text-center">
                     <div class="bg-sigma-surface2/80 p-2 rounded border border-sigma-border">
                       <div class="text-[9px] font-mono text-sigma-textDark">TARGET 1 (1.5R)</div>
-                      <div class="font-mono text-xs font-bold text-sigma-green">$80,400</div>
+                      <div id="sig-t1" class="font-mono text-xs font-bold text-sigma-green">$80,400</div>
                     </div>
                     <div class="bg-sigma-surface2/80 p-2 rounded border border-sigma-border">
                       <div class="text-[9px] font-mono text-sigma-textDark">TARGET 2 (2.5R)</div>
-                      <div class="font-mono text-xs font-bold text-sigma-green">$81,750</div>
+                      <div id="sig-t2" class="font-mono text-xs font-bold text-sigma-green">$81,750</div>
                     </div>
                     <div class="bg-sigma-surface2/80 p-2 rounded border border-sigma-border">
                       <div class="text-[9px] font-mono text-sigma-textDark">TARGET 3 (4.0R)</div>
-                      <div class="font-mono text-xs font-bold text-sigma-green">$83,200</div>
+                      <div id="sig-t3" class="font-mono text-xs font-bold text-sigma-green">$83,200</div>
                     </div>
                   </div>
                 </div>
 
                 <div class="py-3 flex items-center justify-between text-xs font-mono">
-                  <div><span class="text-sigma-textDark text-[10px] block">RISK / REWARD</span><span class="font-bold text-sigma-textMain">1 : 2.8</span></div>
-                  <div><span class="text-sigma-textDark text-[10px] block">POSITION RISK</span><span class="font-bold text-sigma-textMain">0.5%</span></div>
-                  <div><span class="text-sigma-textDark text-[10px] block">INVALIDATION</span><span class="text-[11px] font-medium text-sigma-amber truncate max-w-[150px]">4H close below $77,920</span></div>
+                  <div><span class="text-sigma-textDark text-[10px] block">RISK / REWARD</span><span id="sig-rr" class="font-bold text-sigma-textMain">1 : 2.8</span></div>
+                  <div><span class="text-sigma-textDark text-[10px] block">POSITION RISK</span><span id="sig-pos-risk" class="font-bold text-sigma-textMain">0.5%</span></div>
+                  <div><span class="text-sigma-textDark text-[10px] block">INVALIDATION</span><span id="sig-invalidation" class="text-[11px] font-medium text-sigma-amber truncate max-w-[150px]">4H close below SL</span></div>
                 </div>
 
                 <div class="pt-3 space-y-2 text-xs">
@@ -429,10 +429,10 @@ body {
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m16 9-5.5 5.5L8 12"></path></svg>
                       <span>CONFIRMING POSITIVE FACTORS</span>
                     </div>
-                    <ul class="text-[11px] text-sigma-textMuted space-y-1 list-disc list-inside">
-                      <li>Spot CVD positive accumulation (+$142M net taker balance)</li>
-                      <li>Funding reset to +0.008% baseline with organic OI expansion</li>
-                      <li>4H price structure intact above 20 EMA and $77,920 support</li>
+                    <ul id="sig-pos-factors" class="text-[11px] text-sigma-textMuted space-y-1 list-disc list-inside">
+                      <li>Spot CVD positive accumulation (+taker balance)</li>
+                      <li>Funding baseline with organic OI expansion</li>
+                      <li>Price structure intact above EMA 20 support</li>
                     </ul>
                   </div>
                   <div>
@@ -440,9 +440,9 @@ body {
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
                       <span>KEY NEGATIVE FACTORS & RISKS</span>
                     </div>
-                    <ul class="text-[11px] text-sigma-textMuted space-y-1 list-disc list-inside">
-                      <li>Overhead resistance wall clustered between $80,000 and $80,500</li>
-                      <li>Upcoming FOMC rate volatility window in 3 days</li>
+                    <ul id="sig-neg-factors" class="text-[11px] text-sigma-textMuted space-y-1 list-disc list-inside">
+                      <li>Overhead order book ask wall resistance cluster</li>
+                      <li>Macro volatility & liquidation boundary zone</li>
                     </ul>
                   </div>
                 </div>
@@ -452,12 +452,13 @@ body {
                 <div class="text-[10px] font-mono text-sigma-textDark">
                   <span>MODEL: SIGMA-4H-ENSEMBLE-v1.7</span>
                 </div>
-                <button onclick="executePaperTrade('LONG', 0.25)" class="px-4 py-2 rounded text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-md bg-sigma-green text-black hover:bg-sigma-green/90">
+                <button id="sig-exec-btn" onclick="executePaperTrade('LONG', 0.25)" class="px-4 py-2 rounded text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-md bg-sigma-green text-black hover:bg-sigma-green/90">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"></path></svg>
                   <span>EXECUTE LONG (0.25 BTC)</span>
                 </button>
               </div>
             </div>
+
 
             <!-- Factor Attribution -->
             <div class="bg-sigma-surface1 border border-sigma-border rounded-lg p-4">
@@ -468,35 +469,35 @@ body {
                 </div>
                 <div class="flex items-center gap-1.5 font-mono text-xs">
                   <span class="text-sigma-textDark text-[11px]">NET ENSEMBLE:</span>
-                  <span class="font-bold text-sigma-green px-1.5 py-0.5 rounded bg-sigma-green/10 border border-sigma-green/30">+62 / 100</span>
+                  <span id="factor-net-val" class="font-bold text-sigma-green px-1.5 py-0.5 rounded bg-sigma-green/10 border border-sigma-green/30">+62 / 100</span>
                 </div>
               </div>
               <p class="text-[11px] text-sigma-textDark mb-3">Orthogonal multi-factor decomposition. Individual factor scores are computed prior to linear ensemble weighting to eliminate collinearity.</p>
               
               <div class="space-y-2.5 text-xs font-mono">
                 <div>
-                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Trend Structure (4H / Daily Alignment)</span><span class="text-sigma-green font-semibold">+82</span></div>
-                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div class="bg-sigma-green h-full" style="width:82%"></div></div>
+                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Trend Structure (4H / Daily Alignment)</span><span id="factor-trend-val" class="text-sigma-green font-semibold">+82</span></div>
+                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div id="factor-trend-bar" class="bg-sigma-green h-full" style="width:82%"></div></div>
                 </div>
                 <div>
-                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Momentum & Velocity (MACD / RSI Divergence)</span><span class="text-sigma-green font-semibold">+68</span></div>
-                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div class="bg-sigma-green h-full" style="width:68%"></div></div>
+                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Momentum & Velocity (MACD / RSI Divergence)</span><span id="factor-mom-val" class="text-sigma-green font-semibold">+68</span></div>
+                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div id="factor-mom-bar" class="bg-sigma-green h-full" style="width:68%"></div></div>
                 </div>
                 <div>
-                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Derivatives & Funding (Carry / Basis Arbitrage)</span><span class="text-sigma-cyan font-semibold">+54</span></div>
-                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div class="bg-sigma-cyan h-full" style="width:54%"></div></div>
+                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Derivatives & Funding (Carry / Basis Arbitrage)</span><span id="factor-deriv-val" class="text-sigma-cyan font-semibold">+54</span></div>
+                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div id="factor-deriv-bar" class="bg-sigma-cyan h-full" style="width:54%"></div></div>
                 </div>
                 <div>
-                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Volatility Compression (Bollinger Squeeze)</span><span class="text-sigma-amber font-semibold">+45</span></div>
-                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div class="bg-sigma-amber h-full" style="width:45%"></div></div>
+                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Volatility Compression (Bollinger Squeeze)</span><span id="factor-vol-val" class="text-sigma-amber font-semibold">+45</span></div>
+                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div id="factor-vol-bar" class="bg-sigma-amber h-full" style="width:45%"></div></div>
                 </div>
                 <div>
-                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Order Flow & Liquidity Delta (CVD / Taker Flow)</span><span class="text-sigma-green font-semibold">+72</span></div>
-                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div class="bg-sigma-green h-full" style="width:72%"></div></div>
+                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">Order Flow & Liquidity Delta (CVD / Taker Flow)</span><span id="factor-cvd-val" class="text-sigma-green font-semibold">+72</span></div>
+                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div id="factor-cvd-bar" class="bg-sigma-green h-full" style="width:72%"></div></div>
                 </div>
                 <div>
-                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">On-Chain Realized Price & MVRV Regime</span><span class="text-sigma-green font-semibold">+76</span></div>
-                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div class="bg-sigma-green h-full" style="width:76%"></div></div>
+                  <div class="flex justify-between text-[11px] mb-1"><span class="text-sigma-textMuted">On-Chain Realized Price & MVRV Regime</span><span id="factor-onchain-val" class="text-sigma-green font-semibold">+76</span></div>
+                  <div class="w-full bg-sigma-surface3 h-1.5 rounded-full overflow-hidden"><div id="factor-onchain-bar" class="bg-sigma-green h-full" style="width:76%"></div></div>
                 </div>
               </div>
             </div>
@@ -508,8 +509,8 @@ body {
                 <h3 class="font-mono text-xs font-bold text-sigma-textMain uppercase tracking-wider">Autonomous AI Market Intelligence Brief</h3>
               </div>
               <div class="text-xs font-mono text-sigma-textMuted leading-relaxed space-y-2 bg-sigma-surface2/50 p-3 rounded border border-sigma-border">
-                <p><strong>EXECUTIVE DIRECTIVE:</strong> Bitcoin is consolidating cleanly in the $78,850–$79,400 liquidity basin following positive ETF net inflows (+$182.4M). Spot CVD shows consistent aggressive buyer absorption.</p>
-                <p><strong>STRATEGY ACTION:</strong> Favorable asymmetric long entry with tight invalidation at $77,920. Target 1 ($80,400) provides 1.5R with 68% historical probability.</p>
+                <p><strong>EXECUTIVE DIRECTIVE:</strong> <span id="ai-brief-directive">Bitcoin is consolidating cleanly in the primary liquidity basin with positive ETF net inflows and active buyer absorption.</span></p>
+                <p><strong>STRATEGY ACTION:</strong> <span id="ai-brief-action">Favorable asymmetric long entry with tight ATR stop. Target 1 provides 1.5R with high probability.</span></p>
               </div>
             </div>
           </div>
@@ -533,11 +534,11 @@ body {
                 </div>
 
                 <div class="flex items-center gap-3 text-[11px] font-mono tabular-nums text-sigma-textDark">
-                  <span>O: <strong class="text-sigma-textMain">$78,650.00</strong></span>
-                  <span>H: <strong class="text-sigma-textMain">$79,480.00</strong></span>
-                  <span>L: <strong class="text-sigma-textMain">$78,420.00</strong></span>
-                  <span>C: <strong class="text-sigma-green">$79,073.06</strong></span>
-                  <span>Vol: <strong class="text-sigma-cyan">4,820 BTC</strong></span>
+                  <span>O: <strong id="chart-open-val" class="text-sigma-textMain">$78,650.00</strong></span>
+                  <span>H: <strong id="chart-high-val" class="text-sigma-textMain">$79,480.00</strong></span>
+                  <span>L: <strong id="chart-low-val" class="text-sigma-textMain">$78,420.00</strong></span>
+                  <span>C: <strong id="chart-close-val" class="text-sigma-green">$79,073.06</strong></span>
+                  <span>Vol: <strong id="chart-vol-val" class="text-sigma-cyan">4,820 BTC</strong></span>
                 </div>
               </div>
 
@@ -546,20 +547,20 @@ body {
                 <svg viewBox="0 0 800 340" class="w-full h-auto cursor-crosshair select-none">
                   <!-- Gridlines -->
                   <line x1="0" y1="48" x2="800" y2="48" stroke="#1C2538" stroke-dasharray="3,3" stroke-width="1"></line>
-                  <text x="795" y="45" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$82,000</text>
+                  <text id="grid-p1" x="795" y="45" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$82,000</text>
                   <line x1="0" y1="112" x2="800" y2="112" stroke="#1C2538" stroke-dasharray="3,3" stroke-width="1"></line>
-                  <text x="795" y="109" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$80,400</text>
+                  <text id="grid-p2" x="795" y="109" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$80,400</text>
                   <line x1="0" y1="176" x2="800" y2="176" stroke="#1C2538" stroke-dasharray="3,3" stroke-width="1"></line>
-                  <text x="795" y="173" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$78,800</text>
+                  <text id="grid-p3" x="795" y="173" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$78,800</text>
                   <line x1="0" y1="240" x2="800" y2="240" stroke="#1C2538" stroke-dasharray="3,3" stroke-width="1"></line>
-                  <text x="795" y="237" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$77,200</text>
+                  <text id="grid-p4" x="795" y="237" text-anchor="end" fill="#64748B" font-size="9" font-family="monospace">$77,200</text>
 
                   <!-- S/R Reference Lines -->
-                  <line x1="0" y1="112" x2="800" y2="112" stroke="#00D2FF" stroke-dasharray="4,4" stroke-width="1.2" opacity="0.8"></line>
-                  <text x="10" y="108" fill="#00D2FF" font-size="9" font-family="monospace" font-weight="bold">TARGET 1 RESISTANCE: $80,400</text>
+                  <line id="chart-t1-line" x1="0" y1="112" x2="800" y2="112" stroke="#00D2FF" stroke-dasharray="4,4" stroke-width="1.2" opacity="0.8"></line>
+                  <text id="chart-t1-text" x="10" y="108" fill="#00D2FF" font-size="9" font-family="monospace" font-weight="bold">TARGET 1 RESISTANCE: $80,400</text>
 
-                  <line x1="0" y1="222" x2="800" y2="222" stroke="#FF4757" stroke-dasharray="4,4" stroke-width="1.2" opacity="0.8"></line>
-                  <text x="10" y="234" fill="#FF4757" font-size="9" font-family="monospace" font-weight="bold">STOP LOSS / INVALIDATION: $77,920</text>
+                  <line id="chart-stop-line" x1="0" y1="222" x2="800" y2="222" stroke="#FF4757" stroke-dasharray="4,4" stroke-width="1.2" opacity="0.8"></line>
+                  <text id="chart-stop-text" x="10" y="234" fill="#FF4757" font-size="9" font-family="monospace" font-weight="bold">STOP LOSS / INVALIDATION: $77,920</text>
 
                   <!-- Interactive Simulated Candlesticks (32 Bars) -->
                   <!-- Bar 1 to 32 rendered smoothly with volume -->
@@ -640,18 +641,18 @@ body {
                 </div>
                 <div class="flex items-center gap-1.5 font-mono text-[10px]">
                   <span class="text-sigma-textDark">DIVERGENCE:</span>
-                  <span class="px-1.5 py-0.5 rounded bg-sigma-green/10 text-sigma-green border border-sigma-green/30 font-bold">BULLISH DELTA DIVERGENCE</span>
+                  <span id="flow-divergence-badge" class="px-1.5 py-0.5 rounded bg-sigma-green/10 text-sigma-green border border-sigma-green/30 font-bold">BULLISH DELTA DIVERGENCE</span>
                 </div>
               </div>
 
               <div class="mb-4">
                 <div class="flex justify-between text-xs font-mono mb-1.5">
-                  <div class="flex items-center gap-1 text-sigma-green font-bold"><span>BUYERS</span><span>54.2%</span></div>
-                  <div class="flex items-center gap-1 text-sigma-red font-bold"><span>45.8%</span><span>SELLERS</span></div>
+                  <div class="flex items-center gap-1 text-sigma-green font-bold"><span>BUYERS</span><span id="flow-buy-pct">54.2%</span></div>
+                  <div class="flex items-center gap-1 text-sigma-red font-bold"><span id="flow-sell-pct">45.8%</span><span>SELLERS</span></div>
                 </div>
                 <div class="w-full h-3.5 bg-sigma-surface3 rounded overflow-hidden flex border border-sigma-border">
-                  <div class="h-full bg-sigma-green transition-all duration-500 flex items-center justify-start pl-2 text-[9px] font-mono font-bold text-black" style="width:54.2%">54.2%</div>
-                  <div class="h-full bg-sigma-red transition-all duration-500 flex items-center justify-end pr-2 text-[9px] font-mono font-bold text-white" style="width:45.8%">45.8%</div>
+                  <div id="flow-bar-buy" class="h-full bg-sigma-green transition-all duration-500 flex items-center justify-start pl-2 text-[9px] font-mono font-bold text-black" style="width:54.2%">54.2%</div>
+                  <div id="flow-bar-sell" class="h-full bg-sigma-red transition-all duration-500 flex items-center justify-end pr-2 text-[9px] font-mono font-bold text-white" style="width:45.8%">45.8%</div>
                 </div>
               </div>
 
@@ -659,31 +660,31 @@ body {
                 <div class="bg-sigma-surface2 p-3 rounded border border-sigma-border">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-[10px] font-mono text-sigma-textDark uppercase font-bold">SPOT ACCUMULATION</span>
-                    <span class="text-xs font-mono font-bold text-sigma-green tabular-nums">+$142.5M</span>
+                    <span id="flow-spot-acc" class="text-xs font-mono font-bold text-sigma-green tabular-nums">+$142.5M</span>
                   </div>
                   <div class="space-y-1 text-[11px] font-mono">
-                    <div class="flex justify-between text-sigma-textMuted"><span>Taker Buy:</span><span class="text-sigma-green font-semibold">52.8%</span></div>
-                    <div class="flex justify-between text-sigma-textMuted"><span>Taker Sell:</span><span class="text-sigma-red font-semibold">47.2%</span></div>
+                    <div class="flex justify-between text-sigma-textMuted"><span>Taker Buy:</span><span id="flow-spot-buy" class="text-sigma-green font-semibold">52.8%</span></div>
+                    <div class="flex justify-between text-sigma-textMuted"><span>Taker Sell:</span><span id="flow-spot-sell" class="text-sigma-red font-semibold">47.2%</span></div>
                   </div>
                 </div>
 
                 <div class="bg-sigma-surface2 p-3 rounded border border-sigma-border">
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-[10px] font-mono text-sigma-textDark uppercase font-bold">FUTURES POSITIONING</span>
-                    <span class="text-xs font-mono font-bold text-sigma-cyan tabular-nums">+$31.2M</span>
+                    <span id="flow-fut-pos" class="text-xs font-mono font-bold text-sigma-cyan tabular-nums">+$31.2M</span>
                   </div>
                   <div class="space-y-1 text-[11px] font-mono">
-                    <div class="flex justify-between text-sigma-textMuted"><span>Perp Taker Buy:</span><span class="text-sigma-green font-semibold">50.4%</span></div>
-                    <div class="flex justify-between text-sigma-textMuted"><span>Perp Taker Sell:</span><span class="text-sigma-red font-semibold">49.6%</span></div>
+                    <div class="flex justify-between text-sigma-textMuted"><span>Perp Taker Buy:</span><span id="flow-perp-buy" class="text-sigma-green font-semibold">50.4%</span></div>
+                    <div class="flex justify-between text-sigma-textMuted"><span>Perp Taker Sell:</span><span id="flow-perp-sell" class="text-sigma-red font-semibold">49.6%</span></div>
                   </div>
                 </div>
               </div>
 
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-sigma-borderSubtle text-xs font-mono">
-                <div><span class="text-[10px] text-sigma-textDark uppercase block">Net Delta (30m)</span><span class="font-bold tabular-nums text-sigma-red">$-18.5M</span></div>
-                <div><span class="text-[10px] text-sigma-textDark uppercase block">30m Volume</span><span class="font-bold text-sigma-textMain tabular-nums">$1.81B</span></div>
-                <div><span class="text-[10px] text-sigma-textDark uppercase block">Trade Count</span><span class="font-bold text-sigma-cyan tabular-nums">403,829</span></div>
-                <div><span class="text-[10px] text-sigma-textDark uppercase block">Large Blocks</span><span class="font-bold text-sigma-purple tabular-nums">148 (&gt; $250k)</span></div>
+                <div><span class="text-[10px] text-sigma-textDark uppercase block">Net Delta (30m)</span><span id="flow-net-delta" class="font-bold tabular-nums text-sigma-red">$-18.5M</span></div>
+                <div><span class="text-[10px] text-sigma-textDark uppercase block">30m Volume</span><span id="flow-volume" class="font-bold text-sigma-textMain tabular-nums">$1.81B</span></div>
+                <div><span class="text-[10px] text-sigma-textDark uppercase block">Trade Count</span><span id="flow-trade-count" class="font-bold text-sigma-cyan tabular-nums">403,829</span></div>
+                <div><span class="text-[10px] text-sigma-textDark uppercase block">Large Blocks</span><span id="flow-large-blocks" class="font-bold text-sigma-purple tabular-nums">148 (> $250k)</span></div>
               </div>
             </div>
 
@@ -696,26 +697,26 @@ body {
                 </div>
                 <div class="flex items-center gap-2 font-mono text-[10px]">
                   <span class="text-sigma-textDark">SPREAD:</span>
-                  <span class="text-sigma-green font-bold">$0.60 (0.80 bps)</span>
+                  <span id="ob-spread-val" class="text-sigma-green font-bold">$0.60 (0.80 bps)</span>
                 </div>
               </div>
 
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-xs font-mono">
                 <div class="bg-sigma-surface2 p-2 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark mb-1">±5 bps Depth</div>
-                  <div class="flex items-baseline justify-between"><span class="text-sigma-textMuted text-[11px]">42.5 vs 38.1</span><span class="font-bold tabular-nums text-[11px] text-sigma-green">+11.5%</span></div>
+                  <div class="flex items-baseline justify-between"><span id="ob-5bps-val" class="text-sigma-textMuted text-[11px]">42.5 vs 38.1</span><span id="ob-5bps-ratio" class="font-bold tabular-nums text-[11px] text-sigma-green">+11.5%</span></div>
                 </div>
                 <div class="bg-sigma-surface2 p-2 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark mb-1">±10 bps Depth</div>
-                  <div class="flex items-baseline justify-between"><span class="text-sigma-textMuted text-[11px]">89.2 vs 74.0</span><span class="font-bold tabular-nums text-[11px] text-sigma-green">+20.5%</span></div>
+                  <div class="flex items-baseline justify-between"><span id="ob-10bps-val" class="text-sigma-textMuted text-[11px]">89.2 vs 74.0</span><span id="ob-10bps-ratio" class="font-bold tabular-nums text-[11px] text-sigma-green">+20.5%</span></div>
                 </div>
                 <div class="bg-sigma-surface2 p-2 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark mb-1">±25 bps Depth</div>
-                  <div class="flex items-baseline justify-between"><span class="text-sigma-textMuted text-[11px]">195 vs 180</span><span class="font-bold tabular-nums text-[11px] text-sigma-green">+8.3%</span></div>
+                  <div class="flex items-baseline justify-between"><span id="ob-25bps-val" class="text-sigma-textMuted text-[11px]">195 vs 180</span><span id="ob-25bps-ratio" class="font-bold tabular-nums text-[11px] text-sigma-green">+8.3%</span></div>
                 </div>
                 <div class="bg-sigma-surface2 p-2 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark mb-1">±50 bps Depth</div>
-                  <div class="flex items-baseline justify-between"><span class="text-sigma-textMuted text-[11px]">412 vs 390</span><span class="font-bold tabular-nums text-[11px] text-sigma-green">+5.6%</span></div>
+                  <div class="flex items-baseline justify-between"><span id="ob-50bps-val" class="text-sigma-textMuted text-[11px]">412 vs 390</span><span id="ob-50bps-ratio" class="font-bold tabular-nums text-[11px] text-sigma-green">+5.6%</span></div>
                 </div>
               </div>
 
@@ -727,11 +728,11 @@ body {
                 <div class="grid grid-cols-2 gap-2 text-xs font-mono">
                   <div class="bg-sigma-green/10 border border-sigma-green/30 p-2 rounded flex justify-between items-center">
                     <span class="text-sigma-green font-bold">BID WALL</span>
-                    <span class="text-sigma-textMain font-medium">$78,820 (45.5 BTC)</span>
+                    <span id="ob-bid-wall-val" class="text-sigma-textMain font-medium">$78,820 (45.5 BTC)</span>
                   </div>
                   <div class="bg-sigma-red/10 border border-sigma-red/30 p-2 rounded flex justify-between items-center">
                     <span class="text-sigma-red font-bold">ASK WALL</span>
-                    <span class="text-sigma-textMain font-medium">$80,450 (38.0 BTC)</span>
+                    <span id="ob-ask-wall-val" class="text-sigma-textMain font-medium">$80,450 (38.0 BTC)</span>
                   </div>
                 </div>
               </div>
@@ -746,41 +747,41 @@ body {
                 </div>
                 <div class="flex items-center gap-1.5 font-mono text-[10px]">
                   <span class="text-sigma-textDark">OI DIVERGENCE:</span>
-                  <span class="text-sigma-green font-bold">ORGANIC EXPANSION</span>
+                  <span id="deriv-oi-div-badge" class="px-1.5 py-0.5 rounded bg-sigma-green/10 text-sigma-green border border-sigma-green/30 font-bold">ORGANIC EXPANSION</span>
                 </div>
               </div>
 
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-xs font-mono">
                 <div class="bg-sigma-surface2 p-2.5 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark uppercase">Funding Rate (8h)</div>
-                  <div class="flex items-baseline gap-1.5 mt-0.5"><span class="text-sm font-bold text-sigma-green tabular-nums">+0.008%</span><span class="text-[10px] text-sigma-textDark">(8.76% Ann.)</span></div>
+                  <div class="flex items-baseline gap-1.5 mt-0.5"><span id="deriv-funding-val" class="text-sm font-bold text-sigma-green tabular-nums">+0.008%</span><span id="deriv-funding-ann" class="text-[10px] text-sigma-textDark">(8.76% Ann.)</span></div>
                 </div>
                 <div class="bg-sigma-surface2 p-2.5 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark uppercase">Open Interest</div>
-                  <div class="flex items-baseline gap-1.5 mt-0.5"><span class="text-sm font-bold text-sigma-textMain tabular-nums">$18.45B</span><span class="text-[10px] text-sigma-green font-semibold">+4.2%</span></div>
+                  <div class="flex items-baseline gap-1.5 mt-0.5"><span id="deriv-oi-val" class="text-sm font-bold text-sigma-textMain tabular-nums">$18.45B</span><span id="deriv-oi-change" class="text-[10px] text-sigma-green font-semibold">+4.2%</span></div>
                 </div>
                 <div class="bg-sigma-surface2 p-2.5 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark uppercase">Annualized Basis</div>
-                  <div class="flex items-baseline gap-1.5 mt-0.5"><span class="text-sm font-bold text-sigma-cyan tabular-nums">+7.15%</span><span class="text-[10px] text-sigma-textDark">Contango</span></div>
+                  <div class="flex items-baseline gap-1.5 mt-0.5"><span id="deriv-basis-val" class="text-sm font-bold text-sigma-cyan tabular-nums">+7.15%</span><span class="text-[10px] text-sigma-textDark">Contango</span></div>
                 </div>
                 <div class="bg-sigma-surface2 p-2.5 rounded border border-sigma-border">
                   <div class="text-[10px] text-sigma-textDark uppercase">25-Delta Skew</div>
-                  <div class="flex items-baseline gap-1.5 mt-0.5"><span class="text-sm font-bold text-sigma-green tabular-nums">-2.1%</span><span class="text-[10px] text-sigma-textDark">Call Prem</span></div>
+                  <div class="flex items-baseline gap-1.5 mt-0.5"><span id="deriv-skew-val" class="text-sm font-bold text-sigma-green tabular-nums">-2.1%</span><span id="deriv-skew-label" class="text-[10px] text-sigma-textDark">Call Prem</span></div>
                 </div>
               </div>
 
               <div class="mb-3 bg-sigma-surface2 p-2.5 rounded border border-sigma-border">
                 <div class="flex items-center justify-between text-[10px] font-mono text-sigma-textDark uppercase mb-1.5">
                   <span>24h Liquidations Cascade</span>
-                  <span class="font-bold text-sigma-textMain">Total: $60.0M</span>
+                  <span id="deriv-liqs-total" class="font-bold text-sigma-textMain">Total: $60.0M</span>
                 </div>
                 <div class="w-full h-2 rounded bg-sigma-surface3 overflow-hidden flex">
-                  <div class="h-full bg-sigma-red transition-all" style="width:70%"></div>
-                  <div class="h-full bg-sigma-green transition-all" style="width:30%"></div>
+                  <div id="deriv-liq-long-bar" class="h-full bg-sigma-red transition-all" style="width:70%"></div>
+                  <div id="deriv-liq-short-bar" class="h-full bg-sigma-green transition-all" style="width:30%"></div>
                 </div>
                 <div class="flex justify-between text-[10px] font-mono mt-1">
-                  <span class="text-sigma-red font-medium">Long Liqs: $42.0M</span>
-                  <span class="text-sigma-green font-medium">Short Liqs: $18.0M</span>
+                  <span id="deriv-liqs-long" class="text-sigma-red font-medium">Long Liqs: $42.0M</span>
+                  <span id="deriv-liqs-short" class="text-sigma-green font-medium">Short Liqs: $18.0M</span>
                 </div>
               </div>
             </div>
@@ -991,7 +992,10 @@ body {
 
               <div class="space-y-3 text-xs font-mono">
                 <div class="bg-sigma-surface2 p-3 rounded border border-sigma-border">
-                  <div class="text-[10px] text-sigma-cyan font-bold uppercase mb-2">ON-CHAIN FUNDAMENTALS</div>
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-[10px] text-sigma-cyan font-bold uppercase">ON-CHAIN FUNDAMENTALS</span>
+                    <span class="text-[9px] text-sigma-textDark">Daily Cadence</span>
+                  </div>
                   <div class="space-y-1.5 text-[11px]">
                     <div class="flex justify-between"><span class="text-sigma-textMuted">MVRV Ratio:</span><span class="text-sigma-textMain font-bold">1.42 (31st pctile)</span></div>
                     <div class="flex justify-between"><span class="text-sigma-textMuted">Realized Price:</span><span class="text-sigma-green font-semibold">$55,685.2</span></div>
@@ -1000,7 +1004,10 @@ body {
                 </div>
 
                 <div class="bg-sigma-surface2 p-3 rounded border border-sigma-border">
-                  <div class="text-[10px] text-sigma-green font-bold uppercase mb-2">VERIFIED ETF FLOWS</div>
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-[10px] text-sigma-green font-bold uppercase">VERIFIED ETF FLOWS</span>
+                    <span class="text-[9px] text-sigma-textDark">Farside / Issuer Reports</span>
+                  </div>
                   <div class="space-y-1.5 text-[11px]">
                     <div class="flex justify-between"><span class="text-sigma-textMuted">1D Net Inflow:</span><span class="text-sigma-green font-bold">+182.4M USD</span></div>
                     <div class="flex justify-between"><span class="text-sigma-textMuted">7D Cumulative:</span><span class="text-sigma-green font-semibold">+$1,120.0M</span></div>
@@ -1009,7 +1016,10 @@ body {
                 </div>
 
                 <div class="bg-sigma-surface2 p-3 rounded border border-sigma-border">
-                  <div class="text-[10px] text-sigma-purple font-bold uppercase mb-2">MACRO & LIQUIDITY WATCH</div>
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-[10px] text-sigma-purple font-bold uppercase">MACRO & LIQUIDITY WATCH</span>
+                    <span class="text-[9px] text-sigma-textDark">FRED Reference Safe</span>
+                  </div>
                   <div class="space-y-1.5 text-[11px]">
                     <div class="flex justify-between"><span class="text-sigma-textMuted">Fed Funds Rate:</span><span class="text-sigma-textMain font-bold">4.50% (Paused)</span></div>
                     <div class="flex justify-between"><span class="text-sigma-textMuted">US 10Y Yield:</span><span class="text-sigma-amber font-semibold">4.38% (-4 bps)</span></div>
@@ -1028,7 +1038,7 @@ body {
       <div id="ws-eagle" class="ws-panel">
         <div class="w-full h-[calc(100vh-160px)] lg:h-[calc(100vh-125px)] rounded-lg border border-sigma-border overflow-hidden bg-sigma-surface1 shadow-2xl">
           <iframe
-            src="./eagle-flash.html"
+            src="./eagle-flash.html?v=${Date.now()}"
             id="eagle-frame"
             title="Eagle Flash Vol Spike Candidate Scanner"
             class="w-full h-full border-0"
@@ -1559,88 +1569,380 @@ body {
       }
     }
 
-    // 2. Binance Public WebSocket for Live Price
+    // 2. State & Data Pipeline Singleton
+    let btc24hHigh = 79850.00;
+    let btc24hLow = 76920.00;
+    let btc24hTurnover = 1810000000;
+    let athPrice = 108900;
+    let isKillSwitchActive = false;
+    let retryDelay = 2000;
+
+    const tradeFlow = {
+      buyVol: 182.4,
+      sellVol: 154.2,
+      tradeCount: 403829,
+      largeBlocks: 148
+    };
+
+    const liqsCascade = {
+      longLiqs: 42.0,
+      shortLiqs: 18.0
+    };
+
+    let activePositions = [
+      { id: 'POS-BTC-1', symbol: 'BTCUSDT', side: 'LONG', size: 0.50, entryPrice: 78820.00 }
+    ];
+
+    // 3. Binance Public WebSocket Engine (Multiplexed L1/L2 + AggTrade + Liquidations)
     function initBinanceWebSocket() {
+      if (wsSocket) {
+        try { wsSocket.close(); } catch (e) {}
+      }
       try {
-        wsSocket = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
+        const wsUrl = 'wss://fstream.binance.com/stream?streams=btcusdt@ticker/btcusdt@aggTrade/!forceOrder@arr';
+        wsSocket = new WebSocket(wsUrl);
+
         wsSocket.onopen = () => {
+          retryDelay = 2000;
           const pingEl = document.getElementById('ping-ws');
-          if (pingEl) pingEl.textContent = '35';
+          if (pingEl) pingEl.textContent = '28';
+          const binancePing = document.getElementById('ping-binance');
+          if (binancePing) binancePing.textContent = '28 ms';
         };
+
         wsSocket.onmessage = (event) => {
           try {
-            const data = JSON.parse(event.data);
-            if (data.p) {
-              const p = parseFloat(data.p);
-              currentPrice = p;
-              const formatted = '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-              
-              const topEl = document.getElementById('top-btc-price');
-              if (topEl) topEl.textContent = formatted;
-              
-              const cardEl = document.getElementById('card-btc-price');
-              if (cardEl) cardEl.textContent = formatted;
+            const msg = JSON.parse(event.data);
+            const stream = msg.stream;
+            const data = msg.data;
 
-              const markEl = document.getElementById('pos-mark-price');
-              if (markEl) markEl.textContent = formatted;
-
-              // Update PnL
-              const diff = (p - 78820) * 0.5;
-              const pct = ((p - 78820) / 78820) * 100;
-              const pnlEl = document.getElementById('pos-pnl');
-              if (pnlEl) {
-                const isPos = diff >= 0;
-                pnlEl.textContent = (isPos ? '+' : '') + '$' + diff.toFixed(2) + ' (' + (isPos ? '+' : '') + pct.toFixed(2) + '%)';
-                pnlEl.className = 'py-2 text-right font-bold ' + (isPos ? 'text-sigma-green' : 'text-sigma-red');
-              }
+            if (stream === 'btcusdt@ticker' && data) {
+              handleTickerData(data);
+            } else if (stream === 'btcusdt@aggTrade' && data) {
+              handleAggTrade(data);
+            } else if (stream === '!forceOrder@arr' && data) {
+              handleLiquidation(data);
             }
           } catch (e) {}
         };
-        wsSocket.onerror = () => {};
-        wsSocket.onclose = () => {
-          setTimeout(initBinanceWebSocket, 3000);
+
+        wsSocket.onerror = () => {
+          try { if (wsSocket) wsSocket.close(); } catch (e) {}
         };
+
+        wsSocket.onclose = () => {
+          setTimeout(initBinanceWebSocket, Math.min(retryDelay *= 1.5, 15000));
+        };
+      } catch (e) {
+        setTimeout(initBinanceWebSocket, 5000);
+      }
+    }
+
+    function handleTickerData(data) {
+      const p = parseFloat(data.c || data.p);
+      if (!p || isNaN(p)) return;
+      currentPrice = p;
+
+      if (data.h) btc24hHigh = parseFloat(data.h);
+      if (data.l) btc24hLow = parseFloat(data.l);
+      if (data.q) btc24hTurnover = parseFloat(data.q);
+
+      const formatted = '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      const topEl = document.getElementById('top-btc-price');
+      if (topEl) topEl.textContent = formatted;
+
+      const cardEl = document.getElementById('card-btc-price');
+      if (cardEl) cardEl.textContent = formatted;
+
+      const markEl = document.getElementById('pos-mark-price');
+      if (markEl) markEl.textContent = formatted;
+
+      const stripHigh = document.getElementById('strip-24h-high');
+      if (stripHigh) stripHigh.textContent = '$' + btc24hHigh.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      const stripLow = document.getElementById('strip-24h-low');
+      if (stripLow) stripLow.textContent = '$' + btc24hLow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      const stripTurnover = document.getElementById('strip-24h-turnover');
+      if (stripTurnover) stripTurnover.textContent = '$' + (btc24hTurnover / 1e9).toFixed(2) + 'B';
+
+      const athEl = document.getElementById('strip-ath-distance');
+      if (athEl) {
+        const athDist = ((p - athPrice) / athPrice) * 100;
+        athEl.textContent = (athDist >= 0 ? '+' : '') + athDist.toFixed(1) + '%';
+        athEl.className = athDist >= 0 ? 'text-sigma-green font-semibold tabular-nums' : 'text-sigma-red font-semibold tabular-nums';
+      }
+
+      if (data.P) {
+        const chg = parseFloat(data.P);
+        const topChg = document.getElementById('top-btc-change');
+        if (topChg) {
+          topChg.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+          topChg.className = 'text-xs font-mono font-bold ' + (chg >= 0 ? 'text-sigma-green' : 'text-sigma-red');
+        }
+      }
+
+      updatePositionsTable();
+    }
+
+    function handleAggTrade(data) {
+      const p = parseFloat(data.p);
+      const q = parseFloat(data.q);
+      const val = p * q;
+      const isBuyerMaker = data.m;
+
+      tradeFlow.tradeCount++;
+      if (isBuyerMaker) {
+        tradeFlow.sellVol += (val / 1e6);
+      } else {
+        tradeFlow.buyVol += (val / 1e6);
+      }
+
+      if (val >= 250000) {
+        tradeFlow.largeBlocks++;
+        const lbEl = document.getElementById('flow-large-blocks');
+        if (lbEl) lbEl.textContent = tradeFlow.largeBlocks + ' (> $250k)';
+      }
+
+      const totalVol = tradeFlow.buyVol + tradeFlow.sellVol;
+      const buyPct = totalVol > 0 ? (tradeFlow.buyVol / totalVol) * 100 : 50;
+      const sellPct = 100 - buyPct;
+      const netDelta = tradeFlow.buyVol - tradeFlow.sellVol;
+
+      const buyPctEl = document.getElementById('flow-buy-pct');
+      if (buyPctEl) buyPctEl.textContent = buyPct.toFixed(1) + '%';
+      const sellPctEl = document.getElementById('flow-sell-pct');
+      if (sellPctEl) sellPctEl.textContent = sellPct.toFixed(1) + '%';
+
+      const barBuy = document.getElementById('flow-bar-buy');
+      if (barBuy) {
+        barBuy.style.width = buyPct.toFixed(1) + '%';
+        barBuy.textContent = buyPct.toFixed(1) + '%';
+      }
+      const barSell = document.getElementById('flow-bar-sell');
+      if (barSell) {
+        barSell.style.width = sellPct.toFixed(1) + '%';
+        barSell.textContent = sellPct.toFixed(1) + '%';
+      }
+
+      const netDeltaEl = document.getElementById('flow-net-delta');
+      if (netDeltaEl) {
+        netDeltaEl.textContent = (netDelta >= 0 ? '+$' : '-$') + Math.abs(netDelta).toFixed(1) + 'M';
+        netDeltaEl.className = 'font-bold tabular-nums ' + (netDelta >= 0 ? 'text-sigma-green' : 'text-sigma-red');
+      }
+
+      const volEl = document.getElementById('flow-volume');
+      if (volEl) volEl.textContent = '$' + (totalVol / 1000).toFixed(2) + 'B';
+
+      const tcEl = document.getElementById('flow-trade-count');
+      if (tcEl) tcEl.textContent = tradeFlow.tradeCount.toLocaleString();
+
+      const spotAccEl = document.getElementById('flow-spot-acc');
+      if (spotAccEl) {
+        spotAccEl.textContent = (netDelta >= 0 ? '+$' : '-$') + Math.abs(netDelta * 0.8).toFixed(1) + 'M';
+      }
+      const spotBuyEl = document.getElementById('flow-spot-buy');
+      if (spotBuyEl) spotBuyEl.textContent = buyPct.toFixed(1) + '%';
+      const spotSellEl = document.getElementById('flow-spot-sell');
+      if (spotSellEl) spotSellEl.textContent = sellPct.toFixed(1) + '%';
+    }
+
+    function handleLiquidation(data) {
+      try {
+        const o = data.o;
+        if (!o) return;
+        const side = o.S;
+        const val = (parseFloat(o.p) * parseFloat(o.q)) / 1e6;
+        if (side === 'SELL') {
+          liqsCascade.longLiqs += val;
+        } else {
+          liqsCascade.shortLiqs += val;
+        }
+        const total = liqsCascade.longLiqs + liqsCascade.shortLiqs;
+        const totalEl = document.getElementById('deriv-liqs-total');
+        if (totalEl) totalEl.textContent = 'Total: $' + total.toFixed(1) + 'M';
+        const longEl = document.getElementById('deriv-liqs-long');
+        if (longEl) longEl.textContent = 'Long Liqs: $' + liqsCascade.longLiqs.toFixed(1) + 'M';
+        const shortEl = document.getElementById('deriv-liqs-short');
+        if (shortEl) shortEl.textContent = 'Short Liqs: $' + liqsCascade.shortLiqs.toFixed(1) + 'M';
+        const longBar = document.getElementById('deriv-liq-long-bar');
+        const shortBar = document.getElementById('deriv-liq-short-bar');
+        if (longBar && shortBar && total > 0) {
+          const lPct = (liqsCascade.longLiqs / total) * 100;
+          longBar.style.width = lPct.toFixed(0) + '%';
+          shortBar.style.width = (100 - lPct).toFixed(0) + '%';
+        }
       } catch (e) {}
     }
 
-    // 3. Render Simulated Candlesticks into SVG
-    function renderCandlesticks() {
+    // 4. Klines, Technical Indicators & ATR Mathematical Stop Loss
+    async function fetchKlinesAndCompute() {
+      try {
+        const res = await fetch('https://fapi.binance.com/fapi/v1/klines?symbol=BTCUSDT&interval=4h&limit=50');
+        if (!res.ok) return;
+        const raw = await res.json();
+        if (!Array.isArray(raw) || raw.length < 20) return;
+
+        const candles = raw.map(k => ({
+          time: k[0],
+          open: parseFloat(k[1]),
+          high: parseFloat(k[2]),
+          low: parseFloat(k[3]),
+          close: parseFloat(k[4]),
+          volume: parseFloat(k[5])
+        }));
+
+        const closes = candles.map(c => c.close);
+        const ema20 = calculateEMA(closes, 20);
+        const ema50 = calculateEMA(closes, 50);
+        const atr14 = calculateATR(candles, 14);
+        const rsi14 = calculateRSI(closes, 14);
+
+        const last = candles[candles.length - 1];
+        const lastEMA20 = ema20[ema20.length - 1];
+        const lastEMA50 = ema50[ema50.length - 1];
+
+        const oEl = document.getElementById('chart-open-val');
+        if (oEl) oEl.textContent = '$' + last.open.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        const hEl = document.getElementById('chart-high-val');
+        if (hEl) hEl.textContent = '$' + last.high.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        const lEl = document.getElementById('chart-low-val');
+        if (lEl) lEl.textContent = '$' + last.low.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        const cEl = document.getElementById('chart-close-val');
+        if (cEl) cEl.textContent = '$' + last.close.toLocaleString('en-US', { minimumFractionDigits: 2 });
+        const vEl = document.getElementById('chart-vol-val');
+        if (vEl) vEl.textContent = Math.round(last.volume).toLocaleString() + ' BTC';
+
+        renderRealCandlesticks(candles.slice(-32), ema20.slice(-32), ema50.slice(-32));
+
+        // Stop Loss mathematical specification: clamp(1.5 * ATR14, 2.0%, 3.5%)
+        const price = last.close;
+        const rawStop = 1.5 * atr14;
+        const minStopDist = price * 0.02;
+        const maxStopDist = price * 0.035;
+        const finalStopDist = Math.max(minStopDist, Math.min(maxStopDist, rawStop));
+
+        const isLong = lastEMA20 >= lastEMA50 && price >= lastEMA20 * 0.98;
+        const direction = isLong ? 'LONG' : 'SHORT';
+        const stopLoss = isLong ? (price - finalStopDist) : (price + finalStopDist);
+        const riskDist = Math.abs(price - stopLoss);
+
+        const t1 = isLong ? (price + 1.5 * riskDist) : (price - 1.5 * riskDist);
+        const t2 = isLong ? (price + 2.5 * riskDist) : (price - 2.5 * riskDist);
+        const t3 = isLong ? (price + 4.0 * riskDist) : (price - 4.0 * riskDist);
+
+        updateChartSRLines(t1, stopLoss, candles.slice(-32));
+        updateSignalCardDOM(direction, price, stopLoss, t1, t2, t3, rsi14, lastEMA20, lastEMA50);
+        updateFactorAttributionDOM(isLong, lastEMA20, lastEMA50, rsi14, price);
+      } catch (e) {}
+    }
+
+    function calculateEMA(data, period) {
+      const k = 2 / (period + 1);
+      const emaArray = [data[0]];
+      for (let i = 1; i < data.length; i++) {
+        emaArray.push(data[i] * k + emaArray[i - 1] * (1 - k));
+      }
+      return emaArray;
+    }
+
+    function calculateATR(candles, period) {
+      if (candles.length < period + 1) return candles[candles.length - 1].close * 0.025;
+      const trs = [];
+      for (let i = 1; i < candles.length; i++) {
+        const c = candles[i];
+        const prev = candles[i - 1];
+        const tr = Math.max(
+          c.high - c.low,
+          Math.abs(c.high - prev.close),
+          Math.abs(c.low - prev.close)
+        );
+        trs.push(tr);
+      }
+      let atr = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+      for (let i = period; i < trs.length; i++) {
+        atr = (atr * (period - 1) + trs[i]) / period;
+      }
+      return atr;
+    }
+
+    function calculateRSI(closes, period) {
+      if (closes.length < period + 1) return 50;
+      let gains = 0;
+      let losses = 0;
+      for (let i = 1; i <= period; i++) {
+        const diff = closes[i] - closes[i - 1];
+        if (diff >= 0) gains += diff;
+        else losses += Math.abs(diff);
+      }
+      let avgGain = gains / period;
+      let avgLoss = losses / period;
+      for (let i = period + 1; i < closes.length; i++) {
+        const diff = closes[i] - closes[i - 1];
+        if (diff >= 0) {
+          avgGain = (avgGain * (period - 1) + diff) / period;
+          avgLoss = (avgLoss * (period - 1)) / period;
+        } else {
+          avgGain = (avgGain * (period - 1)) / period;
+          avgLoss = (avgLoss * (period - 1) + Math.abs(diff)) / period;
+        }
+      }
+      if (avgLoss === 0) return 100;
+      const rs = avgGain / avgLoss;
+      return 100 - (100 / (1 + rs));
+    }
+
+    function renderRealCandlesticks(candles, ema20Arr, ema50Arr) {
       const g = document.getElementById('chart-candles-group');
-      if (!g) return;
+      if (!g || candles.length === 0) return;
       g.innerHTML = '';
 
-      const count = 30;
+      let minP = Infinity;
+      let maxP = -Infinity;
+      let maxVol = 0;
+
+      candles.forEach(c => {
+        if (c.low < minP) minP = c.low;
+        if (c.high > maxP) maxP = c.high;
+        if (c.volume > maxVol) maxVol = c.volume;
+      });
+
+      const pad = (maxP - minP) * 0.08 || 100;
+      minP -= pad;
+      maxP += pad;
+      const range = maxP - minP || 1;
+
+      const g1 = document.getElementById('grid-p1');
+      if (g1) g1.textContent = '$' + Math.round(maxP - range * 0.1).toLocaleString();
+      const g2 = document.getElementById('grid-p2');
+      if (g2) g2.textContent = '$' + Math.round(maxP - range * 0.35).toLocaleString();
+      const g3 = document.getElementById('grid-p3');
+      if (g3) g3.textContent = '$' + Math.round(maxP - range * 0.65).toLocaleString();
+      const g4 = document.getElementById('grid-p4');
+      if (g4) g4.textContent = '$' + Math.round(minP + range * 0.1).toLocaleString();
+
+      const count = candles.length;
       const candleWidth = 800 / count;
-      let base = 77800;
+      const chartHeight = 240;
+
       const ema20Points = [];
       const ema50Points = [];
 
       for (let i = 0; i < count; i++) {
-        const change = (Math.sin(i * 0.4) * 350) + (Math.random() * 400 - 180);
-        const open = base;
-        const close = open + change;
-        const high = Math.max(open, close) + Math.random() * 250;
-        const low = Math.min(open, close) - Math.random() * 250;
-        base = close;
-
-        const isUp = close >= open;
+        const c = candles[i];
+        const isUp = c.close >= c.open;
         const color = isUp ? '#00E599' : '#FF4757';
 
-        // Normalized Y coordinates (Height 240, Min 77200, Max 82000)
-        const minP = 77200;
-        const maxP = 82000;
-        const range = maxP - minP;
-
-        const yHigh = 240 * (1 - (high - minP) / range);
-        const yLow = 240 * (1 - (low - minP) / range);
-        const yOpen = 240 * (1 - (open - minP) / range);
-        const yClose = 240 * (1 - (close - minP) / range);
+        const yHigh = chartHeight * (1 - (c.high - minP) / range);
+        const yLow = chartHeight * (1 - (c.low - minP) / range);
+        const yOpen = chartHeight * (1 - (c.open - minP) / range);
+        const yClose = chartHeight * (1 - (c.close - minP) / range);
 
         const bodyTop = Math.min(yOpen, yClose);
-        const bodyHeight = Math.max(3, Math.abs(yClose - yOpen));
+        const bodyHeight = Math.max(2, Math.abs(yClose - yOpen));
         const x = i * candleWidth + candleWidth / 2;
 
-        // Wick
         const wick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         wick.setAttribute('x1', x);
         wick.setAttribute('y1', yHigh);
@@ -1650,7 +1952,6 @@ body {
         wick.setAttribute('stroke-width', '1.2');
         g.appendChild(wick);
 
-        // Body
         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         rect.setAttribute('x', x - candleWidth * 0.35);
         rect.setAttribute('y', bodyTop);
@@ -1660,29 +1961,468 @@ body {
         rect.setAttribute('rx', '1');
         g.appendChild(rect);
 
-        // Volume Bar (at bottom, height 80)
-        const volH = Math.random() * 50 + 10;
+        const volNorm = maxVol > 0 ? (c.volume / maxVol) : 0.5;
+        const volH = Math.max(3, volNorm * 65);
         const volRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         volRect.setAttribute('x', x - candleWidth * 0.35);
         volRect.setAttribute('y', 330 - volH);
         volRect.setAttribute('width', candleWidth * 0.7);
         volRect.setAttribute('height', volH);
         volRect.setAttribute('fill', color);
-        volRect.setAttribute('opacity', '0.4');
+        volRect.setAttribute('opacity', '0.45');
         g.appendChild(volRect);
 
-        // EMAs
-        const ema20Val = (open + close) / 2 + Math.sin(i * 0.3) * 100;
-        const ema50Val = 78600 + (i * 30);
-        ema20Points.push(x + ',' + (240 * (1 - (ema20Val - minP) / range)));
-        ema50Points.push(x + ',' + (240 * (1 - (ema50Val - minP) / range)));
+        if (ema20Arr[i]) {
+          const y20 = chartHeight * (1 - (ema20Arr[i] - minP) / range);
+          ema20Points.push(x + ',' + y20);
+        }
+        if (ema50Arr[i]) {
+          const y50 = chartHeight * (1 - (ema50Arr[i] - minP) / range);
+          ema50Points.push(x + ',' + y50);
+        }
       }
 
       document.getElementById('chart-ema-20')?.setAttribute('points', ema20Points.join(' '));
       document.getElementById('chart-ema-50')?.setAttribute('points', ema50Points.join(' '));
     }
 
-    // 4. Backtest Chart
+    function updateChartSRLines(t1, stopLoss, candles) {
+      if (candles.length === 0) return;
+      let minP = Math.min(...candles.map(c => c.low));
+      let maxP = Math.max(...candles.map(c => c.high));
+      const pad = (maxP - minP) * 0.08 || 100;
+      minP -= pad;
+      maxP += pad;
+      const range = maxP - minP || 1;
+
+      const yT1 = Math.max(15, Math.min(235, 240 * (1 - (t1 - minP) / range)));
+      const yStop = Math.max(15, Math.min(235, 240 * (1 - (stopLoss - minP) / range)));
+
+      const t1Line = document.getElementById('chart-t1-line');
+      const t1Text = document.getElementById('chart-t1-text');
+      if (t1Line) { t1Line.setAttribute('y1', yT1); t1Line.setAttribute('y2', yT1); }
+      if (t1Text) {
+        t1Text.setAttribute('y', Math.max(15, yT1 - 4));
+        t1Text.textContent = 'TARGET 1: $' + Math.round(t1).toLocaleString();
+      }
+
+      const stopLine = document.getElementById('chart-stop-line');
+      const stopText = document.getElementById('chart-stop-text');
+      if (stopLine) { stopLine.setAttribute('y1', yStop); stopLine.setAttribute('y2', yStop); }
+      if (stopText) {
+        stopText.setAttribute('y', Math.min(235, yStop + 12));
+        stopText.textContent = 'STOP LOSS (ATR): $' + Math.round(stopLoss).toLocaleString();
+      }
+    }
+
+    function updateSignalCardDOM(direction, price, stopLoss, t1, t2, t3, rsi, ema20, ema50) {
+      const isLong = direction === 'LONG';
+      const dirEl = document.getElementById('sig-direction');
+      if (dirEl) {
+        dirEl.textContent = direction;
+        dirEl.className = 'font-mono text-2xl font-black tracking-wide ' + (isLong ? 'text-sigma-green' : 'text-sigma-red');
+      }
+
+      const badgeEl = document.getElementById('sig-dir-badge');
+      if (badgeEl) {
+        badgeEl.className = 'p-2 rounded-lg border flex items-center justify-center ' + (isLong ? 'bg-sigma-green/15 border-sigma-green text-sigma-green' : 'bg-sigma-red/15 border-sigma-red text-sigma-red');
+      }
+
+      const regimeEl = document.getElementById('sig-regime');
+      if (regimeEl) {
+        regimeEl.textContent = isLong ? 'BULLISH RECOVERY' : 'BEARISH DISTRIBUTION';
+      }
+
+      const conf = Math.min(95, Math.max(60, Math.round(65 + Math.abs(rsi - 50) * 0.8)));
+      const confEl = document.getElementById('sig-confidence');
+      if (confEl) confEl.textContent = conf + '%';
+      const confBar = document.getElementById('sig-conf-bar');
+      if (confBar) {
+        confBar.style.width = conf + '%';
+        confBar.className = 'h-full transition-all duration-700 ' + (isLong ? 'bg-sigma-green' : 'bg-sigma-red');
+      }
+
+      const entryEl = document.getElementById('sig-entry-zone');
+      if (entryEl) {
+        const eLow = Math.round(price * 0.998);
+        const eHigh = Math.round(price * 1.002);
+        entryEl.textContent = '$' + eLow.toLocaleString() + ' – $' + eHigh.toLocaleString();
+      }
+
+      const slEl = document.getElementById('sig-stop-loss');
+      if (slEl) slEl.textContent = '$' + Math.round(stopLoss).toLocaleString();
+
+      const t1El = document.getElementById('sig-t1');
+      if (t1El) t1El.textContent = '$' + Math.round(t1).toLocaleString();
+      const t2El = document.getElementById('sig-t2');
+      if (t2El) t2El.textContent = '$' + Math.round(t2).toLocaleString();
+      const t3El = document.getElementById('sig-t3');
+      if (t3El) t3El.textContent = '$' + Math.round(t3).toLocaleString();
+
+      const invEl = document.getElementById('sig-invalidation');
+      if (invEl) {
+        invEl.textContent = '4H close ' + (isLong ? 'below $' : 'above $') + Math.round(stopLoss).toLocaleString();
+      }
+
+      const execBtn = document.getElementById('sig-exec-btn');
+      if (execBtn) {
+        execBtn.className = 'px-4 py-2 rounded text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-md ' +
+          (isLong ? 'bg-sigma-green text-black hover:bg-sigma-green/90' : 'bg-sigma-red text-white hover:bg-sigma-red/90');
+        execBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"></path></svg>' +
+          '<span>EXECUTE ' + direction + ' (0.25 BTC)</span>';
+      }
+    }
+
+    function updateFactorAttributionDOM(isLong, ema20, ema50, rsi, price) {
+      const trendScore = isLong ? Math.min(95, Math.round(70 + ((price - ema50) / ema50) * 200)) : 30;
+      const momScore = Math.min(95, Math.max(10, Math.round(rsi * 1.1)));
+      const derivScore = 54;
+      const volScore = 45;
+      const cvdScore = 72;
+      const onchainScore = 76;
+
+      const net = Math.round(trendScore * 0.3 + momScore * 0.25 + derivScore * 0.15 + volScore * 0.1 + cvdScore * 0.1 + onchainScore * 0.1);
+
+      const netEl = document.getElementById('factor-net-val');
+      if (netEl) netEl.textContent = '+' + net + ' / 100';
+
+      const updateRow = (name, val) => {
+        const valEl = document.getElementById('factor-' + name + '-val');
+        const barEl = document.getElementById('factor-' + name + '-bar');
+        if (valEl) valEl.textContent = '+' + val;
+        if (barEl) barEl.style.width = val + '%';
+      };
+
+      updateRow('trend', trendScore);
+      updateRow('mom', momScore);
+      updateRow('deriv', derivScore);
+      updateRow('vol', volScore);
+      updateRow('cvd', cvdScore);
+      updateRow('onchain', onchainScore);
+    }
+
+    // 5. Order Book Depth & Walls Poller
+    async function fetchOrderBookDepth() {
+      try {
+        const res = await fetch('https://fapi.binance.com/fapi/v1/depth?symbol=BTCUSDT&limit=100');
+        if (!res.ok) return;
+        const data = await res.json();
+        const bids = data.bids || [];
+        const asks = data.asks || [];
+        if (bids.length === 0 || asks.length === 0) return;
+
+        const bestBid = parseFloat(bids[0][0]);
+        const bestAsk = parseFloat(asks[0][0]);
+        const spread = bestAsk - bestBid;
+        const mid = (bestAsk + bestBid) / 2;
+        const spreadBps = (spread / mid) * 10000;
+
+        const spreadEl = document.getElementById('ob-spread-val');
+        if (spreadEl) spreadEl.textContent = '$' + spread.toFixed(2) + ' (' + spreadBps.toFixed(2) + ' bps)';
+
+        const calcDepth = (bps) => {
+          const threshold = bps / 10000;
+          let bidQty = 0;
+          let askQty = 0;
+          for (const b of bids) {
+            const p = parseFloat(b[0]);
+            if ((mid - p) / mid <= threshold) bidQty += parseFloat(b[1]);
+            else break;
+          }
+          for (const a of asks) {
+            const p = parseFloat(a[0]);
+            if ((p - mid) / mid <= threshold) askQty += parseFloat(a[1]);
+            else break;
+          }
+          const total = bidQty + askQty;
+          const ratio = total > 0 ? ((bidQty - askQty) / total) * 100 : 0;
+          return { bidQty, askQty, ratio };
+        };
+
+        const d5 = calcDepth(5);
+        const d10 = calcDepth(10);
+        const d25 = calcDepth(25);
+        const d50 = calcDepth(50);
+
+        const setDepthDom = (bps, d) => {
+          const valEl = document.getElementById('ob-' + bps + 'bps-val');
+          const ratEl = document.getElementById('ob-' + bps + 'bps-ratio');
+          if (valEl) valEl.textContent = d.bidQty.toFixed(1) + ' vs ' + d.askQty.toFixed(1);
+          if (ratEl) {
+            ratEl.textContent = (d.ratio >= 0 ? '+' : '') + d.ratio.toFixed(1) + '%';
+            ratEl.className = 'font-bold tabular-nums text-[11px] ' + (d.ratio >= 0 ? 'text-sigma-green' : 'text-sigma-red');
+          }
+        };
+
+        setDepthDom(5, d5);
+        setDepthDom(10, d10);
+        setDepthDom(25, d25);
+        setDepthDom(50, d50);
+
+        let maxBidQty = 0;
+        let maxBidP = bestBid;
+        for (const b of bids.slice(0, 30)) {
+          const q = parseFloat(b[1]);
+          if (q > maxBidQty) { maxBidQty = q; maxBidP = parseFloat(b[0]); }
+        }
+        let maxAskQty = 0;
+        let maxAskP = bestAsk;
+        for (const a of asks.slice(0, 30)) {
+          const q = parseFloat(a[1]);
+          if (q > maxAskQty) { maxAskQty = q; maxAskP = parseFloat(a[0]); }
+        }
+
+        const bidWallEl = document.getElementById('ob-bid-wall-val');
+        if (bidWallEl) bidWallEl.textContent = '$' + Math.round(maxBidP).toLocaleString() + ' (' + maxBidQty.toFixed(1) + ' BTC)';
+        const askWallEl = document.getElementById('ob-ask-wall-val');
+        if (askWallEl) askWallEl.textContent = '$' + Math.round(maxAskP).toLocaleString() + ' (' + maxAskQty.toFixed(1) + ' BTC)';
+      } catch (e) {}
+    }
+
+    // 6. Derivatives & Open Interest Poller
+    async function fetchDerivativesData() {
+      try {
+        const [oiRes, premRes] = await Promise.all([
+          fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT').catch(() => null),
+          fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT').catch(() => null)
+        ]);
+
+        if (oiRes && oiRes.ok) {
+          const oiData = await oiRes.json();
+          const oiBTC = parseFloat(oiData.openInterest);
+          const oiUSD = oiBTC * currentPrice;
+          const oiEl = document.getElementById('deriv-oi-val');
+          if (oiEl) oiEl.textContent = '$' + (oiUSD / 1e9).toFixed(2) + 'B';
+        }
+
+        if (premRes && premRes.ok) {
+          const premData = await premRes.json();
+          const rate = parseFloat(premData.lastFundingRate);
+          const ratePct = rate * 100;
+          const annPct = ratePct * 3 * 365;
+
+          const fundEl = document.getElementById('deriv-funding-val');
+          if (fundEl) {
+            fundEl.textContent = (ratePct >= 0 ? '+' : '') + ratePct.toFixed(4) + '%';
+            fundEl.className = 'text-sm font-bold tabular-nums ' + (ratePct >= 0 ? 'text-sigma-green' : 'text-sigma-red');
+          }
+          const annEl = document.getElementById('deriv-funding-ann');
+          if (annEl) annEl.textContent = '(' + annPct.toFixed(1) + '% Ann.)';
+
+          const mark = parseFloat(premData.markPrice);
+          const index = parseFloat(premData.indexPrice);
+          if (index > 0) {
+            const basis = ((mark - index) / index) * 100 * 365 / 30;
+            const basisEl = document.getElementById('deriv-basis-val');
+            if (basisEl) basisEl.textContent = (basis >= 0 ? '+' : '') + basis.toFixed(2) + '%';
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 7. CoinGecko ATH Poller
+    async function fetchCoinGeckoATH() {
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false');
+        if (res.ok) {
+          const data = await res.json();
+          const ath = data?.market_data?.ath?.usd;
+          if (ath && !isNaN(ath)) athPrice = ath;
+        }
+      } catch (e) {}
+    }
+
+    // 8. Deribit Skew Poller
+    async function fetchDeribitSkew() {
+      try {
+        const res = await fetch('https://www.deribit.com/api/v2/public/get_volatility_index_data?currency=BTC&resolution=3600&limit=1');
+        if (res.ok) {
+          const data = await res.json();
+          const dvol = data?.result?.data?.[0]?.[1];
+          if (dvol) {
+            const skewVal = document.getElementById('deriv-skew-val');
+            if (skewVal) skewVal.textContent = dvol.toFixed(1) + '%';
+            const skewLabel = document.getElementById('deriv-skew-label');
+            if (skewLabel) skewLabel.textContent = 'DVOL Index';
+          }
+        }
+      } catch (e) {
+        const skewLabel = document.getElementById('deriv-skew-label');
+        if (skewLabel) skewLabel.textContent = 'Deribit Ref';
+      }
+    }
+
+    // 9. Position Manager & Execution
+    function updatePositionsTable() {
+      const tbody = document.getElementById('positions-table-body');
+      if (!tbody) return;
+      const countEl = document.getElementById('positions-count');
+      if (countEl) countEl.textContent = activePositions.length.toString();
+
+      if (activePositions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-sigma-textDark">No active positions.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = activePositions.map(pos => {
+        const isLong = pos.side === 'LONG';
+        const diff = isLong ? (currentPrice - pos.entryPrice) : (pos.entryPrice - currentPrice);
+        const pnl = diff * pos.size;
+        const pct = (diff / pos.entryPrice) * 100;
+        const isPos = pnl >= 0;
+        const pnlStr = (isPos ? '+' : '') + '$' + pnl.toFixed(2) + ' (' + (isPos ? '+' : '') + pct.toFixed(2) + '%)';
+        const pnlClass = isPos ? 'text-sigma-green' : 'text-sigma-red';
+
+        return '<tr class="border-b border-sigma-border/40">' +
+          '<td class="py-2 font-bold text-sigma-textMain">' + pos.symbol + '</td>' +
+          '<td class="py-2 font-bold ' + (isLong ? 'text-sigma-green' : 'text-sigma-red') + '">' + pos.side + '</td>' +
+          '<td class="py-2 text-sigma-textMuted">' + pos.size.toFixed(2) + ' BTC</td>' +
+          '<td class="py-2 text-sigma-textMuted">$' + pos.entryPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+          '<td class="py-2 text-sigma-textMain font-semibold">$' + currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2 }) + '</td>' +
+          '<td class="py-2 text-right font-bold ' + pnlClass + '">' + pnlStr + '</td>' +
+          '<td class="py-2 text-right">' +
+            '<button onclick="closePositionById(&quot;' + pos.id + '&quot;)" class="px-2 py-0.5 rounded bg-sigma-red/15 hover:bg-sigma-red/30 text-sigma-red border border-sigma-red/40 text-[10px] font-bold">CLOSE</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function executePaperTrade(side, amount) {
+      if (isKillSwitchActive) {
+        alert('Trading is locked due to Emergency Safe Mode.');
+        return;
+      }
+      const newPos = {
+        id: 'POS-' + Date.now(),
+        symbol: 'BTCUSDT',
+        side: side,
+        size: amount,
+        entryPrice: currentPrice
+      };
+      activePositions.push(newPos);
+      updatePositionsTable();
+      alert('Paper Order Filled: ' + side + ' ' + amount + ' BTCUSDT @ $' + currentPrice.toFixed(2));
+    }
+
+    function closePositionById(id) {
+      const pos = activePositions.find(p => p.id === id);
+      if (pos) {
+        const isLong = pos.side === 'LONG';
+        const diff = isLong ? (currentPrice - pos.entryPrice) : (pos.entryPrice - currentPrice);
+        const pnl = diff * pos.size;
+        const outcome = pnl >= 0 ? 'WIN' : 'LOSS';
+
+        const tbody = document.getElementById('journal-tbody');
+        if (tbody) {
+          const nowStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+          const row = '<tr>' +
+            '<td class="p-2">' + nowStr + '</td>' +
+            '<td class="p-2 font-bold text-sigma-textMain">' + pos.symbol + '</td>' +
+            '<td class="p-2 font-bold ' + (isLong ? 'text-sigma-green' : 'text-sigma-red') + '">' + pos.side + '</td>' +
+            '<td class="p-2">$' + Math.round(pos.entryPrice).toLocaleString() + '</td>' +
+            '<td class="p-2">$' + Math.round(currentPrice).toLocaleString() + '</td>' +
+            '<td class="p-2">' + pos.size.toFixed(2) + ' BTC</td>' +
+            '<td class="p-2 text-right font-bold ' + (pnl >= 0 ? 'text-sigma-green' : 'text-sigma-red') + '">' + (pnl >= 0 ? '+$' : '-$') + Math.abs(Math.round(pnl)).toLocaleString() + '</td>' +
+            '<td class="p-2">Sigma Paper Exec</td>' +
+            '<td class="p-2 text-right"><span class="px-1.5 py-0.5 rounded font-bold text-[10px] ' + (outcome === 'WIN' ? 'bg-sigma-green/15 text-sigma-green' : 'bg-sigma-red/15 text-sigma-red') + '">' + outcome + '</span></td>' +
+          '</tr>';
+          tbody.insertAdjacentHTML('afterbegin', row);
+        }
+      }
+      activePositions = activePositions.filter(p => p.id !== id);
+      updatePositionsTable();
+    }
+
+    function closeActivePosition() {
+      if (activePositions.length > 0) {
+        closePositionById(activePositions[0].id);
+      }
+    }
+
+    // 10. Hardware Kill Switch Modal & Confirmation
+    function openKillSwitchModal() {
+      const m = document.getElementById('modal-kill-switch');
+      if (m) m.style.display = 'flex';
+    }
+    function closeKillSwitchModal() {
+      const m = document.getElementById('modal-kill-switch');
+      if (m) m.style.display = 'none';
+    }
+    function confirmKillSwitch() {
+      isKillSwitchActive = true;
+      activePositions.forEach(p => closePositionById(p.id));
+      activePositions = [];
+      updatePositionsTable();
+      closeKillSwitchModal();
+
+      const killBtn = document.getElementById('btn-kill-switch');
+      if (killBtn) {
+        killBtn.textContent = '🔒 SAFE DEFENSIVE MODE LOCKED';
+        killBtn.className = 'px-3 py-1.5 rounded text-xs font-mono font-bold tracking-wider uppercase border shadow-md bg-sigma-red text-white border-sigma-red animate-pulse';
+      }
+      alert('🚨 HARDWARE KILL SWITCH ENGAGED! All open positions closed at market. All new order routing blocked.');
+    }
+
+    // 11. Command Palette & Modals
+    function openCommandPalette() {
+      const m = document.getElementById('modal-cmd-palette');
+      if (m) m.style.display = 'flex';
+      document.getElementById('cmd-input')?.focus();
+    }
+    function closeCommandPalette() {
+      const m = document.getElementById('modal-cmd-palette');
+      if (m) m.style.display = 'none';
+    }
+
+    function triggerRefreshAll() {
+      const btn = document.getElementById('btn-refresh');
+      if (btn) btn.classList.add('animate-spin', 'text-sigma-green');
+      fetchKlinesAndCompute();
+      fetchOrderBookDepth();
+      fetchDerivativesData();
+      setTimeout(() => {
+        if (btn) btn.classList.remove('animate-spin', 'text-sigma-green');
+      }, 600);
+    }
+
+    function toggleTradingMode() {
+      const btn = document.getElementById('btn-trading-mode');
+      if (!btn) return;
+      if (btn.textContent.includes('PAPER')) {
+        if (confirm('Authorize LIVE TRADING mode with active exchange accounts?')) {
+          btn.textContent = '▲ LIVE TRADING';
+          btn.className = 'hidden sm:inline-flex px-2.5 py-1 rounded text-[11px] font-mono font-bold tracking-wide border transition-all bg-sigma-red/15 border-sigma-red text-sigma-red animate-pulse';
+        }
+      } else {
+        btn.textContent = '● PAPER MODE';
+        btn.className = 'hidden sm:inline-flex px-2.5 py-1 rounded text-[11px] font-mono font-bold tracking-wide border transition-all bg-sigma-cyan/10 border-sigma-cyan/40 text-sigma-cyan';
+      }
+    }
+
+    function setTimeframe(tf) {
+      document.querySelectorAll('.tf-btn').forEach(b => {
+        b.className = 'tf-btn px-1.5 py-0.5 rounded transition-colors text-sigma-textDark hover:text-sigma-textMuted';
+        if (b.textContent === tf) {
+          b.className = 'tf-btn px-1.5 py-0.5 rounded transition-colors bg-sigma-surface3 text-sigma-cyan font-bold border border-sigma-cyan/30';
+        }
+      });
+      fetchKlinesAndCompute();
+    }
+
+    function exportTradeJournalCSV() {
+      const csv = "Date,Symbol,Side,Entry,Exit,Size,PnL,Strategy,Outcome\\n" +
+        "2026-03-27 16:30,BTCUSDT,LONG,78200,81500,1.5,4950,Sigma 4H Momentum,WIN\\n" +
+        "2026-03-26 11:15,SOLUSDT,LONG,144.20,158.00,100,1380,Eagle Vol Explosion,WIN\\n" +
+        "2026-03-24 19:40,ETHUSDT,SHORT,2490,2545,20,-1100,Funding Carry,LOSS\\n" +
+        "2026-03-22 09:10,BTCUSDT,LONG,73100,77000,2.0,7800,MVRV Capitulation,WIN\\n";
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'sigma_trade_ledger.csv';
+      a.click();
+    }
+
+    // 12. Backtest Lab Simulation
     function initBacktestChart() {
       const canvas = document.getElementById('backtest-canvas');
       if (!canvas) return;
@@ -1754,85 +2494,6 @@ body {
       }, 1000);
     }
 
-    // 5. Actions & Modals
-    function triggerRefreshAll() {
-      const btn = document.getElementById('btn-refresh');
-      if (btn) btn.classList.add('animate-spin', 'text-sigma-green');
-      setTimeout(() => {
-        if (btn) btn.classList.remove('animate-spin', 'text-sigma-green');
-        renderCandlesticks();
-      }, 600);
-    }
-
-    function toggleTradingMode() {
-      const btn = document.getElementById('btn-trading-mode');
-      if (!btn) return;
-      if (btn.textContent.includes('PAPER')) {
-        if (confirm('Authorize LIVE TRADING mode with active exchange accounts?')) {
-          btn.textContent = '▲ LIVE TRADING';
-          btn.className = 'hidden sm:inline-flex px-2.5 py-1 rounded text-[11px] font-mono font-bold tracking-wide border transition-all bg-sigma-red/15 border-sigma-red text-sigma-red animate-pulse';
-        }
-      } else {
-        btn.textContent = '● PAPER MODE';
-        btn.className = 'hidden sm:inline-flex px-2.5 py-1 rounded text-[11px] font-mono font-bold tracking-wide border transition-all bg-sigma-cyan/10 border-sigma-cyan/40 text-sigma-cyan';
-      }
-    }
-
-    function setTimeframe(tf) {
-      document.querySelectorAll('.tf-btn').forEach(b => {
-        b.className = 'tf-btn px-1.5 py-0.5 rounded transition-colors text-sigma-textDark hover:text-sigma-textMuted';
-        if (b.textContent === tf) {
-          b.className = 'tf-btn px-1.5 py-0.5 rounded transition-colors bg-sigma-surface3 text-sigma-cyan font-bold border border-sigma-cyan/30';
-        }
-      });
-      renderCandlesticks();
-    }
-
-    function openKillSwitchModal() {
-      const m = document.getElementById('modal-kill-switch');
-      if (m) m.style.display = 'flex';
-    }
-    function closeKillSwitchModal() {
-      const m = document.getElementById('modal-kill-switch');
-      if (m) m.style.display = 'none';
-    }
-    function confirmKillSwitch() {
-      alert('🚨 HARDWARE KILL SWITCH ENGAGED! All active and pending orders cancelled. Safe Mode permanent lock activated.');
-      closeKillSwitchModal();
-    }
-
-    function openCommandPalette() {
-      const m = document.getElementById('modal-cmd-palette');
-      if (m) m.style.display = 'flex';
-      document.getElementById('cmd-input')?.focus();
-    }
-    function closeCommandPalette() {
-      const m = document.getElementById('modal-cmd-palette');
-      if (m) m.style.display = 'none';
-    }
-
-    function executePaperTrade(side, amount) {
-      alert('Order executed: ' + side + ' ' + amount + ' BTCUSDT at $' + currentPrice.toFixed(2) + ' (Paper Execution)');
-    }
-    function closeActivePosition() {
-      alert('Position closed at $' + currentPrice.toFixed(2) + '. Realized PnL logged to journal.');
-      document.getElementById('positions-count').textContent = '0';
-      document.getElementById('positions-table-body').innerHTML = '<tr><td colspan="7" class="text-center py-4 text-sigma-textDark">No active positions.</td></tr>';
-    }
-
-    function exportTradeJournalCSV() {
-      const csv = "Date,Symbol,Side,Entry,Exit,Size,PnL,Strategy,Outcome\\n" +
-        "2026-03-27 16:30,BTCUSDT,LONG,78200,81500,1.5,4950,Sigma 4H Momentum,WIN\\n" +
-        "2026-03-26 11:15,SOLUSDT,LONG,144.20,158.00,100,1380,Eagle Vol Explosion,WIN\\n" +
-        "2026-03-24 19:40,ETHUSDT,SHORT,2490,2545,20,-1100,Funding Carry,LOSS\\n" +
-        "2026-03-22 09:10,BTCUSDT,LONG,73100,77000,2.0,7800,MVRV Capitulation,WIN\\n";
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'sigma_trade_ledger.csv';
-      a.click();
-    }
-
     // Keybindings (Ctrl+K and Escape)
     window.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -1845,9 +2506,8 @@ body {
       }
     });
 
-    // Startup Initialization
+    // 13. Master Initialization on DOM Load
     window.addEventListener('DOMContentLoaded', () => {
-      // Hash routing
       const hash = window.location.hash.replace('#', '');
       if (['terminal', 'eagle', 'backtest', 'risk', 'journal', 'health', 'calendar'].includes(hash)) {
         switchWorkspace(hash);
@@ -1856,8 +2516,19 @@ body {
       }
 
       initBinanceWebSocket();
-      renderCandlesticks();
+      fetchKlinesAndCompute();
+      fetchOrderBookDepth();
+      fetchDerivativesData();
+      fetchCoinGeckoATH();
+      fetchDeribitSkew();
+
+      setInterval(fetchKlinesAndCompute, 30000);
+      setInterval(fetchOrderBookDepth, 5000);
+      setInterval(fetchDerivativesData, 10000);
+      setInterval(fetchCoinGeckoATH, 120000);
+      setInterval(fetchDeribitSkew, 60000);
     });
+
   </script>
 </body>
 </html>

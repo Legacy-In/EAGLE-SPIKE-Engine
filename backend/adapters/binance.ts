@@ -185,3 +185,5 @@ export class BinanceAdapter {
     }
   }
 }
+
+export const binanceAdapter = new BinanceAdapter();

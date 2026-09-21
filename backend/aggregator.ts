@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { binanceAdapter } from './adapters/binance';
 import { bybitAdapter } from './adapters/bybit';
 import { mexcAdapter } from './adapters/mexc';
 import { weexAdapter } from './adapters/weex';
@@ -27,7 +28,7 @@ export class ScannerAggregator extends EventEmitter {
     this.timer = setInterval(() => {
       this.runIngestionCycle();
     }, this.refreshIntervalMs);
-    console.log('🦅 Eagle Flash Aggregator started. Ingesting Bybit, MEXC, and WEEX...');
+    console.log('🦅 Eagle Flash Aggregator started. Ingesting Binance, Bybit, MEXC, and WEEX...');
   }
 
   /**
@@ -41,7 +42,7 @@ export class ScannerAggregator extends EventEmitter {
   }
 
   /**
-   * Runs an ingestion cycle across Bybit, MEXC, and WEEX
+   * Runs an ingestion cycle across Binance, Bybit, MEXC, and WEEX
    */
   public async runIngestionCycle(): Promise<ScannerSnapshotPayload> {
     if (this.isIngesting && this.cachedSnapshot) {
@@ -52,8 +53,12 @@ export class ScannerAggregator extends EventEmitter {
     const startTime = Date.now();
 
     try {
-      // Concurrently fetch active tickers from all 3 exchanges
-      const [bybitTickers, mexcTickers, weexTickers] = await Promise.all([
+      // Concurrently fetch active tickers from all 4 exchanges
+      const [binanceTickers, bybitTickers, mexcTickers, weexTickers] = await Promise.all([
+        binanceAdapter.fetchTickers().catch((e) => {
+          console.warn('Binance tickers fetch failed:', e.message);
+          return [] as NormalizedTicker[];
+        }),
         bybitAdapter.fetchTickers().catch((e) => {
           console.warn('Bybit tickers fetch failed:', e.message);
           return [] as NormalizedTicker[];
@@ -71,7 +76,14 @@ export class ScannerAggregator extends EventEmitter {
       const allTickers: NormalizedTicker[] = [];
       const seenSymbols = new Set<string>();
 
-      // Ingest Bybit first (Primary reference)
+      // Ingest Binance first
+      for (const t of binanceTickers) {
+        this.enrichTicker(t);
+        allTickers.push(t);
+        seenSymbols.add(t.symbol);
+      }
+
+      // Ingest Bybit (Primary reference)
       for (const t of bybitTickers) {
         this.enrichTicker(t);
         allTickers.push(t);
