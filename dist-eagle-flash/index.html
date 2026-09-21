@@ -4152,6 +4152,7 @@ const LifecycleEngine = {
             .from('signals')
             .select(`
               id,
+              signal_id,
               exchange_id,
               symbol,
               direction,
@@ -4175,7 +4176,7 @@ const LifecycleEngine = {
               ),
               signal_checkpoints (
                 checkpoint_type,
-                return_pct
+                directional_return_pct
               )
             `)
             .order('detected_at', { ascending: false })
@@ -4184,9 +4185,13 @@ const LifecycleEngine = {
           if (!error && Array.isArray(data)) {
             this.signals = data;
             renderSupabaseSignalsView(data);
+          } else {
+            console.warn('Supabase query issue:', error);
+            renderSupabaseSignalsView([]);
           }
         } catch (err) {
           console.warn('Failed to query Supabase signals:', err?.message);
+          renderSupabaseSignalsView([]);
         }
       },
 
@@ -4223,6 +4228,15 @@ const LifecycleEngine = {
       if (!tbody) return;
 
       if (!signals || signals.length === 0) {
+        const elTotal = document.getElementById('db-kpi-total'); if (elTotal) elTotal.innerText = '0';
+        const elWin = document.getElementById('db-kpi-winrate'); if (elWin) elWin.innerText = '0.0%';
+        const elMfe = document.getElementById('db-kpi-mfe'); if (elMfe) elMfe.innerText = '+0.00%';
+        const elMae = document.getElementById('db-kpi-mae'); if (elMae) elMae.innerText = '-0.00%';
+        const elNet = document.getElementById('db-kpi-netpnl');
+        if (elNet) {
+          elNet.innerText = '+0.00%';
+          elNet.className = 'kpi-val tabular c-emerald';
+        }
         tbody.innerHTML = '<tr><td colspan="17" class="c-dark" style="text-align:center; padding:30px;">No historical signals found in database. Signals qualify when Score &ge; 65, RVOL &ge; 2.0x, and OI &Delta; &gt; +3%.</td></tr>';
         return;
       }
@@ -4280,7 +4294,7 @@ const LifecycleEngine = {
         // Checkpoints map
         const cps = {};
         if (Array.isArray(s.signal_checkpoints)) {
-          s.signal_checkpoints.forEach(cp => { cps[cp.checkpoint_type] = cp.return_pct; });
+          s.signal_checkpoints.forEach(cp => { cps[cp.checkpoint_type] = cp.directional_return_pct ?? cp.return_pct; });
         }
 
         const ret15m = cps['15M'] != null ? parseFloat(cps['15M']).toFixed(2) + '%' : '—';
@@ -4292,11 +4306,12 @@ const LifecycleEngine = {
         const isNetPos = parseFloat(net) >= 0;
 
         const dateStr = s.detected_at ? new Date(s.detected_at).toLocaleTimeString() : '—';
+        const displayId = (s.signal_id || String(s.id || '')).substring(0, 16);
 
         html += `
           <tr>
             <td class="tabular c-dark">${dateStr}</td>
-            <td class="tabular font-bold c-cyan">${s.id.substring(0, 16)}...</td>
+            <td class="tabular font-bold c-cyan">${displayId}...</td>
             <td><span class="${exBadge}">${s.exchange_id}</span></td>
             <td class="tabular font-bold"><a href="${getTradeUrl({ symbol: s.symbol, exchange: s.exchange_id })}" target="_blank" style="color:var(--text); text-decoration:none;">${s.symbol} ↗</a></td>
             <td><span class="tabular font-bold ${sideClass}">${s.direction}</span></td>
