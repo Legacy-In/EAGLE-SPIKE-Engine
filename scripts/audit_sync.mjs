@@ -113,6 +113,14 @@ if (fs.existsSync(schemaPath) && fs.existsSync(repoPath)) {
     schemaTablesValid && repoTablesValid,
     schemaTablesValid && repoTablesValid ? 'All 4 tables aligned between migration and repository layer' : 'Table contract mismatch'
   );
+
+  const migration2Path = path.join(rootDir, 'supabase', 'migrations', '002_big_cap_signals.sql');
+  const bigCapMigrationValid = fs.existsSync(migration2Path) && fs.readFileSync(migration2Path, 'utf-8').includes('big_cap_signals');
+  report(
+    'Supabase Big-Cap Schema Contract Integrity',
+    bigCapMigrationValid,
+    bigCapMigrationValid ? 'big_cap_signals table schema migration verified with exclusive active lock' : 'Missing 002_big_cap_signals.sql'
+  );
 }
 
 // 5. Audit Clean Scripts Directory

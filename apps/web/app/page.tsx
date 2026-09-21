@@ -19,6 +19,7 @@ import { RiskExposureCenter } from '../components/risk/RiskExposureCenter';
 import { TradeJournalView } from '../components/trade/TradeJournalView';
 import { DataHealthCenter } from '../components/health/DataHealthCenter';
 import { EconomicCalendarView } from '../components/calendar/EconomicCalendarView';
+import { BigCapSpikeSection } from '../components/terminal/BigCapSpikeSection';
 import { AlertOctagon, Power, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 export default function SigmaWorkstationPage() {
@@ -71,6 +72,9 @@ export default function SigmaWorkstationPage() {
           <div className="space-y-3">
             {/* Header Ticker Strip */}
             <PriceHeader market={market} />
+
+            {/* Big-Cap Spike & PnL Intelligence Terminal (BTC, ETH, SOL) */}
+            <BigCapSpikeSection />
 
             {/* Responsive Institutional Grid: 1 col on mobile, 12 cols on desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">

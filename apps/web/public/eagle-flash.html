@@ -1295,6 +1295,7 @@
       <button class="nav-btn" onclick="switchTab('HEATMAP')">Heatmap</button>
       <button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>
       <button class="nav-btn" onclick="switchTab('JOURNAL')">Signal Journal <span class="badge-count" id="journal-count">0</span></button>
+      <button class="nav-btn" onclick="switchTab('BIGCAP')">🏛️ Big Cap Desk <span class="badge-count" id="nav-bigcap-count" style="background:#00f5d4; color:#000;">1</span></button>
       <button class="nav-btn" onclick="switchTab('HISTORY')">History</button>
       <button class="nav-btn" onclick="switchTab('DIAGNOSTICS')">Diagnostics</button>
     </nav>
@@ -1901,6 +1902,103 @@
             <tr><td colspan="17" class="c-dark" style="text-align:center; padding:30px;">Connecting to Supabase PostgreSQL database...</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- 7. BIG CAP SPIKE & PNL INTELLIGENCE DESK -->
+    <div id="view-BIGCAP" class="view-container">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono); letter-spacing:0.5px;">🏛️ BIG-CAP SPIKE &amp; MULTI-TIMEFRAME STRATEGY DESK</h2>
+            <span class="badge-supabase" id="bigcap-db-badge">SUPABASE LIVE · 24/7 DAEMON</span>
+            <span style="font-size:10px; font-family:var(--font-mono); padding:2px 8px; border-radius:4px; background:rgba(0,245,212,0.15); color:#00f5d4; border:1px solid rgba(0,245,212,0.3);">BTC · ETH · SOL EXCLUSIVE</span>
+          </div>
+          <p class="c-dark" style="font-size:11px; margin-top:2px;">
+            CONTINUOUS 5M / 15M / 1H FOOTPRINTS · NON-OVERLAPPING POSITION LOCK · AUTOMATED TP/SL LIFECYCLE
+          </p>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn btn-sm" onclick="BigCapIntelligenceDesk.syncDb()">⟳ Sync BigCap DB</button>
+        </div>
+      </div>
+
+      <!-- KPI Strip -->
+      <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-lbl">Active Symbol Locks</div>
+          <div class="kpi-val tabular c-cyan" id="bigcap-kpi-locks">0 / 3</div>
+          <div class="kpi-sub">Non-overlapping rule</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Historical Win Rate</div>
+          <div class="kpi-val tabular c-emerald" id="bigcap-kpi-winrate">--%</div>
+          <div class="kpi-sub">TP2 (+3.5%) vs SL (-0.8%)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Net Realized ROI</div>
+          <div class="kpi-val tabular" id="bigcap-kpi-netroi">+0.00%</div>
+          <div class="kpi-sub">Closed big-cap trades</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Macro Session</div>
+          <div class="kpi-val tabular" style="font-size:13px; color:#f1faee;" id="bigcap-kpi-session">ACTIVE WINDOW</div>
+          <div class="kpi-sub" id="bigcap-kpi-session-sub">RVOL Min: 1.5x</div>
+        </div>
+      </div>
+
+      <!-- Asset Regime Matrix Cards (BTC, ETH, SOL) -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:16px;" id="bigcap-regime-grid">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Active Setups & Rationale Cards Container -->
+      <div style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+            ⚡ ACTIVE DIRECTIONAL SETUPS &amp; REAL-TIME STATE MACHINE
+          </h3>
+          <span style="font-size:10px; font-family:var(--font-mono); color:var(--text-dark);">
+            At most 1 Active Trade Per Symbol · Auto TP2 (+3.5%) / SL (-0.8%)
+          </span>
+        </div>
+        <div id="bigcap-active-cards" style="display:flex; flex-direction:column; gap:12px;">
+          <div style="padding:24px; text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--text-dark); background:var(--surface); border:1px dashed var(--border); border-radius:8px;">
+            Loading active big-cap signals from Supabase...
+          </div>
+        </div>
+      </div>
+
+      <!-- Resolved Positions Audit Table -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+            📜 RESOLVED BIG-CAP TRADES LOG &amp; AUDIT TRAIL
+          </h3>
+          <span style="font-size:10px; font-family:var(--font-mono); color:var(--text-dark);">
+            45m Cooldown Enforced Post-Closure
+          </span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="bigcap-history-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Signal ID</th>
+                <th>Symbol</th>
+                <th>Side</th>
+                <th>Best TF</th>
+                <th>Entry Price</th>
+                <th>Exit Price</th>
+                <th>Realized ROI</th>
+                <th>Outcome</th>
+              </tr>
+            </thead>
+            <tbody id="bigcap-history-tbody">
+              <tr><td colspan="9" class="c-dark" style="text-align:center; padding:20px;">No resolved big-cap trades yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -3881,6 +3979,9 @@ const LifecycleEngine = {
         if (typeof EagleSupabase !== 'undefined') {
           EagleSupabase.init().catch(e => console.warn('Supabase startup notice:', e));
         }
+        if (typeof BigCapIntelligenceDesk !== 'undefined') {
+          BigCapIntelligenceDesk.init().catch(e => console.warn('BigCap desk startup notice:', e));
+        }
 
         document.getElementById('splash-btn').style.display = 'block';
         document.getElementById('sp-5').className = 'step-done';
@@ -4365,6 +4466,283 @@ const LifecycleEngine = {
       a.download = `eagle_supabase_signals_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
     }
+
+    // =========================================================================
+    // 🏛️ BIG-CAP SPIKE & PNL INTELLIGENCE DESK (BTC, ETH, SOL)
+    // =========================================================================
+    const BigCapIntelligenceDesk = {
+      activeSignals: [],
+      historicalSignals: [],
+      livePrices: { BTCUSDT: 0, ETHUSDT: 0, SOLUSDT: 0 },
+      ws: null,
+
+      async init() {
+        this.connectTickerWs();
+        await this.syncDb();
+        this.subscribeRealtime();
+      },
+
+      connectTickerWs() {
+        try {
+          const wsUrl = 'wss://fstream.binance.com/stream?streams=btcusdt@ticker/ethusdt@ticker/solusdt@ticker';
+          this.ws = new WebSocket(wsUrl);
+          this.ws.onmessage = (e) => {
+            try {
+              const msg = JSON.parse(e.data);
+              const t = msg?.data;
+              if (t && t.s && t.c) {
+                const price = parseFloat(t.c);
+                this.livePrices[t.s] = price;
+                this.updateLiveTickPrice(t.s, price);
+              }
+            } catch (err) {}
+          };
+          this.ws.onclose = () => {
+            setTimeout(() => this.connectTickerWs(), 5000);
+          };
+        } catch (e) {}
+      },
+
+      subscribeRealtime() {
+        if (!EagleSupabase.client) return;
+        try {
+          EagleSupabase.client
+            .channel('public:big_cap_signals')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'big_cap_signals' }, () => {
+              this.syncDb();
+            })
+            .subscribe();
+        } catch (e) {}
+      },
+
+      async syncDb() {
+        if (!EagleSupabase.client) return;
+        try {
+          const { data, error } = await EagleSupabase.client
+            .from('big_cap_signals')
+            .select('*')
+            .order('detected_at', { ascending: false })
+            .limit(50);
+
+          if (!error && Array.isArray(data)) {
+            this.activeSignals = data.filter(s => s.status === 'ACTIVE');
+            this.historicalSignals = data.filter(s => s.status !== 'ACTIVE');
+            this.render();
+          }
+        } catch (e) {
+          console.warn('BigCap DB sync error:', e);
+        }
+      },
+
+      updateLiveTickPrice(symbol, price) {
+        const priceEl = document.getElementById('bigcap-price-' + symbol);
+        if (priceEl) priceEl.innerText = '$' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+
+        const active = this.activeSignals.find(s => s.symbol === symbol);
+        if (active) {
+          const isLong = active.direction === 'LONG';
+          const pnl = isLong ? ((price - active.entry_price) / active.entry_price) * 100 : ((active.entry_price - price) / active.entry_price) * 100;
+          const pnlEl = document.getElementById('bigcap-pnl-' + active.signal_id);
+          if (pnlEl) {
+            const isPos = pnl >= 0;
+            pnlEl.innerText = (isPos ? '+' : '') + pnl.toFixed(2) + '%';
+            pnlEl.className = 'tabular font-bold ' + (isPos ? 'c-emerald' : 'c-red');
+          }
+
+          const gaugeEl = document.getElementById('bigcap-gauge-' + active.signal_id);
+          if (gaugeEl) {
+            const pct = Math.max(0, Math.min(100, ((pnl + 0.8) / (3.5 + 0.8)) * 100));
+            gaugeEl.style.width = pct + '%';
+          }
+        }
+      },
+
+      render() {
+        const navCount = document.getElementById('nav-bigcap-count');
+        if (navCount) navCount.innerText = this.activeSignals.length;
+
+        const elLocks = document.getElementById('bigcap-kpi-locks');
+        if (elLocks) elLocks.innerText = this.activeSignals.length + ' / 3';
+
+        const closed = this.historicalSignals.filter(s => s.status === 'TP_HIT' || s.status === 'SL_HIT');
+        const tpCount = closed.filter(s => s.status === 'TP_HIT').length;
+        const winRate = closed.length > 0 ? ((tpCount / closed.length) * 100).toFixed(1) + '%' : '—%';
+        const netPnl = closed.reduce((acc, s) => acc + (parseFloat(s.realized_pnl_pct) || 0), 0);
+
+        const elWin = document.getElementById('bigcap-kpi-winrate');
+        if (elWin) elWin.innerText = winRate;
+
+        const elRoi = document.getElementById('bigcap-kpi-netroi');
+        if (elRoi) {
+          const isPos = netPnl >= 0;
+          elRoi.innerText = (isPos ? '+' : '') + netPnl.toFixed(2) + '%';
+          elRoi.className = 'kpi-val tabular ' + (isPos ? 'c-emerald' : 'c-red');
+        }
+
+        // Render Regime Grid
+        const gridEl = document.getElementById('bigcap-regime-grid');
+        if (gridEl) {
+          const assets = [
+            { symbol: 'BTCUSDT', name: 'Bitcoin Perpetual', base: 'BTC' },
+            { symbol: 'ETHUSDT', name: 'Ethereum Perpetual', base: 'ETH' },
+            { symbol: 'SOLUSDT', name: 'Solana Perpetual', base: 'SOL' }
+          ];
+
+          let html = '';
+          assets.forEach(a => {
+            const active = this.activeSignals.find(s => s.symbol === a.symbol);
+            const livePrice = this.livePrices[a.symbol] || (active ? active.current_price : 0);
+            const isLocked = Boolean(active);
+            const lockPill = isLocked
+              ? '<span style="font-size:10px; font-family:var(--font-mono); font-weight:bold; padding:2px 8px; border-radius:4px; background:rgba(0,245,212,0.15); color:#00f5d4; border:1px solid rgba(0,245,212,0.3);">🔒 LOCKED (' + active.direction + ')</span>'
+              : '<span style="font-size:10px; font-family:var(--font-mono); padding:2px 8px; border-radius:4px; background:var(--surface-3); color:var(--text-dark); border:1px solid var(--border);">🟢 READY: SCANNING</span>';
+
+            html += '<div style="background:var(--surface); border:1px solid ' + (isLocked ? 'rgba(0,245,212,0.35)' : 'var(--border)') + '; border-radius:8px; padding:12px; font-family:var(--font-mono);">' +
+              '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+                '<div style="font-weight:bold; font-size:14px; color:#fff;">' + a.base + ' <span style="font-size:10px; color:var(--text-dark);">/ USDT</span></div>' +
+                '<div>' + lockPill + '</div>' +
+              '</div>' +
+              '<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">' +
+                '<span id="bigcap-price-' + a.symbol + '" style="font-size:20px; font-weight:800; color:#fff;" class="tabular">' +
+                  (livePrice > 0 ? '$' + livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '—') +
+                '</span>' +
+                (active ? '<span class="tabular font-bold ' + (active.direction === 'LONG' ? 'c-emerald' : 'c-red') + '" style="font-size:11px;">Entry: $' + active.entry_price + '</span>' : '') +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; font-size:10px;">' +
+                '<div style="background:var(--surface-3); padding:4px 6px; border-radius:4px; text-align:center; border:1px solid var(--border);">' +
+                  '<div class="c-dark">5m TF</div>' +
+                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '5m' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '5m' ? 'ACTIVE' : 'READY') + '</div>' +
+                '</div>' +
+                '<div style="background:var(--surface-3); padding:4px 6px; border-radius:4px; text-align:center; border:1px solid var(--border);">' +
+                  '<div class="c-dark">15m TF</div>' +
+                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '15m' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '15m' ? 'ACTIVE' : 'READY') + '</div>' +
+                '</div>' +
+                '<div style="background:var(--surface-3); padding:4px 6px; border-radius:4px; text-align:center; border:1px solid var(--border);">' +
+                  '<div class="c-dark">1h TF</div>' +
+                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '1h' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '1h' ? 'ACTIVE' : 'READY') + '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+          });
+          gridEl.innerHTML = html;
+        }
+
+        // Render Active Signal Cards
+        const cardsEl = document.getElementById('bigcap-active-cards');
+        if (cardsEl) {
+          if (this.activeSignals.length === 0) {
+            cardsEl.innerHTML = '<div style="padding:24px; text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--text-dark); background:var(--surface); border:1px dashed var(--border); border-radius:8px;">' +
+              'No active big-cap positions currently locked. Daemon running continuous multi-timeframe analytics across BTC, ETH, and SOL.' +
+            '</div>';
+          } else {
+            let cardsHtml = '';
+            this.activeSignals.forEach(sig => {
+              const isLong = sig.direction === 'LONG';
+              const sideClass = isLong ? 'c-emerald' : 'c-red';
+              const live = this.livePrices[sig.symbol] || sig.current_price;
+              const pnl = isLong ? ((live - sig.entry_price) / sig.entry_price) * 100 : ((sig.entry_price - live) / sig.entry_price) * 100;
+              const isPos = pnl >= 0;
+              const bullets = Array.isArray(sig.rationale_json) ? sig.rationale_json : [];
+              const gaugeWidth = Math.max(0, Math.min(100, ((pnl + 0.8) / (3.5 + 0.8)) * 100));
+
+              cardsHtml += '<div style="background:var(--surface); border:1px solid rgba(0,245,212,0.35); border-radius:8px; padding:14px; font-family:var(--font-mono);">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border);">' +
+                  '<div style="display:flex; align-items:center; gap:8px;">' +
+                    '<span style="font-size:15px; font-weight:800; color:#fff;">' + sig.symbol + '</span>' +
+                    '<span class="tabular font-bold ' + sideClass + '" style="padding:2px 8px; border-radius:4px; font-size:11px; background:' + (isLong ? 'rgba(62,207,142,0.15)' : 'rgba(255,71,87,0.15)') + '; border:1px solid ' + (isLong ? 'rgba(62,207,142,0.35)' : 'rgba(255,71,87,0.35)') + ';">' +
+                      sig.direction +
+                    '</span>' +
+                    '<span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(0,245,212,0.1); color:#00f5d4; border:1px solid rgba(0,245,212,0.3);">' +
+                      '⚡ Best TF: ' + sig.best_timeframe +
+                    '</span>' +
+                    '<span style="font-size:11px; color:var(--text-muted);">Eagle Score: <strong style="color:#fff;">' + sig.eagle_score + '/100</strong></span>' +
+                  '</div>' +
+                  '<div style="display:flex; align-items:center; gap:12px;">' +
+                    '<div>' +
+                      '<span class="c-dark" style="font-size:10px; display:block; text-align:right;">LIVE UNREALIZED PNL</span>' +
+                      '<span id="bigcap-pnl-' + sig.signal_id + '" class="tabular font-bold ' + (isPos ? 'c-emerald' : 'c-red') + '" style="font-size:14px;">' +
+                        (isPos ? '+' : '') + pnl.toFixed(2) + '%' +
+                      '</span>' +
+                    '</div>' +
+                    '<span class="c-dark" style="font-size:10px;">Detected: ' + new Date(sig.detected_at).toLocaleTimeString() + '</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:8px; margin-bottom:12px; font-size:11px;">' +
+                  '<div style="background:var(--surface-3); padding:6px 10px; border-radius:4px; border:1px solid var(--border);">' +
+                    '<div class="c-dark" style="font-size:9px;">ENTRY PRICE</div>' +
+                    '<div style="font-weight:bold; color:#fff;" class="tabular">$' + sig.entry_price + '</div>' +
+                  '</div>' +
+                  '<div style="background:var(--surface-3); padding:6px 10px; border-radius:4px; border:1px solid var(--border);">' +
+                    '<div class="c-dark" style="font-size:9px;">STOP LOSS (-0.8%)</div>' +
+                    '<div class="c-red font-bold tabular">$' + sig.stop_loss_price + '</div>' +
+                  '</div>' +
+                  '<div style="background:var(--surface-3); padding:6px 10px; border-radius:4px; border:1px solid var(--border);">' +
+                    '<div class="c-dark" style="font-size:9px;">TARGET 1 (+1.5%)</div>' +
+                    '<div class="c-emerald font-bold tabular">$' + sig.target_price_1 + '</div>' +
+                  '</div>' +
+                  '<div style="background:var(--surface-3); padding:6px 10px; border-radius:4px; border:1px solid var(--border);">' +
+                    '<div class="c-dark" style="font-size:9px;">TARGET 2 (+3.5%)</div>' +
+                    '<div class="c-emerald font-bold tabular">$' + sig.target_price_2 + '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="margin-bottom:12px;">' +
+                  '<div style="display:flex; justify-content:space-between; font-size:9px; color:var(--text-dark); margin-bottom:3px;">' +
+                    '<span>SL (-0.8%)</span>' +
+                    '<span>ENTRY</span>' +
+                    '<span>TP1 (+1.5%)</span>' +
+                    '<span>TP2 (+3.5%)</span>' +
+                  '</div>' +
+                  '<div style="width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; position:relative;">' +
+                    '<div id="bigcap-gauge-' + sig.signal_id + '" style="height:100%; background:linear-gradient(90deg, #ff4757, #00f5d4); width:' + gaugeWidth + '%; transition:width 0.3s ease;"></div>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:10px 12px; font-size:11px;">' +
+                  '<div style="font-weight:bold; color:#00f5d4; margin-bottom:6px; font-size:10px; letter-spacing:0.5px;">' +
+                    '📊 DETERMINISTIC QUANTITATIVE RATIONALE' +
+                  '</div>' +
+                  '<ul style="margin:0; padding-left:14px; line-height:1.6; color:var(--text-muted);">' +
+                    bullets.map(b => '<li style="margin-bottom:3px;">' + b + '</li>').join('') +
+                  '</ul>' +
+                '</div>' +
+              '</div>';
+            });
+            cardsEl.innerHTML = cardsHtml;
+          }
+        }
+
+        // Render Historical Table
+        const histTbody = document.getElementById('bigcap-history-tbody');
+        if (histTbody) {
+          if (this.historicalSignals.length === 0) {
+            histTbody.innerHTML = '<tr><td colspan="9" class="c-dark" style="text-align:center; padding:20px;">No resolved big-cap positions yet. Automated TP/SL daemon active.</td></tr>';
+          } else {
+            let histHtml = '';
+            this.historicalSignals.forEach(h => {
+              const isLong = h.direction === 'LONG';
+              const pnl = parseFloat(h.realized_pnl_pct) || 0;
+              const isWin = h.status === 'TP_HIT';
+
+              histHtml += '<tr>' +
+                '<td class="tabular c-dark">' + (h.closed_at ? new Date(h.closed_at).toLocaleTimeString() : new Date(h.detected_at).toLocaleTimeString()) + '</td>' +
+                '<td class="tabular font-bold c-cyan">' + h.signal_id.slice(-14) + '</td>' +
+                '<td class="tabular font-bold" style="color:#fff;">' + h.symbol + '</td>' +
+                '<td class="tabular font-bold ' + (isLong ? 'c-emerald' : 'c-red') + '">' + h.direction + '</td>' +
+                '<td class="tabular">' + h.best_timeframe + '</td>' +
+                '<td class="tabular">$' + h.entry_price + '</td>' +
+                '<td class="tabular">$' + h.current_price + '</td>' +
+                '<td class="tabular font-bold ' + (pnl >= 0 ? 'c-emerald' : 'c-red') + '">' + (pnl >= 0 ? '+' : '') + pnl + '%</td>' +
+                '<td>' +
+                  '<span class="badge-status ' + (isWin ? 'status-live' : '') + '" style="' + (isWin ? 'color:#3ecf8e; border-color:#3ecf8e;' : 'color:#ff4757; border-color:#ff4757;') + '">' +
+                    h.status +
+                  '</span>' +
+                '</td>' +
+              '</tr>';
+            });
+            histTbody.innerHTML = histHtml;
+          }
+        }
+      }
+    };
 
     // Prefetch real historical 1h klines for top volume movers
     async function prefetchTopVolumeBaselines() {
@@ -6144,6 +6522,9 @@ function loadAllScannerRows() {
       if (tabId === 'HEATMAP') renderHeatmapTab();
       if (tabId === 'WATCHLIST') renderWatchlist();
       if (tabId === 'JOURNAL' && typeof LifecycleEngine !== 'undefined') LifecycleEngine.renderJournalTab();
+      if (tabId === 'BIGCAP') {
+        if (typeof BigCapIntelligenceDesk !== 'undefined') BigCapIntelligenceDesk.render();
+      }
       if (tabId === 'HISTORY') {
         renderHistory();
         if (typeof EagleSupabase !== 'undefined') EagleSupabase.fetchLatestSignals();

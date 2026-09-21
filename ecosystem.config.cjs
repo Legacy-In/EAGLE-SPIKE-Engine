@@ -34,5 +34,15 @@ module.exports = {
       autorestart: true,
       restart_delay: 5000,
     },
+    {
+      name: 'eagle-flash-bigcap-worker',
+      script: 'scripts/bigcap_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+      },
+      autorestart: true,
+      restart_delay: 5000,
+    },
   ],
 };
