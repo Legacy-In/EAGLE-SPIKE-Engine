@@ -11,6 +11,10 @@
     "stop:all": "pm2 stop ecosystem.config.cjs",
     "bot": "node scripts/telegram_poll.mjs",
     "scanner": "node scripts/server_scanner.mjs",
-    "test": "npx.cmd --yes tsx --test tests/market-discovery.test.ts tests/scanner-signals.test.ts tests/spike-intelligence.test.ts tests/signals-heatmap.test.ts tests/btc-positioning.test.ts && node --test tests/lifecycle.test.mjs tests/engine.test.mjs && node scripts/security_audit.mjs && node scripts/verify_clean.mjs"
+    "test": "npx.cmd --yes tsx --test tests/market-discovery.test.ts tests/supabase-lifecycle.test.ts tests/scanner-signals.test.ts tests/spike-intelligence.test.ts tests/signals-heatmap.test.ts tests/btc-positioning.test.ts && node --test tests/lifecycle.test.mjs tests/engine.test.mjs && node scripts/security_audit.mjs && node scripts/verify_clean.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "dotenv": "^18.0.1"
   }
 }

@@ -1,4 +1,4 @@
-export type ExchangeName = 'BYBIT' | 'MEXC' | 'WEEX';
+export type ExchangeName = 'BYBIT' | 'MEXC' | 'WEEX' | 'BINANCE';
 
 export interface MarketContract {
   symbol: string;

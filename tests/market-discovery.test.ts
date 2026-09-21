@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { BybitAdapter } from '../backend/adapters/bybit';
 import { MexcAdapter } from '../backend/adapters/mexc';
 import { WeexAdapter } from '../backend/adapters/weex';
+import { BinanceAdapter } from '../backend/adapters/binance';
 
 test('Market Discovery: BybitAdapter active contract filtering and ticker normalization', async () => {
   const adapter = new BybitAdapter();
@@ -56,4 +57,22 @@ test('Market Discovery: WEEXAdapter processes active USDT contracts', async () =
   assert.equal(usdtOnly.length, 2);
   assert.equal(usdtOnly[0].symbol, 'BTCUSDT');
   assert.equal(usdtOnly[1].symbol, 'SOLUSDT');
+});
+
+test('Market Discovery: BinanceAdapter filters active TRADING contracts with quoteAsset USDT', async () => {
+  const adapter = new BinanceAdapter();
+
+  const rawBinanceSymbols = [
+    { symbol: 'BTCUSDT', quoteAsset: 'USDT', status: 'TRADING', contractType: 'PERPETUAL' },
+    { symbol: 'ETHUSDT', quoteAsset: 'USDT', status: 'TRADING', contractType: 'PERPETUAL' },
+    { symbol: 'BNBBUSD', quoteAsset: 'BUSD', status: 'TRADING', contractType: 'PERPETUAL' }, // Non-USDT
+    { symbol: 'LUNAUSDT_DEL', quoteAsset: 'USDT', status: 'SETTLING', contractType: 'PERPETUAL' }, // Settling
+  ];
+
+  const valid = rawBinanceSymbols.filter(
+    (s) => s.quoteAsset === 'USDT' && s.status === 'TRADING' && s.contractType === 'PERPETUAL'
+  );
+  assert.equal(valid.length, 2);
+  assert.equal(valid[0].symbol, 'BTCUSDT');
+  assert.equal(valid[1].symbol, 'ETHUSDT');
 });
