@@ -41,7 +41,7 @@ try {
 
 // 3. Scan codebase for leaked secrets & Telegram Bot tokens
 const SCAN_DIRS = ['apps', 'dist-eagle-flash', 'packages', 'services', 'scripts'];
-const SCAN_FILES = ['index.html', 'sigma_btc_live.html', 'README.md'];
+const SCAN_FILES = ['index.html', 'eagle-flash.html', 'README.md'];
 
 // Patterns to detect
 const TOKEN_PATTERN = /\b\d{8,10}:[A-Za-z0-9_-]{35}\b/g;
