@@ -4475,11 +4475,15 @@ const LifecycleEngine = {
       historicalSignals: [],
       livePrices: { BTCUSDT: 0, ETHUSDT: 0, SOLUSDT: 0 },
       ws: null,
+      syncTimer: null,
+      realtimeChannel: null,
 
       async init() {
         this.connectTickerWs();
         await this.syncDb();
         this.subscribeRealtime();
+        if (this.syncTimer) clearInterval(this.syncTimer);
+        this.syncTimer = setInterval(() => this.syncDb(), 2000);
       },
 
       connectTickerWs() {
@@ -4506,27 +4510,51 @@ const LifecycleEngine = {
       subscribeRealtime() {
         if (!EagleSupabase.client) return;
         try {
-          EagleSupabase.client
+          if (this.realtimeChannel) {
+            EagleSupabase.client.removeChannel(this.realtimeChannel);
+          }
+          this.realtimeChannel = EagleSupabase.client
             .channel('public:big_cap_signals')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'big_cap_signals' }, () => {
               this.syncDb();
             })
             .subscribe();
-        } catch (e) {}
+        } catch (e) {
+          console.warn('BigCap realtime sub warning:', e);
+        }
       },
 
       async syncDb() {
-        if (!EagleSupabase.client) return;
         try {
-          const { data, error } = await EagleSupabase.client
-            .from('big_cap_signals')
-            .select('*')
-            .order('detected_at', { ascending: false })
-            .limit(50);
+          let records = null;
+          if (EagleSupabase.client) {
+            const { data, error } = await EagleSupabase.client
+              .from('big_cap_signals')
+              .select('*')
+              .order('detected_at', { ascending: false })
+              .limit(100);
+            if (!error && Array.isArray(data)) {
+              records = data;
+            }
+          }
 
-          if (!error && Array.isArray(data)) {
-            this.activeSignals = data.filter(s => s.status === 'ACTIVE');
-            this.historicalSignals = data.filter(s => s.status !== 'ACTIVE');
+          if (!records) {
+            try {
+              const resp = await fetch(SUPABASE_CONFIG.url + '/rest/v1/big_cap_signals?select=*&order=detected_at.desc&limit=100', {
+                headers: {
+                  'apikey': SUPABASE_CONFIG.anonKey,
+                  'Authorization': 'Bearer ' + SUPABASE_CONFIG.anonKey
+                }
+              });
+              if (resp.ok) {
+                records = await resp.json();
+              }
+            } catch (netErr) {}
+          }
+
+          if (Array.isArray(records)) {
+            this.activeSignals = records.filter(s => s.status === 'ACTIVE');
+            this.historicalSignals = records.filter(s => s.status !== 'ACTIVE');
             this.render();
           }
         } catch (e) {
@@ -4535,8 +4563,13 @@ const LifecycleEngine = {
       },
 
       updateLiveTickPrice(symbol, price) {
+        const formattedPrice = '$' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        
         const priceEl = document.getElementById('bigcap-price-' + symbol);
-        if (priceEl) priceEl.innerText = '$' + price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+        if (priceEl) priceEl.innerText = formattedPrice;
+
+        const scanTickEl = document.getElementById('bigcap-scan-price-' + symbol);
+        if (scanTickEl) scanTickEl.innerText = formattedPrice;
 
         const active = this.activeSignals.find(s => s.symbol === symbol);
         if (active) {
@@ -4551,7 +4584,7 @@ const LifecycleEngine = {
 
           const gaugeEl = document.getElementById('bigcap-gauge-' + active.signal_id);
           if (gaugeEl) {
-            const pct = Math.max(0, Math.min(100, ((pnl + 0.8) / (3.5 + 0.8)) * 100));
+            const pct = Math.max(0, Math.min(100, ((pnl + 0.8) / 4.3) * 100));
             gaugeEl.style.width = pct + '%';
           }
         }
@@ -4579,15 +4612,15 @@ const LifecycleEngine = {
           elRoi.className = 'kpi-val tabular ' + (isPos ? 'c-emerald' : 'c-red');
         }
 
+        const assets = [
+          { symbol: 'BTCUSDT', name: 'Bitcoin Perpetual', base: 'BTC', minVol: '1.5x - 2.1x' },
+          { symbol: 'ETHUSDT', name: 'Ethereum Perpetual', base: 'ETH', minVol: '1.5x - 2.1x' },
+          { symbol: 'SOLUSDT', name: 'Solana Perpetual', base: 'SOL', minVol: '1.8x - 2.4x' }
+        ];
+
         // Render Regime Grid
         const gridEl = document.getElementById('bigcap-regime-grid');
         if (gridEl) {
-          const assets = [
-            { symbol: 'BTCUSDT', name: 'Bitcoin Perpetual', base: 'BTC' },
-            { symbol: 'ETHUSDT', name: 'Ethereum Perpetual', base: 'ETH' },
-            { symbol: 'SOLUSDT', name: 'Solana Perpetual', base: 'SOL' }
-          ];
-
           let html = '';
           assets.forEach(a => {
             const active = this.activeSignals.find(s => s.symbol === a.symbol);
@@ -4595,7 +4628,7 @@ const LifecycleEngine = {
             const isLocked = Boolean(active);
             const lockPill = isLocked
               ? '<span style="font-size:10px; font-family:var(--font-mono); font-weight:bold; padding:2px 8px; border-radius:4px; background:rgba(0,245,212,0.15); color:#00f5d4; border:1px solid rgba(0,245,212,0.3);">🔒 LOCKED (' + active.direction + ')</span>'
-              : '<span style="font-size:10px; font-family:var(--font-mono); padding:2px 8px; border-radius:4px; background:var(--surface-3); color:var(--text-dark); border:1px solid var(--border);">🟢 READY: SCANNING</span>';
+              : '<span style="font-size:10px; font-family:var(--font-mono); padding:2px 8px; border-radius:4px; background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3);">🟢 READY: SCANNING</span>';
 
             html += '<div style="background:var(--surface); border:1px solid ' + (isLocked ? 'rgba(0,245,212,0.35)' : 'var(--border)') + '; border-radius:8px; padding:12px; font-family:var(--font-mono);">' +
               '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
@@ -4606,20 +4639,20 @@ const LifecycleEngine = {
                 '<span id="bigcap-price-' + a.symbol + '" style="font-size:20px; font-weight:800; color:#fff;" class="tabular">' +
                   (livePrice > 0 ? '$' + livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '—') +
                 '</span>' +
-                (active ? '<span class="tabular font-bold ' + (active.direction === 'LONG' ? 'c-emerald' : 'c-red') + '" style="font-size:11px;">Entry: $' + active.entry_price + '</span>' : '') +
+                (active ? '<span class="tabular font-bold ' + (active.direction === 'LONG' ? 'c-emerald' : 'c-red') + '" style="font-size:11px;">Entry: $' + active.entry_price + '</span>' : '<span class="c-dark" style="font-size:10px;">RVOL Gate: ' + a.minVol + '</span>') +
               '</div>' +
               '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; font-size:10px;">' +
                 '<div style="background:var(--surface-3); padding:4px 6px; border-radius:4px; text-align:center; border:1px solid var(--border);">' +
                   '<div class="c-dark">5m TF</div>' +
-                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '5m' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '5m' ? 'ACTIVE' : 'READY') + '</div>' +
+                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '5m' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '5m' ? 'ACTIVE' : 'SCANNING') + '</div>' +
                 '</div>' +
                 '<div style="background:var(--surface-3); padding:4px 6px; border-radius:4px; text-align:center; border:1px solid var(--border);">' +
                   '<div class="c-dark">15m TF</div>' +
-                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '15m' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '15m' ? 'ACTIVE' : 'READY') + '</div>' +
+                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '15m' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '15m' ? 'ACTIVE' : 'SCANNING') + '</div>' +
                 '</div>' +
                 '<div style="background:var(--surface-3); padding:4px 6px; border-radius:4px; text-align:center; border:1px solid var(--border);">' +
                   '<div class="c-dark">1h TF</div>' +
-                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '1h' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '1h' ? 'ACTIVE' : 'READY') + '</div>' +
+                  '<div style="font-weight:bold; color:' + (active && active.best_timeframe === '1h' ? '#00f5d4' : 'var(--text-muted)') + ';">' + (active && active.best_timeframe === '1h' ? 'ACTIVE' : 'SCANNING') + '</div>' +
                 '</div>' +
               '</div>' +
             '</div>';
@@ -4627,27 +4660,26 @@ const LifecycleEngine = {
           gridEl.innerHTML = html;
         }
 
-        // Render Active Signal Cards
+        // Render Active Signal Cards & Authentic Institutional Scanning Telemetry
         const cardsEl = document.getElementById('bigcap-active-cards');
         if (cardsEl) {
-          if (this.activeSignals.length === 0) {
-            cardsEl.innerHTML = '<div style="padding:24px; text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--text-dark); background:var(--surface); border:1px dashed var(--border); border-radius:8px;">' +
-              'No active big-cap positions currently locked. Daemon running continuous multi-timeframe analytics across BTC, ETH, and SOL.' +
-            '</div>';
-          } else {
-            let cardsHtml = '';
-            this.activeSignals.forEach(sig => {
+          let cardsHtml = '';
+          assets.forEach(a => {
+            const sig = this.activeSignals.find(s => s.symbol === a.symbol);
+            const livePrice = this.livePrices[a.symbol] || (sig ? sig.current_price : 0);
+
+            if (sig) {
               const isLong = sig.direction === 'LONG';
               const sideClass = isLong ? 'c-emerald' : 'c-red';
-              const live = this.livePrices[sig.symbol] || sig.current_price;
+              const live = livePrice > 0 ? livePrice : sig.current_price;
               const pnl = isLong ? ((live - sig.entry_price) / sig.entry_price) * 100 : ((sig.entry_price - live) / sig.entry_price) * 100;
               const isPos = pnl >= 0;
               const bullets = Array.isArray(sig.rationale_json) ? sig.rationale_json : [];
-              const gaugeWidth = Math.max(0, Math.min(100, ((pnl + 0.8) / (3.5 + 0.8)) * 100));
+              const gaugeWidth = Math.max(0, Math.min(100, ((pnl + 0.8) / 4.3) * 100));
 
-              cardsHtml += '<div style="background:var(--surface); border:1px solid rgba(0,245,212,0.35); border-radius:8px; padding:14px; font-family:var(--font-mono);">' +
+              cardsHtml += '<div style="background:var(--surface); border:1px solid rgba(0,245,212,0.35); border-radius:8px; padding:14px; font-family:var(--font-mono); margin-bottom:12px;">' +
                 '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border);">' +
-                  '<div style="display:flex; align-items:center; gap:8px;">' +
+                  '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
                     '<span style="font-size:15px; font-weight:800; color:#fff;">' + sig.symbol + '</span>' +
                     '<span class="tabular font-bold ' + sideClass + '" style="padding:2px 8px; border-radius:4px; font-size:11px; background:' + (isLong ? 'rgba(62,207,142,0.15)' : 'rgba(255,71,87,0.15)') + '; border:1px solid ' + (isLong ? 'rgba(62,207,142,0.35)' : 'rgba(255,71,87,0.35)') + ';">' +
                       sig.direction +
@@ -4656,11 +4688,12 @@ const LifecycleEngine = {
                       '⚡ Best TF: ' + sig.best_timeframe +
                     '</span>' +
                     '<span style="font-size:11px; color:var(--text-muted);">Eagle Score: <strong style="color:#fff;">' + sig.eagle_score + '/100</strong></span>' +
+                    '<span style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:3px; background:rgba(0,245,212,0.15); color:#00f5d4; border:1px solid rgba(0,245,212,0.3);">🔒 LOCK ACTIVE</span>' +
                   '</div>' +
                   '<div style="display:flex; align-items:center; gap:12px;">' +
                     '<div>' +
                       '<span class="c-dark" style="font-size:10px; display:block; text-align:right;">LIVE UNREALIZED PNL</span>' +
-                      '<span id="bigcap-pnl-' + sig.signal_id + '" class="tabular font-bold ' + (isPos ? 'c-emerald' : 'c-red') + '" style="font-size:14px;">' +
+                      '<span id="bigcap-pnl-' + sig.signal_id + '" class="tabular font-bold ' + (isPos ? 'c-emerald' : 'c-red') + '" style="font-size:15px;">' +
                         (isPos ? '+' : '') + pnl.toFixed(2) + '%' +
                       '</span>' +
                     '</div>' +
@@ -4705,16 +4738,49 @@ const LifecycleEngine = {
                   '</ul>' +
                 '</div>' +
               '</div>';
-            });
-            cardsEl.innerHTML = cardsHtml;
-          }
+            } else {
+              cardsHtml += '<div style="background:rgba(17,23,36,0.5); border:1px dashed var(--border); border-radius:8px; padding:14px; font-family:var(--font-mono); margin-bottom:12px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">' +
+                  '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+                    '<span style="font-size:14px; font-weight:bold; color:#fff;">' + a.symbol + '</span>' +
+                    '<span style="font-size:10px; font-family:var(--font-mono); padding:2px 8px; border-radius:4px; background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3);">🟢 STATUS: READY / UNLOCKED</span>' +
+                    '<span style="font-size:10px; color:var(--text-muted);">SCANNING FOR 5M/15M/1H CONFLUENCE &amp; OI SQUEEZE</span>' +
+                  '</div>' +
+                  '<div style="text-align:right;">' +
+                    '<span class="c-dark" style="font-size:9px; display:block;">MARK TICK PRICE</span>' +
+                    '<span id="bigcap-scan-price-' + a.symbol + '" class="tabular font-bold" style="font-size:14px; color:#fff;">' +
+                      (livePrice > 0 ? '$' + livePrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : 'CONNECTING...') +
+                    '</span>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:8px; font-size:10px;">' +
+                  '<div style="background:var(--surface-3); padding:8px 10px; border-radius:4px; border:1px solid var(--border);">' +
+                    '<div class="c-dark" style="font-size:9px;">TIMEFRAME FOOTPRINT</div>' +
+                    '<div style="color:#fff;">Evaluating 5m, 15m, 1h Candles</div>' +
+                    '<div class="c-dark" style="font-size:9px; margin-top:2px;">Z-Score &gt; 2.5 Sigma Threshold</div>' +
+                  '</div>' +
+                  '<div style="background:var(--surface-3); padding:8px 10px; border-radius:4px; border:1px solid var(--border);">' +
+                    '<div class="c-dark" style="font-size:9px;">OI SQUEEZE SENSITIVITY</div>' +
+                    '<div style="color:#fff;">Monitoring Compression / Expansion</div>' +
+                    '<div class="c-dark" style="font-size:9px; margin-top:2px;">OI Delta &gt; +2.0% Gate</div>' +
+                  '</div>' +
+                  '<div style="background:var(--surface-3); padding:8px 10px; border-radius:4px; border:1px solid var(--border);">' +
+                    '<div class="c-dark" style="font-size:9px;">AUTOMATED EXECUTION ENGINE</div>' +
+                    '<div style="color:#fff;">Standing By For Ingestion Lock</div>' +
+                    '<div class="c-dark" style="font-size:9px; margin-top:2px;">Auto TP2 (+3.5%) / SL (-0.8%)</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            }
+          });
+          cardsEl.innerHTML = cardsHtml;
         }
 
         // Render Historical Table
         const histTbody = document.getElementById('bigcap-history-tbody');
         if (histTbody) {
           if (this.historicalSignals.length === 0) {
-            histTbody.innerHTML = '<tr><td colspan="9" class="c-dark" style="text-align:center; padding:20px;">No resolved big-cap positions yet. Automated TP/SL daemon active.</td></tr>';
+            histTbody.innerHTML = '<tr><td colspan="9" class="c-dark" style="text-align:center; padding:20px;">No resolved big-cap positions recorded in Supabase yet. Monitoring for TP/SL executions.</td></tr>';
           } else {
             let histHtml = '';
             this.historicalSignals.forEach(h => {
