@@ -1,0 +1,11 @@
+node_modules
+apps/web/node_modules
+.next
+apps/web/.next
+.git
+.gitignore
+*.log
+scratch
+.env
+.env.local
+.env.production
