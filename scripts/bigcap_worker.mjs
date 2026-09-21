@@ -426,6 +426,70 @@ async function updateCurrentPriceInDb(signalId, currentPrice) {
 }
 
 // ============================================================================
+// 8B. TELEGRAM ALERT DISPATCHER (BIG-CAP DESK)
+// ============================================================================
+
+export function formatBigCapTelegramMessage(sig) {
+  const bullets = Array.isArray(sig.rationale_json) ? sig.rationale_json : [];
+  const b0 = bullets[0] || 'Institutional volume compression breakout verified';
+  const b1 = bullets[1] || 'Open Interest positioning and delta confluence confirmed';
+  const b2 = bullets[2] || 'Macro trading session volatility threshold satisfied';
+  const b3 = bullets[3] || 'Optimal execution timeframe isolated';
+
+  return `🦅 BIG-CAP SPIKE DETECTED\n\n` +
+    `🪙 Symbol: ${sig.symbol}\n` +
+    `📈 Direction: ${sig.direction}\n` +
+    `⚡ Best TF: ${sig.best_timeframe}\n` +
+    `🎯 Entry: $${sig.entry_price}\n` +
+    `🛑 Stop-Loss: $${sig.stop_loss_price}\n` +
+    `🚀 TP1 / TP2: $${sig.target_price_1} / $${sig.target_price_2}\n` +
+    `📊 Eagle Score: ${sig.eagle_score} | RVOL: ${sig.rvol}x\n\n` +
+    `Deterministic Rationale:\n` +
+    `• ${b0}\n` +
+    `• ${b1}\n` +
+    `• ${b2}\n` +
+    `• ${b3}`;
+}
+
+export async function sendBigCapTelegramAlert(sig) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId || token.includes('your_telegram_bot_token')) {
+    console.log(`ℹ️ [TELEGRAM] Bot token/chat_id not configured in environment. Alert for ${sig.symbol} skipped.`);
+    return { success: false, reason: 'NOT_CONFIGURED' };
+  }
+
+  const messageText = formatBigCapTelegramMessage(sig);
+
+  try {
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: messageText,
+        disable_web_page_preview: true,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      console.log(`📢 [TELEGRAM] Successfully dispatched Big-Cap alert for ${sig.symbol} (Message ID: ${data.result?.message_id})`);
+      return { success: true, messageId: data.result?.message_id };
+    } else {
+      console.warn(`⚠️ [TELEGRAM] Telegram API error dispatching alert for ${sig.symbol}:`, data?.description || res.statusText);
+      return { success: false, error: data?.description || res.statusText };
+    }
+  } catch (err) {
+    console.error(`❌ [TELEGRAM] Network error sending alert for ${sig.symbol}:`, err?.message);
+    return { success: false, error: err?.message };
+  }
+}
+
+// ============================================================================
 // 9. MAIN DAEMON EVALUATION CYCLE
 // ============================================================================
 
@@ -581,7 +645,10 @@ export async function processBigCapSymbol(symbol) {
   console.log(`   TP1: $${targets.targetPrice1} (+1.5%) | TP2: $${targets.targetPrice2} (+3.5%) | SL: $${targets.stopLossPrice} (-0.8%)`);
   console.log(`   Rationale: \n   • ${rationale.join('\n   • ')}`);
 
-  await persistNewSignal(newSignal);
+  const persisted = await persistNewSignal(newSignal);
+  if (persisted) {
+    await sendBigCapTelegramAlert(newSignal);
+  }
 
   return { symbol, status: 'NEW_SIGNAL', signal: newSignal };
 }

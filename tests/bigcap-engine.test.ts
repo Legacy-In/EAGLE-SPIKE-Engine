@@ -10,6 +10,7 @@ import {
   synthesizeRationale,
   calculateTradeTargets,
   evaluatePositionExit,
+  formatBigCapTelegramMessage,
   COOLDOWN_MS
 } from '../scripts/bigcap_worker.mjs';
 
@@ -131,4 +132,40 @@ test('BigCap Engine: Automated Exit State Machine', () => {
 
 test('BigCap Engine: Cooldown constant is 45 minutes', () => {
   assert.equal(COOLDOWN_MS, 45 * 60 * 1000);
+});
+
+test('BigCap Engine: Telegram Message Format Contract (Institutional Markdown)', () => {
+  const signal = {
+    symbol: 'BTCUSDT',
+    direction: 'LONG',
+    best_timeframe: '15m',
+    entry_price: 64250,
+    stop_loss_price: 63736,
+    target_price_1: 65213.75,
+    target_price_2: 66500,
+    eagle_score: 88,
+    rvol: 2.85,
+    rationale_json: [
+      'Volume breakout: RVOL reached 2.85x with 3.12σ statistical surge',
+      'Open Interest expanded +2.45% confirming institutional positioning',
+      'New York Cash Session liquidity window active',
+      '15m selected as optimal entry timeframe based on momentum alignment'
+    ]
+  };
+
+  const message = formatBigCapTelegramMessage(signal);
+
+  assert.ok(message.includes('🦅 BIG-CAP SPIKE DETECTED'));
+  assert.ok(message.includes('🪙 Symbol: BTCUSDT'));
+  assert.ok(message.includes('📈 Direction: LONG'));
+  assert.ok(message.includes('⚡ Best TF: 15m'));
+  assert.ok(message.includes('🎯 Entry: $64250'));
+  assert.ok(message.includes('🛑 Stop-Loss: $63736'));
+  assert.ok(message.includes('🚀 TP1 / TP2: $65213.75 / $66500'));
+  assert.ok(message.includes('📊 Eagle Score: 88 | RVOL: 2.85x'));
+  assert.ok(message.includes('Deterministic Rationale:'));
+  assert.ok(message.includes('• Volume breakout: RVOL reached 2.85x'));
+  assert.ok(message.includes('• Open Interest expanded +2.45%'));
+  assert.ok(message.includes('• New York Cash Session liquidity window active'));
+  assert.ok(message.includes('• 15m selected as optimal entry timeframe'));
 });
