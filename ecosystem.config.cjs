@@ -44,5 +44,16 @@ module.exports = {
       autorestart: true,
       restart_delay: 5000,
     },
+    {
+      name: 'eagle-flash-checkpoint-worker',
+      script: 'scripts/checkpoint_evaluator.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+        EVAL_INTERVAL_MS: 60000,
+      },
+      autorestart: true,
+      restart_delay: 5000,
+    },
   ],
 };

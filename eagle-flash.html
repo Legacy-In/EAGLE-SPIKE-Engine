@@ -1324,14 +1324,14 @@
       <div class="kpi-sub">RVOL ≥ 1.5x</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-lbl">Long Candidates</div>
+      <div class="kpi-lbl">Live Long (Scanner)</div>
       <div class="kpi-val tabular c-emerald" id="kpi-long-count">--</div>
-      <div class="kpi-sub">Score ≥ 70</div>
+      <div class="kpi-sub">Score ≥ 70 (Current Scan)</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-lbl">Short Candidates</div>
+      <div class="kpi-lbl">Live Short (Scanner)</div>
       <div class="kpi-val tabular c-red" id="kpi-short-count">--</div>
-      <div class="kpi-sub">Score ≥ 70</div>
+      <div class="kpi-sub">Score ≥ 70 (Current Scan)</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-lbl">Market Breadth</div>
@@ -1702,8 +1702,13 @@
           <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono); display:flex; align-items:center; gap:8px;">
             <span>🦅 SIGNAL LIFECYCLE INTELLIGENCE JOURNAL</span>
             <span class="badge-status status-live">IMMUTABLE OBSERVATIONS</span>
+            <span id="journal-live-timer" class="badge-status" style="border-color:var(--cyan); color:var(--cyan); font-size:10px;">REFRESH IN: 15s</span>
           </h2>
-          <p class="c-dark" style="font-size:11px;">EVIDENCE-BASED POST-SIGNAL PERFORMANCE · STANDARDIZED CHECKPOINTS · MFE/MAE EXCURSIONS</p>
+          <div style="display:flex; align-items:center; gap:12px; margin-top:3px; font-size:11px; font-family:var(--font-mono);">
+            <span class="c-dark">EVIDENCE-BASED POST-SIGNAL PERFORMANCE · CHECKPOINTS · MFE/MAE</span>
+            <span style="color:var(--text-muted);">|</span>
+            <span style="color:var(--cyan);">Last checkpoint job run: <strong id="jkpi-last-run" style="color:var(--emerald);">JUST NOW</strong></span>
+          </div>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-sm" onclick="openModal('lifecycle-analytics-modal')">📊 Cohort Analytics</button>
@@ -1723,9 +1728,9 @@
           <div class="kpi-sub">Recorded</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-lbl">Active Signals</div>
+          <div class="kpi-lbl">Journal Signals</div>
           <div class="kpi-val tabular c-emerald" id="jkpi-active">0</div>
-          <div class="kpi-sub">Tracking live</div>
+          <div class="kpi-sub">Tracking in Journal</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-lbl">Confirmed %</div>
@@ -1786,13 +1791,19 @@
           <button class="preset-pill" onclick="setJournalSide('LONG', this)">Long</button>
           <button class="preset-pill" onclick="setJournalSide('SHORT', this)">Short</button>
         </div>
+        <div class="presets-group" style="margin-left:8px;">
+          <span class="c-dark" style="font-size:11px; font-family:var(--font-mono); margin-right:4px;">DESK:</span>
+          <button class="preset-pill active" onclick="setJournalAssetClass('ALL', this)">All</button>
+          <button class="preset-pill" onclick="setJournalAssetClass('BIGCAP', this)">🏛️ Big-Cap</button>
+          <button class="preset-pill" onclick="setJournalAssetClass('ALTS', this)">Altcoins</button>
+        </div>
         <div class="search-box">
           <span class="search-icon">🔍</span>
           <input type="text" id="journal-search" class="search-input" placeholder="Search signal ID or symbol..." oninput="handleJournalSearch(this.value)" />
         </div>
       </div>
 
-      <!-- Journal Table (Section 19: 20 Standardized Columns) -->
+      <!-- Journal Table (Section 19: 21 Standardized Columns with Sparklines) -->
       <div class="table-wrap">
         <table>
           <thead>
@@ -1800,6 +1811,7 @@
               <th onclick="sortJournal('index')">#</th>
               <th onclick="sortJournal('signalId')">Signal ID</th>
               <th onclick="sortJournal('symbol')">Symbol</th>
+              <th>Trajectory</th>
               <th onclick="sortJournal('direction')">Side</th>
               <th onclick="sortJournal('signalType')">Signal</th>
               <th onclick="sortJournal('score')">Score</th>
@@ -2581,8 +2593,9 @@ const LifecycleEngine = {
   },
   activeFilter: 'ALL',
   activeSide: 'ALL',
+  activeAssetClass: 'ALL',
   searchQuery: '',
-  sortColumn: 'detectedAt',
+  sortColumn: 'score',
   sortDirection: 'desc',
   selectedSignalId: null,
   replayStepIndex: 0,
@@ -2597,6 +2610,7 @@ const LifecycleEngine = {
     this.updateActiveCountBadge();
     this.syncStoredSignalsToBackend();
     this.checkTelegramStatus();
+    this.startLiveTimer();
   },
 
   async initStorage() {
@@ -2710,27 +2724,30 @@ const LifecycleEngine = {
     const y = date.getUTCFullYear();
     const m = String(date.getUTCMonth() + 1).padStart(2, '0');
     const d = String(date.getUTCDate()).padStart(2, '0');
-    const cleanSym = symbol.replace(/USDT$/, '');
+    const norm = (typeof normalizeSymbol === 'function' ? normalizeSymbol(symbol) : String(symbol).replace(/_/g, '')).toUpperCase();
+    const cleanSym = norm.replace(/USDT$/, '');
     const todayPrefix = `EGL-${y}${m}${d}-${cleanSym}-`;
     const todayCount = this.signals.filter(s => s.signalId && s.signalId.startsWith(todayPrefix)).length + 1;
     const seq = String(todayCount).padStart(3, '0');
     return `${todayPrefix}${seq}`;
   },
 
-  // 3. Deduplication Protection
+  // 3. Deduplication Protection (Enforce normalized symbol deduplication)
   isDuplicate(symbol, signalType, now = Date.now()) {
+    const norm = (typeof normalizeSymbol === 'function' ? normalizeSymbol(symbol) : String(symbol).replace(/_/g, '')).toUpperCase();
     const cooldownMs = this.settings.cooldownMinutes * 60 * 1000;
-    return this.signals.some(s => 
-      s.symbol === symbol &&
-      s.signalType === signalType &&
-      ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(s.status) &&
-      (now - s.detectedAt) < cooldownMs
-    );
+    return this.signals.some(s => {
+      const sNorm = (typeof normalizeSymbol === 'function' ? normalizeSymbol(s.symbol) : String(s.symbol).replace(/_/g, '')).toUpperCase();
+      return sNorm === norm &&
+        ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(s.status) &&
+        (now - s.detectedAt) < cooldownMs;
+    });
   },
 
   // 4. Record Signal with Immutable Initial Snapshot
   recordSignal(symData, activeFilters = {}) {
     if (!this.settings.enabled) return null;
+    symData.symbol = (typeof normalizeSymbol === 'function' ? normalizeSymbol(symData.symbol) : String(symData.symbol).replace(/_/g, '')).toUpperCase();
     const score = symData.signalScore || 0;
     const rvol = symData.relativeVolume || 1.0;
     const oiDelta = symData.oiChangePct || 0;
@@ -2741,8 +2758,8 @@ const LifecycleEngine = {
 
     if (!isLong && !isShort) {
       if (isTriggerRule) {
-        isLong = (symData.returns5m || 0) >= 0 || (symData.price24hChange || 0) >= 0;
-        isShort = !isLong;
+        isShort = (symData.returns5m || 0) < 0 && ((symData.returns15m || 0) < 0 || (symData.price24hChange || 0) < 0 || symData.spikePhase === 'BREAKDOWN');
+        isLong = !isShort;
         symData.signal = isLong ? 'LONG CANDIDATE' : 'SHORT CANDIDATE';
       } else {
         return null;
@@ -3218,10 +3235,117 @@ const LifecycleEngine = {
     return `${m}m`;
   },
 
-  formatPct(val) {
-    if (val === null || val === undefined) return '<span class="c-dark">PENDING</span>';
+  formatPct(val, cpName = '', detectedAt = null, windowSec = 0) {
+    if (val === null || val === undefined) {
+      let tip = 'Pending evaluation';
+      if (detectedAt && windowSec) {
+        const remaining = (detectedAt + windowSec * 1000) - Date.now();
+        if (remaining > 0) {
+          const remMin = Math.ceil(remaining / 60000);
+          tip = `Resolves at ${cpName} checkpoint: ~${remMin}m remaining`;
+        } else {
+          tip = `Resolves at ${cpName} checkpoint: awaiting evaluation`;
+        }
+      }
+      return `<span class="c-dark tabular" title="${tip}" style="cursor:help; border-bottom:1px dotted var(--text-dark); font-size:11px;">PENDING ⏳</span>`;
+    }
     const isPos = val >= 0;
     return `<span class="${isPos ? 'c-emerald' : 'c-red'} font-bold tabular">${isPos ? '+' : ''}${val.toFixed(2)}%</span>`;
+  },
+
+  renderSparkline(checkpoints, mfe, mae, isLong) {
+    const cp15 = checkpoints?.['15M'] ?? 0;
+    const cp1h = checkpoints?.['1H'] ?? cp15;
+    const cp4h = checkpoints?.['4H'] ?? cp1h;
+    const cp8h = checkpoints?.['8H'] ?? cp4h;
+    const cp1d = checkpoints?.['1D'] ?? cp8h;
+    const pts = [0, cp15, cp1h, cp4h, cp8h, cp1d];
+    const max = Math.max(1, ...pts);
+    const min = Math.min(-1, ...pts);
+    const range = max - min || 1;
+    const w = 48, h = 16;
+    const coords = pts.map((val, idx) => {
+      const x = (idx / (pts.length - 1)) * w;
+      const y = h - ((val - min) / range) * (h - 4) - 2;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const isGain = pts[pts.length - 1] >= 0;
+    const color = isGain ? '#10b981' : '#ef4444';
+    return `<svg width="${w}" height="${h}" style="vertical-align:middle; overflow:visible;" title="Trajectory: ${pts.map(p => (p>=0?'+':'')+p.toFixed(1)+'%').join(' → ')}"><polyline fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" points="${coords}" /></svg>`;
+  },
+
+  startLiveTimer() {
+    if (this._timerStarted) return;
+    this._timerStarted = true;
+    let secondsLeft = 15;
+    setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        secondsLeft = 15;
+        if (typeof EagleSupabase !== 'undefined' && EagleSupabase.fetchLatestSignals) {
+          EagleSupabase.fetchLatestSignals();
+        }
+        const lastRunEl = document.getElementById('jkpi-last-run');
+        if (lastRunEl) lastRunEl.innerText = new Date().toLocaleTimeString();
+      }
+      const timerEl = document.getElementById('journal-live-timer');
+      if (timerEl) {
+        timerEl.innerText = `REFRESH IN: ${secondsLeft}s`;
+      }
+    }, 1000);
+  },
+
+  mergeSupabaseSignals(sbSignals) {
+    if (!Array.isArray(sbSignals) || sbSignals.length === 0) return;
+    sbSignals.forEach(s => {
+      const existing = this.signals.find(x => x.signalId === s.signal_id);
+      const cps = {};
+      CHECKPOINTS.forEach(cp => { cps[cp.id] = null; });
+      if (Array.isArray(s.signal_checkpoints)) {
+        s.signal_checkpoints.forEach(cp => {
+          cps[cp.checkpoint_type] = cp.directional_return_pct ?? cp.return_pct;
+        });
+      }
+      const ext = s.signal_extremes?.[0] || s.signal_extremes || {};
+      const mfe = parseFloat(ext.mfe_pct) || 0;
+      const mae = parseFloat(ext.mae_pct) || 0;
+      const detectedMs = s.detected_at ? new Date(s.detected_at).getTime() : Date.now();
+      const detectedDate = new Date(detectedMs);
+
+      if (existing) {
+        existing.status = s.status || existing.status;
+        existing.checkpoints = { ...existing.checkpoints, ...cps };
+        existing.mfePct = mfe;
+        existing.maePct = mae;
+      } else {
+        const normSym = typeof normalizeSymbol === 'function' ? normalizeSymbol(s.symbol) : s.symbol.replace(/_/g, '');
+        this.signals.push({
+          signalId: s.signal_id,
+          symbol: normSym,
+          signalType: (s.direction === 'SHORT' ? 'SHORT CANDIDATE' : 'LONG CANDIDATE'),
+          detectedAt: detectedMs,
+          detectedAtUTC: detectedDate.toISOString(),
+          detectedAtLocal: detectedDate.toLocaleString(),
+          signalPrice: parseFloat(s.entry_price) || 0,
+          signalMarkPrice: parseFloat(s.entry_price) || 0,
+          currentPrice: parseFloat(s.exit_price || s.entry_price) || 0,
+          status: s.status || 'ACTIVE',
+          mfePct: mfe,
+          maePct: mae,
+          checkpoints: cps,
+          warnings: [],
+          initialSnapshot: {
+            signalScore: s.eagle_score || 75,
+            relativeVolume: s.rvol || 2.0,
+            openInterestValue: 0
+          }
+        });
+      }
+    });
+    this.updateActiveCountBadge();
+    if (document.getElementById('view-JOURNAL')?.classList.contains('active')) {
+      this.renderJournalTab();
+    }
   },
 
   getStatusBadge(status) {
@@ -3329,13 +3453,18 @@ const LifecycleEngine = {
     if (this.activeSide !== 'ALL') {
       list = list.filter(s => s.signalType.includes(this.activeSide));
     }
+    if (this.activeAssetClass === 'BIGCAP') {
+      list = list.filter(s => ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(typeof normalizeSymbol === 'function' ? normalizeSymbol(s.symbol) : s.symbol));
+    } else if (this.activeAssetClass === 'ALTS') {
+      list = list.filter(s => !['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(typeof normalizeSymbol === 'function' ? normalizeSymbol(s.symbol) : s.symbol));
+    }
     if (this.searchQuery) {
       const q = this.searchQuery.toLowerCase();
       list = list.filter(s => s.symbol.toLowerCase().includes(q) || s.signalId.toLowerCase().includes(q));
     }
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="16" class="c-dark" style="text-align:center; padding:40px; font-family:var(--font-mono);">
+      tbody.innerHTML = `<tr><td colspan="21" class="c-dark" style="text-align:center; padding:40px; font-family:var(--font-mono);">
         No signals in journal matching filter criteria.<br>Qualifying anomaly candidates (Score ≥ 72, RVOL ≥ 1.5x) are automatically captured here.
       </td></tr>`;
       return;
@@ -3343,8 +3472,12 @@ const LifecycleEngine = {
 
     // Sort
     list.sort((a, b) => {
-      let valA = a[this.sortColumn];
-      let valB = b[this.sortColumn];
+      let valA = a[this.sortColumn] ?? a.initialSnapshot?.[this.sortColumn];
+      let valB = b[this.sortColumn] ?? b.initialSnapshot?.[this.sortColumn];
+      if (this.sortColumn === 'score') {
+        valA = a.initialSnapshot?.signalScore || a.eagleScore || 0;
+        valB = b.initialSnapshot?.signalScore || b.eagleScore || 0;
+      }
       if (valA === undefined) valA = 0;
       if (valB === undefined) valB = 0;
       if (typeof valA === 'string') {
@@ -3363,27 +3496,29 @@ const LifecycleEngine = {
       const statusBadge = this.getStatusBadge(s.status);
       const mfeFormatted = s.mfePct !== null ? `<span class="c-emerald font-bold tabular">+${s.mfePct.toFixed(2)}%</span>` : '<span class="c-dark">—</span>';
       const maeFormatted = s.maePct !== null ? `<span class="c-red font-bold tabular">${s.maePct.toFixed(2)}%</span>` : '<span class="c-dark">—</span>';
+      const sparklineHtml = this.renderSparkline(s.checkpoints, s.mfePct, s.maePct, isLong);
 
       html += `
         <tr onclick="LifecycleEngine.openDetailModal('${s.signalId}')" style="cursor:pointer;">
           <td class="tabular c-dark">${idx + 1}</td>
           <td class="tabular font-bold" style="color:var(--cyan); font-size:11px;">${s.signalId}</td>
           <td class="tabular font-bold" style="color:var(--text);">${s.symbol}</td>
+          <td>${sparklineHtml}</td>
           <td>${sigBadge}</td>
-          <td class="tabular c-muted" style="font-size:11px;">${s.detectedAtLocal.slice(11)}</td>
+          <td class="tabular c-muted" style="font-size:11px;">${s.detectedAtLocal ? s.detectedAtLocal.slice(11) : '—'}</td>
           <td class="tabular font-bold">${age}</td>
           <td class="tabular font-bold">$${s.signalPrice >= 1 ? s.signalPrice.toFixed(2) : s.signalPrice.toFixed(4)}</td>
           <td class="tabular">$${s.currentPrice >= 1 ? s.currentPrice.toFixed(2) : s.currentPrice.toFixed(4)}</td>
-          <td>${this.formatPct(s.checkpoints['4H'])}</td>
-          <td>${this.formatPct(s.checkpoints['8H'])}</td>
-          <td>${this.formatPct(s.checkpoints['1D'])}</td>
+          <td>${this.formatPct(s.checkpoints['4H'], '4H', s.detectedAt, 4 * 3600)}</td>
+          <td>${this.formatPct(s.checkpoints['8H'], '8H', s.detectedAt, 8 * 3600)}</td>
+          <td>${this.formatPct(s.checkpoints['1D'], '1D', s.detectedAt, 24 * 3600)}</td>
           <td>${mfeFormatted}</td>
           <td>${maeFormatted}</td>
           <td>${statusBadge}</td>
           <td class="c-muted" style="font-size:10px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            ${s.rejection ? s.rejection.rejectionReason : s.warnings.length > 0 ? s.warnings[s.warnings.length - 1].reason : '—'}
+            ${s.rejection ? s.rejection.rejectionReason : s.warnings?.length > 0 ? s.warnings[s.warnings.length - 1].reason : '—'}
           </td>
-          <td class="tabular font-bold" style="color:var(--emerald);">${s.initialSnapshot.signalScore}</td>
+          <td class="tabular font-bold" style="color:var(--emerald);">${s.initialSnapshot?.signalScore || s.eagleScore || '—'}</td>
           <td>
             <button class="btn btn-sm" onclick="event.stopPropagation(); LifecycleEngine.openDetailModal('${s.signalId}')">Inspect ↗</button>
           </td>
@@ -3699,6 +3834,13 @@ const LifecycleEngine = {
       LifecycleEngine.renderJournalTable();
     }
 
+    function setJournalAssetClass(cls, btn) {
+      LifecycleEngine.activeAssetClass = cls;
+      document.querySelectorAll('#view-JOURNAL .filter-bar .presets-group:nth-child(3) .preset-pill').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      LifecycleEngine.renderJournalTable();
+    }
+
     function handleJournalSearch(q) {
       LifecycleEngine.searchQuery = q.trim();
       LifecycleEngine.renderJournalTable();
@@ -4007,7 +4149,15 @@ const LifecycleEngine = {
       startCountdown();
     }
 
-    
+    // Global Symbol Normalization (strips underscores, exchange suffixes, uppercase)
+    function normalizeSymbol(rawSymbol, exchange = '') {
+      if (!rawSymbol) return '';
+      let sym = String(rawSymbol).trim().toUpperCase();
+      sym = sym.replace(/(_WEEX|_MEXC|_BINANCE)$/, '');
+      sym = sym.replace(/_/g, '');
+      sym = sym.replace(/-/g, '');
+      return sym;
+    }
     
     // WEEX Ticker Normalizer (990+ USDT Contracts)
     function normalizeWeexTicker(t) {
@@ -4020,7 +4170,7 @@ const LifecycleEngine = {
       const ask = last;
       const spreadPct = 0.02;
 
-      const symbol = t.symbol;
+      const symbol = normalizeSymbol(t.symbol, 'WEEX');
       const estimatedPrevVol = changePct !== -100 ? turnover24h / (1 + changePct / 100) : turnover24h;
       const volumeChange24h = estimatedPrevVol > 0 ? parseFloat((((turnover24h - estimatedPrevVol) / estimatedPrevVol) * 100).toFixed(1)) : 0;
       const rvol = parseFloat((Math.max(0.5, 1 + volumeChange24h / 100)).toFixed(2));
@@ -4068,7 +4218,7 @@ const LifecycleEngine = {
       const ask = parseFloat(t.ask1) || last;
       const spreadPct = last > 0 ? parseFloat((((ask - bid) / last) * 100).toFixed(3)) : 0;
 
-      const symbol = t.symbol;
+      const symbol = normalizeSymbol(t.symbol, 'MEXC');
       const estimatedPrevVol = changePct !== -100 ? turnover24h / (1 + changePct / 100) : turnover24h;
       const volumeChange24h = estimatedPrevVol > 0 ? parseFloat((((turnover24h - estimatedPrevVol) / estimatedPrevVol) * 100).toFixed(1)) : 0;
       const rvol = parseFloat((Math.max(0.5, 1 + volumeChange24h / 100)).toFixed(2));
@@ -4170,7 +4320,7 @@ const LifecycleEngine = {
       const zScore = parseFloat(((rvol - 1) * 2.2).toFixed(2));
 
       return {
-        symbol: t.symbol,
+        symbol: normalizeSymbol(t.symbol, 'BINANCE'),
         exchange: 'BINANCE',
         lastPrice: last,
         markPrice: last,
@@ -4286,6 +4436,9 @@ const LifecycleEngine = {
           if (!error && Array.isArray(data)) {
             this.signals = data;
             renderSupabaseSignalsView(data);
+            if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.mergeSupabaseSignals) {
+              LifecycleEngine.mergeSupabaseSignals(data);
+            }
           } else {
             console.warn('Supabase query issue:', error);
             renderSupabaseSignalsView([]);

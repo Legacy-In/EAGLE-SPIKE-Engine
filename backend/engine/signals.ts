@@ -33,7 +33,9 @@ export class StatefulSignalEngine {
     }
 
     const direction: 'LONG' | 'SHORT' =
-      ticker.returns5m >= 0 || ticker.price24hChange >= 0 ? 'LONG' : 'SHORT';
+      ticker.returns5m < 0 && (ticker.returns15m < 0 || ticker.price24hChange < 0 || ticker.spikePhase === 'BREAKDOWN')
+        ? 'SHORT'
+        : (ticker.returns5m >= 0 ? 'LONG' : (ticker.price24hChange >= 0 ? 'LONG' : 'SHORT'));
 
     const triggerPrice = ticker.lastPrice;
     const signalId = `SIG-${now}-${ticker.exchange}-${symbol}`;
