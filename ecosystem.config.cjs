@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'eagle-flash-web',
-      script: 'npm',
-      args: 'run start',
+      script: 'node_modules/next/dist/bin/next',
+      args: 'start -p 3000',
       cwd: './apps/web',
       env: {
         NODE_ENV: 'production',
@@ -47,6 +47,7 @@ module.exports = {
     {
       name: 'eagle-flash-checkpoint-worker',
       script: 'scripts/checkpoint_evaluator.mjs',
+      args: '--loop',
       cwd: './',
       env: {
         NODE_ENV: 'production',

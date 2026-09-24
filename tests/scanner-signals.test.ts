@@ -237,5 +237,7 @@ test('Stateful Signal Engine: Forward excursion (MFE / MAE) tracking', () => {
   assert.equal(signals.length, 1);
   assert.equal(signals[0].highestPriceSinceTrigger, 8.28);
   assert.equal(signals[0].mfePct, 3.5);
-  assert.equal(signals[0].status, 'TARGET_HIT');
+  // Approved lifecycle rule: Targets are milestone timestamps; lifecycle remains ACTIVE
+  assert.equal(signals[0].lifecycleStatus, 'ACTIVE');
+  assert.ok(signals[0].t1HitAt !== null, 'T1 milestone timestamp must be recorded');
 });

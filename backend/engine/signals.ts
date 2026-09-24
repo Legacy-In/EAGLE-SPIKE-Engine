@@ -1,4 +1,5 @@
 import { EagleSignalRecord, NormalizedTicker } from '../types';
+import { ScannerMathEngine } from './math';
 
 export class StatefulSignalEngine {
   private activeSignals: Map<string, EagleSignalRecord> = new Map(); // signalId -> record
@@ -33,18 +34,36 @@ export class StatefulSignalEngine {
     }
 
     const direction: 'LONG' | 'SHORT' =
-      ticker.returns5m < 0 && (ticker.returns15m < 0 || ticker.price24hChange < 0 || ticker.spikePhase === 'BREAKDOWN')
+      ticker.returns5m < 0 && (ticker.returns15m < 0 || ticker.price24hChange < 0 || ticker.trend === 'BEARISH' || ticker.trend === 'STRONG BEARISH')
         ? 'SHORT'
         : (ticker.returns5m >= 0 ? 'LONG' : (ticker.price24hChange >= 0 ? 'LONG' : 'SHORT'));
 
     const triggerPrice = ticker.lastPrice;
     const signalId = `SIG-${now}-${ticker.exchange}-${symbol}`;
 
+    const canonicalSymbol = symbol.toUpperCase().replace(/[-_]/g, '');
+    const exchangeSymbol = `${ticker.exchange}:${canonicalSymbol}`;
+
+    // Compute ATR14 baseline and targets
+    const atr14 = (ticker.high24h && ticker.low24h && ticker.high24h > ticker.low24h)
+      ? Math.max(triggerPrice * 0.015, (ticker.high24h - ticker.low24h) / 10)
+      : triggerPrice * 0.018;
+
+    const atrLevels = ScannerMathEngine.calculateAtrStopsAndTargets({
+      entryPrice: triggerPrice,
+      atr14,
+      direction,
+    });
+
     const record: EagleSignalRecord = {
       signalId,
       symbol,
+      canonicalSymbol,
+      exchangeSymbol,
       exchange: ticker.exchange,
       direction,
+      qualificationStatus: 'QUALIFIED',
+      lifecycleStatus: 'ACTIVE',
       triggerPrice,
       triggerTimestamp: now,
       eagleScore: score,
@@ -60,6 +79,14 @@ export class StatefulSignalEngine {
       lowestPriceSinceTrigger: triggerPrice,
       mfePct: 0.0,
       maePct: 0.0,
+      target1Price: atrLevels.target1Price,
+      target2Price: atrLevels.target2Price,
+      target3Price: atrLevels.target3Price,
+      stopPrice: atrLevels.stopPrice,
+      t1HitAt: null,
+      t2HitAt: null,
+      t3HitAt: null,
+      stopHitAt: null,
       status: 'ACTIVE',
       lastUpdated: now,
     };
@@ -92,24 +119,44 @@ export class StatefulSignalEngine {
       record.lastUpdated = Date.now();
 
       // Calculate MFE & MAE based on direction
+      let isT1 = false;
+      let isT2 = false;
+      let isT3 = false;
+      let isStop = false;
+
       if (record.direction === 'LONG') {
         const peakGain = ((record.highestPriceSinceTrigger - record.triggerPrice) / record.triggerPrice) * 100;
         const maxDrawdown = ((record.triggerPrice - record.lowestPriceSinceTrigger) / record.triggerPrice) * 100;
         record.mfePct = parseFloat(peakGain.toFixed(2));
         record.maePct = parseFloat(maxDrawdown.toFixed(2));
 
-        if (record.mfePct >= 3.0) record.status = 'TARGET_HIT';
-        else if (record.maePct >= 2.0) record.status = 'INVALIDATED';
-        else if (record.mfePct >= 1.0) record.status = 'CONFIRMED';
+        isT1 = Boolean(record.target1Price && record.highestPriceSinceTrigger >= record.target1Price);
+        isT2 = Boolean(record.target2Price && record.highestPriceSinceTrigger >= record.target2Price);
+        isT3 = Boolean(record.target3Price && record.highestPriceSinceTrigger >= record.target3Price);
+        isStop = Boolean(record.stopPrice && record.lowestPriceSinceTrigger <= record.stopPrice);
       } else {
         const peakGain = ((record.triggerPrice - record.lowestPriceSinceTrigger) / record.triggerPrice) * 100;
         const maxDrawdown = ((record.highestPriceSinceTrigger - record.triggerPrice) / record.triggerPrice) * 100;
         record.mfePct = parseFloat(peakGain.toFixed(2));
         record.maePct = parseFloat(maxDrawdown.toFixed(2));
 
-        if (record.mfePct >= 3.0) record.status = 'TARGET_HIT';
-        else if (record.maePct >= 2.0) record.status = 'INVALIDATED';
-        else if (record.mfePct >= 1.0) record.status = 'CONFIRMED';
+        isT1 = Boolean(record.target1Price && record.lowestPriceSinceTrigger <= record.target1Price);
+        isT2 = Boolean(record.target2Price && record.lowestPriceSinceTrigger <= record.target2Price);
+        isT3 = Boolean(record.target3Price && record.lowestPriceSinceTrigger <= record.target3Price);
+        isStop = Boolean(record.stopPrice && record.highestPriceSinceTrigger >= record.stopPrice);
+      }
+
+      const nowIso = new Date().toISOString();
+      if (isT1 && !record.t1HitAt) record.t1HitAt = nowIso;
+      if (isT2 && !record.t2HitAt) record.t2HitAt = nowIso;
+      if (isT3 && !record.t3HitAt) record.t3HitAt = nowIso;
+
+      if (isStop) {
+        record.lifecycleStatus = 'STOP_HIT';
+        record.status = 'STOP_HIT';
+        if (!record.stopHitAt) record.stopHitAt = nowIso;
+      } else if (record.mfePct >= 1.0) {
+        record.qualificationStatus = 'CONFIRMED';
       }
     }
   }

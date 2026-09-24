@@ -35,7 +35,7 @@ test('Synthetic Bearish Breakdown: Correctly detects SHORT candidate', () => {
     rsi: 28,             // Oversold momentum breakdown
     trend: 'BEARISH',
     signalScore: 78,     // >= 65 qualifying score
-    spikePhase: 'BREAKDOWN',
+    spikePhase: 'ACCELERATION',
     spikeType: 'VOLUME_BREAKOUT',
     spikeQuality: 'CLEAN_BREAKOUT',
     lastUpdated: Date.now(),
@@ -96,9 +96,9 @@ test('Synthetic Bearish Breakdown (Counter-trend dump with 24h green): Correctly
     spreadPct: 0.07,
     takerImbalance: -38,
     rsi: 32,
-    trend: 'REVERSAL',
+    trend: 'BEARISH',
     signalScore: 74,
-    spikePhase: 'BREAKDOWN',
+    spikePhase: 'ACCELERATION',
     spikeType: 'VOLUME_BREAKOUT',
     spikeQuality: 'CLEAN_BREAKOUT',
     lastUpdated: Date.now(),

@@ -67,8 +67,12 @@ export type SpikeQuality =
 export interface EagleSignalRecord {
   signalId: string;
   symbol: string;
+  canonicalSymbol?: string;
+  exchangeSymbol?: string;
   exchange: ExchangeName;
   direction: 'LONG' | 'SHORT';
+  qualificationStatus?: 'WATCH' | 'CANDIDATE' | 'QUALIFIED' | 'CONFIRMED' | 'DISQUALIFIED';
+  lifecycleStatus?: 'DETECTED' | 'ACTIVE' | 'STOP_HIT' | 'CLOSED' | 'EXPIRED';
   triggerPrice: number;
   triggerTimestamp: number;
   eagleScore: number;
@@ -84,7 +88,18 @@ export interface EagleSignalRecord {
   lowestPriceSinceTrigger: number;
   mfePct: number; // Maximum Favorable Excursion
   maePct: number; // Maximum Adverse Excursion
-  status: 'ACTIVE' | 'CONFIRMED' | 'TARGET_HIT' | 'INVALIDATED' | 'COOLING';
+  target1Price?: number;
+  target2Price?: number;
+  target3Price?: number;
+  stopPrice?: number;
+  t1HitAt?: string | null;
+  t2HitAt?: string | null;
+  t3HitAt?: string | null;
+  stopHitAt?: string | null;
+  closedAt?: string | null;
+  chronologyPrecision?: 'TICK' | 'LOWER_TF' | 'CANDLE_FALLBACK';
+  dataConfidence?: 'LIVE' | 'FRESH' | 'STALE' | 'DEGRADED' | 'UNAVAILABLE';
+  status: 'ACTIVE' | 'CONFIRMED' | 'TARGET_HIT' | 'INVALIDATED' | 'COOLING' | 'STOP_HIT' | 'CLOSED' | 'EXPIRED';
   lastUpdated: number;
 }
 

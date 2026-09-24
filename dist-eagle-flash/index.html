@@ -3296,52 +3296,112 @@ const LifecycleEngine = {
   },
 
   mergeSupabaseSignals(sbSignals) {
-    if (!Array.isArray(sbSignals) || sbSignals.length === 0) return;
-    sbSignals.forEach(s => {
-      const existing = this.signals.find(x => x.signalId === s.signal_id);
+    if (!Array.isArray(sbSignals)) return;
+
+    // Canonical mapping of verified database records to LifecycleEngine signals
+    this.signals = sbSignals.map(s => {
       const cps = {};
       CHECKPOINTS.forEach(cp => { cps[cp.id] = null; });
       if (Array.isArray(s.signal_checkpoints)) {
         s.signal_checkpoints.forEach(cp => {
-          cps[cp.checkpoint_type] = cp.directional_return_pct ?? cp.return_pct;
+          const type = cp.checkpoint_type || cp.horizon;
+          if (type) cps[type] = cp.directional_return_pct ?? cp.return_pct;
         });
       }
-      const ext = s.signal_extremes?.[0] || s.signal_extremes || {};
-      const mfe = parseFloat(ext.mfe_pct) || 0;
-      const mae = parseFloat(ext.mae_pct) || 0;
+      const ext = Array.isArray(s.signal_extremes) ? (s.signal_extremes[0] || {}) : (s.signal_extremes || {});
+      const mfe = parseFloat(ext.mfe_pct) || parseFloat(s.mfe_pct) || 0;
+      const mae = parseFloat(ext.mae_pct) || parseFloat(s.mae_pct) || 0;
       const detectedMs = s.detected_at ? new Date(s.detected_at).getTime() : Date.now();
       const detectedDate = new Date(detectedMs);
+      const normSym = (s.symbol || '').toUpperCase().replace(/[-_]/g, '');
+      const ex = (s.exchange_id || s.exchange || 'BYBIT').toUpperCase();
 
-      if (existing) {
-        existing.status = s.status || existing.status;
-        existing.checkpoints = { ...existing.checkpoints, ...cps };
-        existing.mfePct = mfe;
-        existing.maePct = mae;
-      } else {
-        const normSym = typeof normalizeSymbol === 'function' ? normalizeSymbol(s.symbol) : s.symbol.replace(/_/g, '');
-        this.signals.push({
-          signalId: s.signal_id,
-          symbol: normSym,
-          signalType: (s.direction === 'SHORT' ? 'SHORT CANDIDATE' : 'LONG CANDIDATE'),
-          detectedAt: detectedMs,
-          detectedAtUTC: detectedDate.toISOString(),
-          detectedAtLocal: detectedDate.toLocaleString(),
-          signalPrice: parseFloat(s.entry_price) || 0,
-          signalMarkPrice: parseFloat(s.entry_price) || 0,
-          currentPrice: parseFloat(s.exit_price || s.entry_price) || 0,
-          status: s.status || 'ACTIVE',
-          mfePct: mfe,
-          maePct: mae,
-          checkpoints: cps,
-          warnings: [],
-          initialSnapshot: {
-            signalScore: s.eagle_score || 75,
-            relativeVolume: s.rvol || 2.0,
-            openInterestValue: 0
-          }
-        });
+      // Historical REJECTED Migration safeguard & lifecycle mapping
+      let qualificationStatus = s.qualification_status || 'QUALIFIED';
+      let lifecycleStatus = s.lifecycle_status || s.status || 'ACTIVE';
+      const rawStatus = (s.status || '').toUpperCase();
+
+      if (rawStatus === 'REJECTED') {
+        const hasActivation = Boolean(s.entry_price && s.entry_price > 0 && s.created_at);
+        const hasStopHit = Boolean(s.resolved_at && (mae <= -2.0));
+        if (hasActivation && hasStopHit) {
+          qualificationStatus = 'QUALIFIED';
+          lifecycleStatus = 'STOP_HIT';
+        } else {
+          qualificationStatus = 'DISQUALIFIED';
+          lifecycleStatus = 'CLOSED';
+        }
+      } else if (rawStatus === 'STOP_HIT' || rawStatus === 'INVALIDATED') {
+        qualificationStatus = 'QUALIFIED';
+        lifecycleStatus = 'STOP_HIT';
+      } else if (rawStatus === 'CLOSED' || rawStatus === 'T1_HIT' || rawStatus === 'T2_HIT' || rawStatus === 'T3_HIT') {
+        qualificationStatus = 'QUALIFIED';
+        lifecycleStatus = s.resolved_at ? 'CLOSED' : 'ACTIVE';
+      } else if (rawStatus === 'EXPIRED') {
+        lifecycleStatus = 'EXPIRED';
+      } else if (rawStatus === 'DETECTED') {
+        lifecycleStatus = 'DETECTED';
       }
+
+      // Milestones
+      const t1HitAt = s.t1_hit_at || ((rawStatus === 'T1_HIT' || rawStatus === 'T2_HIT' || rawStatus === 'T3_HIT' || mfe >= 2.0) ? (s.resolved_at || s.updated_at || s.detected_at) : null);
+      const t2HitAt = s.t2_hit_at || ((rawStatus === 'T2_HIT' || rawStatus === 'T3_HIT' || mfe >= 4.0) ? (s.resolved_at || s.updated_at) : null);
+      const t3HitAt = s.t3_hit_at || ((rawStatus === 'T3_HIT' || mfe >= 8.0) ? (s.resolved_at || s.updated_at) : null);
+      const stopHitAt = s.stop_hit_at || (lifecycleStatus === 'STOP_HIT' ? (s.resolved_at || s.updated_at) : null);
+
+      return {
+        signalId: s.signal_id,
+        symbol: normSym,
+        canonicalSymbol: normSym,
+        exchangeSymbol: s.market_id || `${ex}:${normSym}`,
+        exchange: ex,
+        direction: s.direction || 'LONG',
+        signalType: (s.direction === 'SHORT' ? 'SHORT CANDIDATE' : 'LONG CANDIDATE'),
+        qualificationStatus,
+        lifecycleStatus,
+        detectedAt: detectedMs,
+        detectedAtUTC: detectedDate.toISOString(),
+        detectedAtLocal: detectedDate.toLocaleString(),
+        signalPrice: parseFloat(s.entry_price) || 0,
+        signalMarkPrice: parseFloat(s.entry_price) || 0,
+        currentPrice: parseFloat(s.exit_price || s.entry_price) || 0,
+        target1Price: parseFloat(s.target_1_price) || 0,
+        target2Price: parseFloat(s.target_2_price) || 0,
+        target3Price: parseFloat(s.target_3_price) || 0,
+        stopPrice: parseFloat(s.stop_price) || 0,
+        t1HitAt,
+        t2HitAt,
+        t3HitAt,
+        stopHitAt,
+        status: lifecycleStatus,
+        mfePct: mfe,
+        maePct: mae,
+        mfePrice: ext.mfe_price ? parseFloat(ext.mfe_price) : (parseFloat(s.entry_price) || 0),
+        maePrice: ext.mae_price ? parseFloat(ext.mae_price) : (parseFloat(s.entry_price) || 0),
+        checkpoints: cps,
+        chronologyPrecision: s.chronology_precision || 'TICK',
+        dataConfidence: s.data_confidence || 'LIVE',
+        warnings: [],
+        timeline: s.timeline || [
+          { eventType: 'DETECTED', timestamp: detectedMs, description: `Signal detected at $${s.entry_price}` }
+        ],
+        rejection: s.rejection || (s.rejection_reason ? { rejectionReason: s.rejection_reason, rejectionTimestamp: s.resolved_at || s.detected_at } : null),
+        initialSnapshot: {
+          signalScore: s.eagle_score || 75,
+          relativeVolume: s.rvol || 2.0,
+          volumeZScore: s.volume_z_score || 0,
+          openInterestValue: 0,
+          fundingRate: 0.0001,
+          trend: 'BULLISH',
+          takerImbalance: 15
+        }
+      };
     });
+
+    try {
+      localStorage.setItem(LifecycleConfig.LS_SIGNALS_KEY, JSON.stringify(this.signals));
+    } catch (e) {}
+
     this.updateActiveCountBadge();
     if (document.getElementById('view-JOURNAL')?.classList.contains('active')) {
       this.renderJournalTab();
@@ -3352,15 +3412,18 @@ const LifecycleEngine = {
     switch (status) {
       case 'ACTIVE': return '<span class="status-badge-active">🟢 ACTIVE</span>';
       case 'CONFIRMED': return '<span class="status-badge-confirmed">🔥 CONFIRMED</span>';
+      case 'STOP_HIT': return '<span class="status-badge-rejected">🛑 STOP HIT</span>';
+      case 'CLOSED': return '<span class="status-badge-confirmed" style="background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.3); color:#60a5fa;">🔵 CLOSED</span>';
       case 'WARNING': return '<span class="status-badge-warning">⚠️ WARNING</span>';
-      case 'REJECTED': return '<span class="status-badge-rejected">🔴 REJECTED</span>';
+      case 'REJECTED':
+      case 'DISQUALIFIED': return '<span class="status-badge-rejected">🔴 DISQUALIFIED</span>';
       case 'EXPIRED': return '<span class="status-badge-expired">⚪ EXPIRED</span>';
       default: return `<span class="c-dark">${status}</span>`;
     }
   },
 
   updateActiveCountBadge() {
-    const activeCount = this.signals.filter(s => ['ACTIVE', 'CONFIRMED', 'WARNING'].includes(s.status)).length;
+    const activeCount = this.signals.filter(s => s.lifecycleStatus === 'ACTIVE' || s.status === 'ACTIVE' || s.status === 'CONFIRMED').length;
     const badge1 = document.getElementById('journal-count');
     const badge2 = document.getElementById('m-journal-count');
     if (badge1) badge1.innerText = activeCount;
@@ -4100,22 +4163,8 @@ const LifecycleEngine = {
 
         updateSplash(5, 'Computing Eagle Scores & signals...');
         recalculateAllScores();
-        // Immediately record any high-probability signals identified during bootstrap
-        if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
-          State.symbols.forEach(s => {
-            if (s.signal === 'LONG CANDIDATE' || s.signal === 'SHORT CANDIDATE') {
-              LifecycleEngine.recordSignal(s, { source: 'BOOTSTRAP' });
-            }
-          });
-        }
-        // Immediately record any high-probability signals identified during bootstrap
-        if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
-          State.symbols.forEach(s => {
-            if (s.signal === 'LONG CANDIDATE' || s.signal === 'SHORT CANDIDATE') {
-              LifecycleEngine.recordSignal(s, { source: 'BOOTSTRAP' });
-            }
-          });
-        }
+        // Zero-mock: Client bootstrap does NOT inject mock/unpersisted signals.
+        // Signal Journal renders exclusively from verified Supabase / API backend records.
 
         // Initialize Supabase PostgreSQL signals connection
         if (typeof EagleSupabase !== 'undefined') {
@@ -4409,6 +4458,7 @@ const LifecycleEngine = {
               direction,
               strategy_version,
               entry_price,
+              exit_price,
               target_1_price,
               target_2_price,
               target_3_price,
@@ -4419,6 +4469,8 @@ const LifecycleEngine = {
               oi_change_pct,
               status,
               detected_at,
+              resolved_at,
+              updated_at,
               signal_extremes (
                 mfe_pct,
                 mae_pct,
@@ -5989,10 +6041,7 @@ function loadAllScannerRows() {
         return (b.signalScore || 0) - (a.signalScore || 0);
       });
 
-      // Record to Lifecycle Journal
-      if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
-        candidates.forEach(s => LifecycleEngine.recordSignal(s, { source: 'SIGNALS_TAB' }));
-      }
+      // Zero-mock: Signals tab renders real-time scanner anomalies without injecting them into Journal database.
 
       const container = document.getElementById('signals-grid');
       if (!container) return;

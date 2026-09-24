@@ -115,9 +115,97 @@ export class ScannerMathEngine {
     const rvol = ticker.relativeVolume || 1.0;
 
     if (spread > 0.12 || turnover < 300000) return 'CHOP';
-    if (ticker.rsi > 85 || ticker.rsi < 15) return 'EXHAUSTION_RISK';
     if (rvol >= 2.5 && ticker.signalScore >= 75) return 'HIGH_CONVICTION';
     if (rvol >= 1.8) return 'CLEAN_BREAKOUT';
     return 'CLEAN_BREAKOUT';
   }
+
+  /**
+   * Rounds a price to the nearest exchange tick size
+   */
+  public static roundToTick(price: number, tickSize: number = 0.01): number {
+    if (!tickSize || tickSize <= 0) return price;
+    const decimals = Math.max(0, -Math.floor(Math.log10(tickSize)));
+    const rounded = Math.round(price / tickSize) * tickSize;
+    return Number(rounded.toFixed(decimals));
+  }
+
+  /**
+   * Calculates dynamic ATR-based Stop Loss and Take Profit targets (15m ATR14)
+   * Formula:
+   * - Raw Stop = 1.5 * ATR14
+   * - Stop % clamped to 2.0% - 3.5% of Entry Price
+   * - T1 = Entry ± 1.2 * ATR14
+   * - T2 = Entry ± 2.5 * ATR14
+   * - T3 = Entry ± 5.0 * ATR14
+   */
+  public static calculateAtrStopsAndTargets(params: {
+    entryPrice: number;
+    atr14: number;
+    direction: 'LONG' | 'SHORT';
+    tickSize?: number;
+  }): {
+    stopPrice: number;
+    target1Price: number;
+    target2Price: number;
+    target3Price: number;
+    stopLossPct: number;
+    t1Pct: number;
+    t2Pct: number;
+    t3Pct: number;
+  } {
+    const { entryPrice, atr14, direction, tickSize = 0.01 } = params;
+    if (entryPrice <= 0 || atr14 <= 0) {
+      const fallbackStopDist = entryPrice * 0.025;
+      return {
+        stopPrice: this.roundToTick(direction === 'LONG' ? entryPrice - fallbackStopDist : entryPrice + fallbackStopDist, tickSize),
+        target1Price: this.roundToTick(direction === 'LONG' ? entryPrice * 1.02 : entryPrice * 0.98, tickSize),
+        target2Price: this.roundToTick(direction === 'LONG' ? entryPrice * 1.04 : entryPrice * 0.96, tickSize),
+        target3Price: this.roundToTick(direction === 'LONG' ? entryPrice * 1.08 : entryPrice * 0.92, tickSize),
+        stopLossPct: 2.5,
+        t1Pct: 2.0,
+        t2Pct: 4.0,
+        t3Pct: 8.0,
+      };
+    }
+
+    const rawStopDist = 1.5 * atr14;
+    const rawStopPct = (rawStopDist / entryPrice) * 100;
+    const clampedStopPct = Math.min(3.5, Math.max(2.0, rawStopPct));
+    const effectiveStopDist = entryPrice * (clampedStopPct / 100);
+
+    let stopPrice: number;
+    let target1Price: number;
+    let target2Price: number;
+    let target3Price: number;
+
+    if (direction === 'LONG') {
+      stopPrice = this.roundToTick(entryPrice - effectiveStopDist, tickSize);
+      target1Price = this.roundToTick(entryPrice + (1.2 * atr14), tickSize);
+      target2Price = this.roundToTick(entryPrice + (2.5 * atr14), tickSize);
+      target3Price = this.roundToTick(entryPrice + (5.0 * atr14), tickSize);
+    } else {
+      stopPrice = this.roundToTick(entryPrice + effectiveStopDist, tickSize);
+      target1Price = this.roundToTick(entryPrice - (1.2 * atr14), tickSize);
+      target2Price = this.roundToTick(entryPrice - (2.5 * atr14), tickSize);
+      target3Price = this.roundToTick(entryPrice - (5.0 * atr14), tickSize);
+    }
+
+    const stopLossPct = Number((Math.abs(entryPrice - stopPrice) / entryPrice * 100).toFixed(2));
+    const t1Pct = Number((Math.abs(target1Price - entryPrice) / entryPrice * 100).toFixed(2));
+    const t2Pct = Number((Math.abs(target2Price - entryPrice) / entryPrice * 100).toFixed(2));
+    const t3Pct = Number((Math.abs(target3Price - entryPrice) / entryPrice * 100).toFixed(2));
+
+    return {
+      stopPrice,
+      target1Price,
+      target2Price,
+      target3Price,
+      stopLossPct,
+      t1Pct,
+      t2Pct,
+      t3Pct,
+    };
+  }
 }
+
