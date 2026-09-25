@@ -66,5 +66,25 @@ module.exports = {
       autorestart: true,
       restart_delay: 5000,
     },
+    {
+      name: 'eagle-flash-whale-detector',
+      script: 'scripts/whale_detector_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+      },
+      autorestart: true,
+      restart_delay: 5000,
+    },
+    {
+      name: 'eagle-flash-etherscan-scanner',
+      script: 'scripts/etherscan_whale_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+      },
+      autorestart: true,
+      restart_delay: 5000,
+    },
   ],
 };

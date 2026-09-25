@@ -1296,6 +1296,7 @@
       <button class="nav-btn" onclick="switchTab('WATCHLIST')">Watchlist (<span id="watch-count">0</span>)</button>
       <button class="nav-btn" onclick="switchTab('JOURNAL')">Signal Journal <span class="badge-count" id="journal-count">0</span></button>
       <button class="nav-btn" onclick="switchTab('BIGCAP')">🏛️ Big Cap Desk <span class="badge-count" id="nav-bigcap-count" style="background:#00f5d4; color:#000;">1</span></button>
+      <button class="nav-btn" onclick="switchTab('WHALE')">🐋 Whale Radar <span class="badge-count" id="nav-whale-count" style="background:#00d2ff; color:#000;">4</span></button>
       <button class="nav-btn" onclick="switchTab('HISTORY')">History</button>
       <button class="nav-btn" onclick="switchTab('DIAGNOSTICS')">Diagnostics</button>
     </nav>
@@ -2014,6 +2015,222 @@
       </div>
     </div>
 
+    <!-- 8. WHALE TRACKING & MANIPULATION DETECTOR RADAR -->
+    <div id="view-WHALE" class="view-container">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono); letter-spacing:0.5px;">🐋 WHALE TRACKING &amp; MANIPULATION DETECTOR RADAR</h2>
+            <span class="badge-supabase" id="whale-db-badge">SUPABASE LIVE · 24/7 WHALE WORKER</span>
+            <span style="font-size:10px; font-family:var(--font-mono); padding:2px 8px; border-radius:4px; background:rgba(0,210,255,0.15); color:#00d2ff; border:1px solid rgba(0,210,255,0.3);">BINANCE · BYBIT · MEXC</span>
+          </div>
+          <p class="c-dark" style="font-size:11px; margin-top:2px;">
+            REAL-TIME LARGE PRINTS ($10K+ ALTS / $100K+ BIGCAPS) · 15M/1H NET FLOW · PUMP &amp; DUMP RISK · PHANTOM WALLS SPOOFING
+          </p>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn btn-sm" onclick="WhaleTerminal.refreshData()">⟳ Refresh Feeds</button>
+          <button class="btn btn-sm btn-emerald" onclick="WhaleTerminal.triggerTestSimulation()">⚡ Test Whale Print</button>
+        </div>
+      </div>
+
+      <!-- Whale KPI Strip -->
+      <div class="kpi-strip" style="padding:0; margin-bottom:14px;">
+        <div class="kpi-card">
+          <div class="kpi-lbl">24H Whale Volume</div>
+          <div class="kpi-val tabular c-cyan" id="whale-kpi-vol">$18.45M</div>
+          <div class="kpi-sub">Large blocks qualified</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Active Manipulation Risks</div>
+          <div class="kpi-val tabular c-red" id="whale-kpi-alerts">4 ACTIVE</div>
+          <div class="kpi-sub">1 Critical · 3 High Alert</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Top Accumulation Candidate</div>
+          <div class="kpi-val tabular c-emerald" id="whale-kpi-accum">AKEUSDT (88%)</div>
+          <div class="kpi-sub">+$342.5K Net Flow in 15m</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Avg Concentration Index</div>
+          <div class="kpi-val tabular c-amber" id="whale-kpi-conc">58.4%</div>
+          <div class="kpi-sub">Whale dominance ratio</div>
+        </div>
+      </div>
+
+      <!-- Horizontal Live Whale Ticker / Tape -->
+      <div class="whale-ticker-container" style="margin-bottom:16px; background:var(--bg-surface1); border:1px solid var(--border); border-radius:6px; padding:8px 12px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <span class="pulse-dot" style="background:#00d2ff;"></span>
+          <span style="font-size:10px; font-weight:800; font-family:var(--font-mono); color:var(--cyan); letter-spacing:0.05em;">LIVE WHALE BLOCKS TAPE</span>
+          <span style="font-size:10px; color:var(--text-dark); margin-left:auto;">Threshold: &ge;$10K Alts · &ge;$100K BTC/ETH/SOL</span>
+        </div>
+        <div id="whale-live-tape" style="display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;">
+          <!-- Live trade badges rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Manipulation Alerts Section -->
+      <div style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+            🚨 ACTIVE MANIPULATION RADAR &amp; EXPLOIT WARNINGS
+          </h3>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-xs" id="whale-filter-all" onclick="WhaleTerminal.filterAlerts('ALL')">All Alerts</button>
+            <button class="btn btn-xs" id="whale-filter-critical" onclick="WhaleTerminal.filterAlerts('CRITICAL')">Critical Only</button>
+          </div>
+        </div>
+        <div id="whale-alerts-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:12px;">
+          <!-- Manipulation alert cards rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Dual Column Layout: Matrix & Orderbook Spoofing -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:16px; margin-bottom:20px;">
+        
+        <!-- Left: Whale Accumulation / Distribution Matrix -->
+        <div style="background:var(--bg-surface1); border:1px solid var(--border); border-radius:8px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase;">
+              📊 WHALE ACCUMULATION / DISTRIBUTION MATRIX
+            </h3>
+            <span style="font-size:10px; font-family:var(--font-mono); color:var(--text-dark);">Rolling 15M &amp; 1H Flows</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="data-table" id="whale-matrix-table" style="width:100%;">
+              <thead>
+                <tr>
+                  <th>SYMBOL</th>
+                  <th>PRICE</th>
+                  <th>15M NET FLOW</th>
+                  <th>15M BUY RATIO</th>
+                  <th>1H NET FLOW</th>
+                  <th>CONCENTRATION</th>
+                  <th>STATE</th>
+                </tr>
+              </thead>
+              <tbody id="whale-matrix-body">
+                <!-- Matrix rows rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Orderbook Spoofing & Phantom Walls Monitor -->
+        <div style="background:var(--bg-surface1); border:1px solid var(--border); border-radius:8px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase;">
+              🛡️ ORDERBOOK SPOOFING &amp; PHANTOM WALLS
+            </h3>
+            <span style="font-size:10px; font-family:var(--font-mono); color:var(--cyan);">Depth Snapshots (&lt;60s cancellations)</span>
+          </div>
+
+          <!-- Visual Depth Balance Indicator -->
+          <div style="margin-bottom:12px; background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:10px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono); margin-bottom:4px;">
+              <span class="c-emerald font-bold" id="whale-depth-bid-lbl">BID DEPTH: $4.2M (58%)</span>
+              <span class="c-red font-bold" id="whale-depth-ask-lbl">ASK DEPTH: $3.1M (42%)</span>
+            </div>
+            <div style="height:8px; width:100%; background:var(--red); border-radius:4px; overflow:hidden; display:flex;">
+              <div id="whale-depth-bar" style="width:58%; background:var(--emerald); height:100%;"></div>
+            </div>
+          </div>
+
+          <!-- Phantom Wall Log -->
+          <div id="whale-spoof-logs" style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Phantom walls rendered dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Recent Whale Block Trades Table -->
+      <div style="background:var(--bg-surface1); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase;">
+            📜 RECENT LARGE EXECUTION PRINTS (WHALE BLOCKS)
+          </h3>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="whale-filter-exchange" class="select-sm" onchange="WhaleTerminal.filterTrades()" style="background:var(--bg-surface2); color:var(--text); border:1px solid var(--border); padding:3px 8px; border-radius:4px; font-size:11px;">
+              <option value="ALL">All Exchanges</option>
+              <option value="BINANCE">Binance</option>
+              <option value="BYBIT">Bybit</option>
+              <option value="MEXC">MEXC</option>
+            </select>
+            <select id="whale-filter-size" class="select-sm" onchange="WhaleTerminal.filterTrades()" style="background:var(--bg-surface2); color:var(--text); border:1px solid var(--border); padding:3px 8px; border-radius:4px; font-size:11px;">
+              <option value="0">All Whale Sizes</option>
+              <option value="25000">&gt;$25K Only</option>
+              <option value="50000">&gt;$50K Only</option>
+              <option value="100000">&gt;$100K Only</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="whale-trades-table" style="width:100%;">
+            <thead>
+              <tr>
+                <th>TIME</th>
+                <th>SYMBOL</th>
+                <th>EXCHANGE</th>
+                <th>SIDE</th>
+                <th>EXECUTION PRICE</th>
+                <th>USD SIZE</th>
+                <th>WHALE TIER</th>
+              </tr>
+            </thead>
+            <tbody id="whale-trades-body">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4. ON-CHAIN ETHERSCAN WHALE WALLET SCANNER & CEX TRANSFERS -->
+      <div style="background:var(--bg-surface1); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h3 style="font-size:12px; font-weight:800; font-family:var(--font-mono); color:var(--text-muted); text-transform:uppercase;">
+                🔗 ON-CHAIN ETHERSCAN WHALE SCANNER &amp; CEX FLOWS
+              </h3>
+              <span style="font-size:10px; font-family:var(--font-mono); padding:2px 6px; border-radius:4px; background:rgba(0,210,255,0.15); color:#00d2ff; border:1px solid rgba(0,210,255,0.3);">ETH &ge; 50 ETH · ERC-20 &ge; $25,000 USD</span>
+            </div>
+            <p class="c-dark" style="font-size:10px; margin-top:2px;">MONITORING INSTITUTIONAL WALLETS, CEX HOT DEPOSITS &amp; HIGH-BETA ALTCOIN MOVEMENTS</p>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-xs" onclick="WhaleTerminal.refreshOnChain()">⟳ Poll Etherscan</button>
+          </div>
+        </div>
+
+        <!-- Tracked Institutional Addresses Pills -->
+        <div id="whale-tracked-wallets" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:12px;">
+          <!-- Tracked wallet pills rendered dynamically -->
+        </div>
+
+        <!-- On-Chain Whale Transfers Table -->
+        <div style="overflow-x:auto;">
+          <table class="data-table" id="whale-onchain-table" style="width:100%;">
+            <thead>
+              <tr>
+                <th>TIME</th>
+                <th>ASSET / TOKEN</th>
+                <th>FROM WHALE</th>
+                <th>DESTINATION</th>
+                <th>TRANSFER ACTION</th>
+                <th>AMOUNT / TOKENS</th>
+                <th>USD VALUE</th>
+                <th>EXPLORER</th>
+              </tr>
+            </thead>
+            <tbody id="whale-onchain-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- 6. DIAGNOSTICS VIEW -->
     <div id="view-DIAGNOSTICS" class="view-container">
       <div style="margin-bottom:14px;">
@@ -2231,6 +2448,10 @@
     <button class="m-nav-item" data-tab="WATCHLIST" onclick="switchTab('WATCHLIST')">
       <span class="m-icon">⭐</span>
       <span>Watch (<span id="m-nav-watch">0</span>)</span>
+    </button>
+    <button class="m-nav-item" data-tab="WHALE" onclick="switchTab('WHALE')">
+      <span class="m-icon">🐋</span>
+      <span>Whale</span>
     </button>
     <button class="m-nav-item" onclick="openModal('settings-modal')">
       <span class="m-icon">⚙️</span>
@@ -4234,6 +4455,9 @@ const LifecycleEngine = {
         if (typeof BigCapIntelligenceDesk !== 'undefined') {
           BigCapIntelligenceDesk.init().catch(e => console.warn('BigCap desk startup notice:', e));
         }
+        if (typeof WhaleTerminal !== 'undefined') {
+          WhaleTerminal.init().catch(e => console.warn('Whale terminal startup notice:', e));
+        }
 
         document.getElementById('splash-btn').style.display = 'block';
         document.getElementById('sp-5').className = 'step-done';
@@ -5138,6 +5362,468 @@ const LifecycleEngine = {
             });
             histTbody.innerHTML = histHtml;
           }
+        }
+      }
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 🐋 WORLD-CLASS WHALE TRACKING & MANIPULATION DETECTOR CONTROLLER
+    // ═════════════════════════════════════════════════════════════════════════
+    const WhaleTerminal = {
+      metrics: null,
+      alerts: [],
+      trades: [],
+      onchainTransfers: [],
+      trackedWallets: [],
+      filterAlertSeverity: 'ALL',
+      pollTimer: null,
+      isInitialized: false,
+
+      async init() {
+        if (this.isInitialized) return;
+        this.isInitialized = true;
+        await this.refreshData();
+        // Start auto-poll every 5 seconds
+        if (!this.pollTimer) {
+          this.pollTimer = setInterval(() => {
+            if (State.activeTab === 'WHALE') {
+              this.refreshData();
+            }
+          }, 5000);
+        }
+      },
+
+      async refreshData() {
+        try {
+          const [mRes, aRes, tRes, oRes] = await Promise.all([
+            fetch('/api/whale/metrics').then(r => r.json()).catch(() => null),
+            fetch('/api/whale/alerts').then(r => r.json()).catch(() => null),
+            fetch('/api/whale/trades?limit=50').then(r => r.json()).catch(() => null),
+            fetch('/api/whale/onchain').then(r => r.json()).catch(() => null)
+          ]);
+
+          if (mRes && mRes.success) {
+            this.metrics = mRes.data;
+          }
+          if (aRes && aRes.success) {
+            this.alerts = aRes.alerts || [];
+          }
+          if (tRes && tRes.success) {
+            this.trades = tRes.trades || [];
+          }
+          if (oRes && oRes.success) {
+            this.onchainTransfers = oRes.transfers || [];
+            this.trackedWallets = oRes.trackedWallets || [];
+          }
+          this.render();
+        } catch (err) {
+          console.warn('⚠️ WhaleTerminal data refresh warning:', err);
+        }
+      },
+
+      async refreshOnChain() {
+        try {
+          const res = await fetch('/api/whale/onchain').then(r => r.json());
+          if (res && res.success) {
+            this.onchainTransfers = res.transfers || [];
+            this.trackedWallets = res.trackedWallets || [];
+            this.renderOnChain();
+          }
+        } catch (e) {
+          console.warn('Error refreshing onchain data:', e);
+        }
+      },
+
+      filterAlerts(severity) {
+        this.filterAlertSeverity = severity;
+        const btnAll = document.getElementById('whale-filter-all');
+        const btnCrit = document.getElementById('whale-filter-critical');
+        if (btnAll && btnCrit) {
+          btnAll.classList.toggle('btn-emerald', severity === 'ALL');
+          btnCrit.classList.toggle('btn-red', severity === 'CRITICAL');
+        }
+        this.renderAlerts();
+      },
+
+      filterTrades() {
+        this.renderTrades();
+      },
+
+      async resolveAlert(alertId) {
+        try {
+          await fetch('/api/whale/alerts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ alert_id: alertId, action: 'RESOLVE' })
+          });
+          const target = this.alerts.find(a => a.alert_id === alertId);
+          if (target) target.status = 'RESOLVED';
+          this.render();
+        } catch (e) {
+          console.warn('Error resolving alert:', e);
+        }
+      },
+
+      triggerTestSimulation() {
+        const testSymbols = ['AKEUSDT', 'LABUSDT', 'GTWUSDT', 'SOLUSDT'];
+        const sym = testSymbols[Math.floor(Math.random() * testSymbols.length)];
+        const isBuy = Math.random() > 0.4;
+        const amount = Math.round(15000 + Math.random() * 85000);
+        const price = sym === 'SOLUSDT' ? 154.5 : sym === 'LABUSDT' ? 0.125 : 0.048;
+
+        const mockTrade = {
+          id: 'test-' + Date.now(),
+          symbol: sym,
+          exchange: 'BYBIT',
+          side: isBuy ? 'BUY' : 'SELL',
+          amount_usdt: amount,
+          execution_price: price,
+          detected_at: new Date().toISOString()
+        };
+
+        this.trades.unshift(mockTrade);
+        if (this.trades.length > 50) this.trades.pop();
+        this.render();
+      },
+
+      formatUsd(num) {
+        const n = Number(num);
+        if (isNaN(n)) return '$0';
+        if (Math.abs(n) >= 1000000) return '$' + (n / 1000000).toFixed(2) + 'M';
+        if (Math.abs(n) >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
+        return '$' + n.toFixed(2);
+      },
+
+      formatPrice(val) {
+        const num = parseFloat(val);
+        if (isNaN(num)) return '$0.00';
+        if (num >= 1000) return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (num >= 1) return '$' + num.toFixed(4);
+        if (num >= 0.001) return '$' + num.toFixed(6);
+        return '$' + num.toFixed(8);
+      },
+
+      render() {
+        // 1. Update KPI Strip & Nav Badge
+        const activeAlerts = this.alerts.filter(a => a.status === 'ACTIVE');
+        const navBadge = document.getElementById('nav-whale-count');
+        if (navBadge) navBadge.innerText = activeAlerts.length;
+
+        if (this.metrics && this.metrics.kpis) {
+          const k = this.metrics.kpis;
+          const elVol = document.getElementById('whale-kpi-vol');
+          const elAlerts = document.getElementById('whale-kpi-alerts');
+          const elAccum = document.getElementById('whale-kpi-accum');
+          const elConc = document.getElementById('whale-kpi-conc');
+
+          if (elVol) elVol.innerText = this.formatUsd(k.total24hWhaleVolumeUsdt);
+          if (elAlerts) {
+            elAlerts.innerText = activeAlerts.length + ' ACTIVE';
+            elAlerts.className = 'kpi-val tabular ' + (activeAlerts.length > 0 ? 'c-red' : 'c-emerald');
+          }
+          if (elAccum) elAccum.innerText = k.topAccumulationSymbol + ' (' + k.topAccumulationRatio + '%)';
+          if (elConc) elConc.innerText = k.averageConcentrationIndex + '%';
+        }
+
+        // 2. Render Components
+        this.renderLiveTape();
+        this.renderAlerts();
+        this.renderMatrix();
+        this.renderSpoofing();
+        this.renderTrades();
+        this.renderOnChain();
+      },
+
+      renderLiveTape() {
+        const tapeEl = document.getElementById('whale-live-tape');
+        if (!tapeEl) return;
+
+        if (!this.trades || this.trades.length === 0) {
+          tapeEl.innerHTML = '<span style="color:var(--text-dark); font-family:var(--font-mono); font-size:11px;">Listening for live whale block executions...</span>';
+          return;
+        }
+
+        let html = '';
+        this.trades.slice(0, 15).forEach(t => {
+          const isBuy = t.side === 'BUY';
+          const bg = isBuy ? 'rgba(0, 229, 153, 0.12)' : 'rgba(255, 71, 87, 0.12)';
+          const border = isBuy ? 'rgba(0, 229, 153, 0.35)' : 'rgba(255, 71, 87, 0.35)';
+          const color = isBuy ? '#00e599' : '#ff4757';
+          const icon = isBuy ? '🟢 BUY' : '🔴 SELL';
+
+          html += '<div style="display:inline-flex; align-items:center; gap:6px; background:' + bg + '; border:1px solid ' + border + '; border-radius:4px; padding:4px 8px; font-family:var(--font-mono); font-size:11px; white-space:nowrap;">' +
+            '<span style="font-weight:800; color:' + color + ';">' + icon + '</span>' +
+            '<strong style="color:var(--text);">' + t.symbol + '</strong>' +
+            '<span style="font-size:9px; color:var(--text-dark); background:var(--bg-surface2); padding:1px 4px; border-radius:2px;">' + (t.exchange || 'EXCHANGE') + '</span>' +
+            '<span style="color:' + color + '; font-weight:700;">' + this.formatUsd(t.amount_usdt) + '</span>' +
+            '<span style="color:var(--text-muted); font-size:10px;">@ ' + this.formatPrice(t.execution_price) + '</span>' +
+          '</div>';
+        });
+        tapeEl.innerHTML = html;
+      },
+
+      renderAlerts() {
+        const grid = document.getElementById('whale-alerts-grid');
+        if (!grid) return;
+
+        let filtered = this.alerts;
+        if (this.filterAlertSeverity === 'CRITICAL') {
+          filtered = filtered.filter(a => a.severity === 'CRITICAL');
+        }
+
+        if (!filtered || filtered.length === 0) {
+          grid.innerHTML = '<div style="grid-column:1/-1; padding:24px; text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--text-dark); background:var(--bg-surface1); border:1px dashed var(--border); border-radius:8px;">No active manipulation risks flagged at this moment.</div>';
+          return;
+        }
+
+        let html = '';
+        filtered.forEach(a => {
+          const isCrit = a.severity === 'CRITICAL';
+          const isHigh = a.severity === 'HIGH';
+          const sevColor = isCrit ? '#ff4757' : isHigh ? '#ffaa00' : '#00d2ff';
+          const sevBg = isCrit ? 'rgba(255, 71, 87, 0.15)' : isHigh ? 'rgba(255, 170, 0, 0.15)' : 'rgba(0, 210, 255, 0.15)';
+          const m = a.metrics_json || {};
+
+          let metricBadges = '';
+          if (m.net_flow_usd != null) {
+            const isPos = m.net_flow_usd >= 0;
+            metricBadges += '<div style="background:var(--bg-surface2); padding:6px 10px; border-radius:4px;">' +
+              '<div style="font-size:10px; color:var(--text-dark);">15M NET FLOW</div>' +
+              '<div style="font-size:12px; font-weight:700; color:' + (isPos ? 'var(--emerald)' : 'var(--red)') + ';">' + (isPos ? '+' : '') + this.formatUsd(m.net_flow_usd) + '</div>' +
+            '</div>';
+          }
+          if (m.taker_sell_dominance_pct != null) {
+            metricBadges += '<div style="background:var(--bg-surface2); padding:6px 10px; border-radius:4px;">' +
+              '<div style="font-size:10px; color:var(--text-dark);">TAKER SELL DOMINANCE</div>' +
+              '<div style="font-size:12px; font-weight:700; color:var(--red);">' + m.taker_sell_dominance_pct + '%</div>' +
+            '</div>';
+          }
+          if (m.price_expansion_15m_pct != null) {
+            metricBadges += '<div style="background:var(--bg-surface2); padding:6px 10px; border-radius:4px;">' +
+              '<div style="font-size:10px; color:var(--text-dark);">15M EXPANSION</div>' +
+              '<div style="font-size:12px; font-weight:700; color:var(--cyan);">+' + m.price_expansion_15m_pct + '%</div>' +
+            '</div>';
+          }
+          if (m.concentration_pct != null) {
+            metricBadges += '<div style="background:var(--bg-surface2); padding:6px 10px; border-radius:4px;">' +
+              '<div style="font-size:10px; color:var(--text-dark);">CONCENTRATION INDEX</div>' +
+              '<div style="font-size:12px; font-weight:700; color:var(--amber);">' + m.concentration_pct + '%</div>' +
+            '</div>';
+          }
+          if (m.peak_size_usdt != null) {
+            metricBadges += '<div style="background:var(--bg-surface2); padding:6px 10px; border-radius:4px;">' +
+              '<div style="font-size:10px; color:var(--text-dark);">PHANTOM WALL</div>' +
+              '<div style="font-size:12px; font-weight:700; color:var(--text);">' + this.formatUsd(m.peak_size_usdt) + ' (' + m.lifespan_seconds + 's)</div>' +
+            '</div>';
+          }
+
+          html += '<div style="background:var(--bg-surface1); border:1px solid ' + (isCrit ? 'rgba(255, 71, 87, 0.4)' : 'var(--border)') + '; border-radius:8px; padding:14px; position:relative; overflow:hidden;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">' +
+              '<div>' +
+                '<div style="display:flex; align-items:center; gap:6px;">' +
+                  '<span style="background:' + sevBg + '; color:' + sevColor + '; border:1px solid ' + sevColor + '; font-size:10px; font-weight:800; font-family:var(--font-mono); padding:2px 6px; border-radius:4px;">' + a.severity + '</span>' +
+                  '<strong style="font-size:14px; color:var(--text); font-family:var(--font-mono);">' + a.symbol + '</strong>' +
+                '</div>' +
+                '<div style="font-size:11px; font-weight:700; color:' + sevColor + '; font-family:var(--font-mono); margin-top:4px;">' + a.alert_type.replace(/_/g, ' ') + '</div>' +
+              '</div>' +
+              (a.status === 'ACTIVE'
+                ? '<button class="btn btn-xs" onclick="WhaleTerminal.resolveAlert(\'' + a.alert_id + '\')" style="font-size:10px;">Acknowledge</button>'
+                : '<span style="font-size:10px; color:var(--text-dark); font-family:var(--font-mono);">RESOLVED</span>'
+              ) +
+            '</div>' +
+            '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px; font-family:var(--font-mono);">' +
+              metricBadges +
+            '</div>' +
+          '</div>';
+        });
+
+        grid.innerHTML = html;
+      },
+
+      renderMatrix() {
+        const tbody = document.getElementById('whale-matrix-body');
+        if (!tbody) return;
+
+        const list = (this.metrics && this.metrics.symbolsSummary) ? this.metrics.symbolsSummary : [];
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="c-dark" style="text-align:center; padding:16px;">Loading accumulation matrix...</td></tr>';
+          return;
+        }
+
+        let html = '';
+        list.forEach(s => {
+          const buyRatio = s.buyRatio15mPct || 50;
+          const isAccum = buyRatio >= 70;
+          const isDist = buyRatio <= 35;
+          const stateBadge = s.activeAlert
+            ? '<span style="background:rgba(255, 71, 87, 0.15); color:#ff4757; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">' + s.activeAlert.replace(/_/g, ' ') + '</span>'
+            : isAccum
+              ? '<span style="background:rgba(0, 229, 153, 0.15); color:#00e599; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">ACCUMULATION</span>'
+              : isDist
+                ? '<span style="background:rgba(255, 170, 0, 0.15); color:#ffaa00; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">DISTRIBUTION</span>'
+                : '<span style="color:var(--text-dark); font-size:10px;">NEUTRAL</span>';
+
+          const net15mColor = s.netFlow15mUsd >= 0 ? 'var(--emerald)' : 'var(--red)';
+          const net1hColor = s.netFlow1hUsd >= 0 ? 'var(--emerald)' : 'var(--red)';
+
+          html += '<tr>' +
+            '<td class="font-bold c-cyan">' + s.symbol + '</td>' +
+            '<td class="tabular">' + this.formatPrice(s.priceCurrent) + '</td>' +
+            '<td class="tabular font-bold" style="color:' + net15mColor + ';">' + (s.netFlow15mUsd >= 0 ? '+' : '') + this.formatUsd(s.netFlow15mUsd) + '</td>' +
+            '<td>' +
+              '<div style="display:flex; align-items:center; gap:6px;">' +
+                '<span class="tabular font-bold" style="font-size:11px; min-width:32px;">' + buyRatio + '%</span>' +
+                '<div style="width:70px; height:6px; background:var(--red); border-radius:3px; overflow:hidden; display:flex;">' +
+                  '<div style="width:' + buyRatio + '%; background:var(--emerald); height:100%;"></div>' +
+                '</div>' +
+              '</div>' +
+            '</td>' +
+            '<td class="tabular" style="color:' + net1hColor + ';">' + (s.netFlow1hUsd >= 0 ? '+' : '') + this.formatUsd(s.netFlow1hUsd) + '</td>' +
+            '<td class="tabular ' + (s.concentrationPct >= 65 ? 'c-amber font-bold' : 'c-muted') + '">' + s.concentrationPct + '%</td>' +
+            '<td>' + stateBadge + '</td>' +
+          '</tr>';
+        });
+
+        tbody.innerHTML = html;
+      },
+
+      renderSpoofing() {
+        const container = document.getElementById('whale-spoof-logs');
+        if (!container) return;
+
+        // Collect all spoofing alerts
+        const spoofAlerts = this.alerts.filter(a => a.alert_type === 'SPOOFING_DETECTED');
+        if (spoofAlerts.length === 0) {
+          container.innerHTML = '<div style="font-family:var(--font-mono); font-size:11px; color:var(--text-dark); padding:10px; text-align:center;">No recent phantom walls detected in top books.</div>';
+          return;
+        }
+
+        let html = '';
+        spoofAlerts.slice(0, 4).forEach(a => {
+          const m = a.metrics_json || {};
+          const isBid = m.wall_side === 'BID';
+          html += '<div style="background:var(--bg-surface2); border:1px solid var(--border); border-radius:4px; padding:8px 10px; font-family:var(--font-mono); font-size:11px;">' +
+            '<div style="display:flex; justify-content:space-between; margin-bottom:4px;">' +
+              '<span class="font-bold c-cyan">' + a.symbol + '</span>' +
+              '<span style="color:' + (isBid ? 'var(--emerald)' : 'var(--red)') + '; font-weight:700;">' + (m.wall_side || 'PHANTOM') + ' WALL</span>' +
+            '</div>' +
+            '<div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:10px;">' +
+              '<span>Size: <strong class="c-amber">' + this.formatUsd(m.peak_size_usdt) + '</strong></span>' +
+              '<span>Lifespan: <strong>' + (m.lifespan_seconds || 15) + 's</strong></span>' +
+              '<span>Filled: <strong>' + (m.fill_ratio_pct || 0) + '%</strong></span>' +
+            '</div>' +
+          '</div>';
+        });
+
+        container.innerHTML = html;
+      },
+
+      renderTrades() {
+        const tbody = document.getElementById('whale-trades-body');
+        if (!tbody) return;
+
+        const selEx = document.getElementById('whale-filter-exchange')?.value || 'ALL';
+        const minSize = parseFloat(document.getElementById('whale-filter-size')?.value || '0');
+
+        let filtered = this.trades;
+        if (selEx !== 'ALL') {
+          filtered = filtered.filter(t => (t.exchange || '').toUpperCase() === selEx);
+        }
+        if (minSize > 0) {
+          filtered = filtered.filter(t => Number(t.amount_usdt) >= minSize);
+        }
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="c-dark" style="text-align:center; padding:16px;">No whale trades match filter criteria.</td></tr>';
+          return;
+        }
+
+        let html = '';
+        filtered.slice(0, 30).forEach(t => {
+          const isBuy = t.side === 'BUY';
+          const amt = Number(t.amount_usdt);
+          const tier = amt >= 100000
+            ? '<span style="background:rgba(0, 210, 255, 0.15); color:#00d2ff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">MEGA ($100K+)</span>'
+            : amt >= 50000
+              ? '<span style="background:rgba(255, 170, 0, 0.15); color:#ffaa00; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">LARGE ($50K+)</span>'
+              : '<span style="color:var(--text-dark); font-size:10px;">BLOCK ($10K+)</span>';
+
+          const timeStr = t.detected_at
+            ? new Date(t.detected_at).toLocaleTimeString()
+            : new Date().toLocaleTimeString();
+
+          html += '<tr>' +
+            '<td class="tabular c-dark">' + timeStr + '</td>' +
+            '<td class="font-bold c-cyan">' + t.symbol + '</td>' +
+            '<td><span style="font-size:10px; background:var(--bg-surface2); border:1px solid var(--border); padding:2px 6px; border-radius:3px;">' + (t.exchange || 'BINANCE') + '</span></td>' +
+            '<td><span style="color:' + (isBuy ? 'var(--emerald)' : 'var(--red)') + '; font-weight:800;">' + t.side + '</span></td>' +
+            '<td class="tabular">' + this.formatPrice(t.execution_price) + '</td>' +
+            '<td class="tabular font-bold" style="color:' + (isBuy ? 'var(--emerald)' : 'var(--red)') + ';">' + this.formatUsd(amt) + '</td>' +
+            '<td>' + tier + '</td>' +
+          '</tr>';
+        });
+
+        tbody.innerHTML = html;
+      },
+
+      renderOnChain() {
+        const walletsContainer = document.getElementById('whale-tracked-wallets');
+        const tbody = document.getElementById('whale-onchain-tbody');
+
+        if (walletsContainer && this.trackedWallets) {
+          let wHtml = '';
+          this.trackedWallets.forEach(w => {
+            const shortAddr = w.address.slice(0, 6) + '...' + w.address.slice(-4);
+            wHtml += '<div style="flex-shrink:0; background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-family:var(--font-mono); font-size:11px;">' +
+              '<div style="display:flex; align-items:center; gap:6px;">' +
+                '<strong style="color:var(--text);">' + w.label + '</strong>' +
+                '<span style="font-size:9px; background:rgba(0,210,255,0.15); color:var(--cyan); padding:1px 4px; border-radius:3px;">' + (w.category || 'WHALE') + '</span>' +
+              '</div>' +
+              '<div style="display:flex; justify-content:space-between; gap:10px; margin-top:2px; font-size:10px; color:var(--text-dark);">' +
+                '<a href="https://etherscan.io/address/' + w.address + '" target="_blank" style="color:var(--cyan); text-decoration:none;">' + shortAddr + ' ↗</a>' +
+                '<span style="color:var(--emerald); font-weight:700;">' + (w.ethBalance || 'Active') + '</span>' +
+              '</div>' +
+            '</div>';
+          });
+          walletsContainer.innerHTML = wHtml;
+        }
+
+        if (tbody) {
+          if (!this.onchainTransfers || this.onchainTransfers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="c-dark" style="text-align:center; padding:16px;">Polling Etherscan for large on-chain whale transfers...</td></tr>';
+            return;
+          }
+
+          let tHtml = '';
+          this.onchainTransfers.forEach(t => {
+            const isDeposit = t.action === 'WHALE_EXCHANGE_DEPOSIT';
+            const isAccum = t.action === 'WHALE_ACCUMULATION';
+            const actColor = isDeposit ? 'var(--red)' : isAccum ? 'var(--emerald)' : 'var(--cyan)';
+            const actBg = isDeposit ? 'rgba(255, 71, 87, 0.15)' : isAccum ? 'rgba(0, 229, 153, 0.15)' : 'rgba(0, 210, 255, 0.15)';
+            const actBorder = isDeposit ? 'rgba(255, 71, 87, 0.3)' : isAccum ? 'rgba(0, 229, 153, 0.3)' : 'rgba(0, 210, 255, 0.3)';
+
+            const timeStr = t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+
+            tHtml += '<tr>' +
+              '<td class="tabular c-dark">' + timeStr + '</td>' +
+              '<td><strong class="c-cyan font-bold">' + t.symbol + '</strong></td>' +
+              '<td class="tabular">' + (t.fromTruncated || (t.from ? t.from.slice(0, 8) + '...' : '--')) + '</td>' +
+              '<td><span style="font-size:11px; background:var(--bg-surface2); border:1px solid var(--border); padding:2px 6px; border-radius:3px;">' + (t.targetName || 'Exchange') + '</span></td>' +
+              '<td>' +
+                '<span style="background:' + actBg + '; color:' + actColor + '; border:1px solid ' + actBorder + '; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:800; font-family:var(--font-mono);">' +
+                  t.action.replace(/_/g, ' ') +
+                '</span>' +
+              '</td>' +
+              '<td class="tabular font-bold">' + Number(t.amountTokens).toLocaleString() + ' ' + t.symbol + '</td>' +
+              '<td class="tabular font-bold" style="color:' + actColor + ';">' + this.formatUsd(t.amountUsd) + '</td>' +
+              '<td>' +
+                '<a href="' + (t.etherscanUrl || 'https://etherscan.io/tx/' + t.txHash) + '" target="_blank" class="btn btn-xs" style="text-decoration:none; font-size:10px; padding:2px 6px;">' +
+                  'Tx ↗' +
+                '</a>' +
+              '</td>' +
+            '</tr>';
+          });
+          tbody.innerHTML = tHtml;
         }
       }
     };
@@ -6919,6 +7605,9 @@ function loadAllScannerRows() {
       if (tabId === 'JOURNAL' && typeof LifecycleEngine !== 'undefined') LifecycleEngine.renderJournalTab();
       if (tabId === 'BIGCAP') {
         if (typeof BigCapIntelligenceDesk !== 'undefined') BigCapIntelligenceDesk.render();
+      }
+      if (tabId === 'WHALE') {
+        if (typeof WhaleTerminal !== 'undefined') WhaleTerminal.render();
       }
       if (tabId === 'HISTORY') {
         renderHistory();

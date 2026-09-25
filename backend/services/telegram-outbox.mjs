@@ -79,6 +79,12 @@ function formatPrice(val) {
 // 3. Canonical Telegram Alert Message Formatter
 export function formatEagleFlashTelegramAlert(item) {
   const p = item.payload || {};
+  if (p.metadata?.customMessage) {
+    return p.metadata.customMessage;
+  }
+  if (p.customMessage) {
+    return p.customMessage;
+  }
   const isLong = (p.direction || 'LONG').toUpperCase() === 'LONG';
   const sideIcon = isLong ? '🟢' : '🔴';
   const sideText = isLong ? 'LONG' : 'SHORT';

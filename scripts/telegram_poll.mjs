@@ -77,6 +77,8 @@ async function main() {
   try {
     const commands = [
       { command: 'signals', description: 'Recent high-confidence signals from the lifecycle engine' },
+      { command: 'whale', description: 'On-chain Etherscan whale transfers & CEX dump alerts' },
+      { command: 'etherscan', description: 'Etherscan whale wallet tracking & exchange flows' },
       { command: 'top', description: 'Top ranked spikes sorted by Eagle Score' },
       { command: 'spikes', description: 'Active high-volume spike anomalies' },
       { command: 'btc', description: 'Bitcoin macro regime & volatility' },
