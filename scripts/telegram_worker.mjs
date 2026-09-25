@@ -96,6 +96,11 @@ export async function processOutboxBatch() {
 
       try {
         const messageText = formatEagleFlashTelegramAlert(item);
+        if (!messageText) {
+          console.warn(`⚠️ [TELEGRAM_SKIP_INVALID] Signal ${item.signal_id} has invalid trade parameters (e.g. SL <= 0). Discarding alert.`);
+          await markOutboxSent(item.id, null);
+          continue;
+        }
         const result = await sendTelegramMessage(targetChatId, messageText);
         await markOutboxSent(item.id, result.message_id);
         console.log(`📢 [TELEGRAM_ALERT_SENT] Signal: ${item.signal_id} -> Chat: ${targetChatId} (Msg ID: ${result.message_id})`);

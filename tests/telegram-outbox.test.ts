@@ -156,3 +156,69 @@ test('5. Non-Blocking Invariant: createSignal() Persists Authoritative Record Ev
     assert.ok(res.signal_id, 'Generated canonical signal ID');
   }
 });
+
+test('6. Invariant Guard: formatEagleFlashTelegramAlert Rejects Corrupt Signals with $0 Stop Loss', async () => {
+  const corruptSignal = {
+    signal_id: 'CORRUPT-TEST-1234',
+    payload: {
+      signal_id: 'CORRUPT-TEST-1234',
+      symbol: 'REZUSDT',
+      direction: 'SHORT',
+      entry_price: 1.0,
+      stop_price: 0,
+      target_1_price: 0,
+    }
+  };
+
+  const output = formatEagleFlashTelegramAlert(corruptSignal);
+  assert.equal(output, null, 'Signals with $0 stop loss must be rejected and return null');
+
+  // queueTelegramSignalAlert also rejects corrupt trade signals with $0 stop
+  const queueRes = await queueTelegramSignalAlert({
+    signal_id: 'CORRUPT-QUEUE-1234',
+    symbol: 'REZUSDT',
+    direction: 'SHORT',
+    entry_price: 1.0,
+    stop_price: 0
+  });
+  assert.equal(queueRes.success, false);
+  assert.equal(queueRes.error, 'INVALID_TRADE_PARAMETERS');
+});
+
+test('7. On-Chain Whale Alert: Uses Dedicated Whale Template & Preserves Custom Message', async () => {
+  const onChainAlert = {
+    signal_id: 'ONCHAIN_DUMP_REZ_0xec58e196',
+    event_type: 'ONCHAIN_WHALE_ALERT',
+    payload: {
+      signal_id: 'ONCHAIN_DUMP_REZ_0xec58e196',
+      symbol: 'REZUSDT',
+      entry_price: 0.045,
+      metadata: {
+        isOnChainWhaleAlert: true,
+        customMessage: '🐋 <b>ETHERSCAN WHALE ALERT</b> 🚨\n\n🪙 <b>Token:</b> <code>REZ</code>\n💰 <b>Amount:</b> $150,000'
+      }
+    }
+  };
+
+  const output = formatEagleFlashTelegramAlert(onChainAlert);
+  assert.ok(output.includes('ETHERSCAN WHALE ALERT'), 'Must contain on-chain whale alert title');
+  assert.ok(!output.includes('STOP LOSS\n$0.00000000'), 'Must never render $0 stop loss');
+  assert.ok(!output.includes('TP1\n$0.00000000'), 'Must never render dummy $0 TP');
+});
+
+test('8. Markdown to HTML Normalization: Safely Converts Markdown into Telegram-Compliant HTML', () => {
+  const rawMarkdown = '*WHALE ALERT*\nAsset: `REZ`\nLink: [View](https://etherscan.io)';
+  const html = formatEagleFlashTelegramAlert({
+    signal_id: 'WHALE_TEST_123',
+    event_type: 'WHALE_ALERT',
+    payload: {
+      customMessage: rawMarkdown,
+      metadata: { isWhaleAlert: true }
+    }
+  });
+
+  assert.ok(html.includes('<b>WHALE ALERT</b>'), 'Asterisks converted to <b> tags');
+  assert.ok(html.includes('<code>REZ</code>'), 'Backticks converted to <code> tags');
+  assert.ok(html.includes('<a href="https://etherscan.io">View</a>'), 'Markdown link converted to <a href> tag');
+});
+

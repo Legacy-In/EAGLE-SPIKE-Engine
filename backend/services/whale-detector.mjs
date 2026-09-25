@@ -394,19 +394,19 @@ export async function createManipulationAlert(symbol, alertType, severity, metri
         : 'N/A';
 
       const customMsg = [
-        `${alertEmoji} *EAGLE FLASH — WHALE MANIPULATION RADAR* 🐋`,
+        `${alertEmoji} <b>EAGLE FLASH — WHALE MANIPULATION RADAR</b> 🐋`,
         ``,
-        `*Alert:* \`${alertType}\` [*${severity}*]`,
-        `*Symbol:* #${normSym}`,
-        metricsJson.price_current ? `*Current Price:* \`$${metricsJson.price_current}\`` : '',
-        metricsJson.price_expansion_15m_pct ? `*15m Expansion:* \`+${metricsJson.price_expansion_15m_pct}%\`` : '',
-        metricsJson.taker_sell_dominance_pct ? `*Taker Sell Dominance:* \`${metricsJson.taker_sell_dominance_pct}%\`` : '',
-        metricsJson.net_flow_usd ? `*Net Large Flow:* \`${flowUsd}\`` : '',
-        metricsJson.concentration_pct ? `*Concentration Index:* \`${metricsJson.concentration_pct}%\` (High Risk)` : '',
-        metricsJson.peak_size_usdt ? `*Spoof Wall Size:* \`$${Math.round(metricsJson.peak_size_usdt).toLocaleString()}\` (${metricsJson.lifespan_seconds}s lifespan)` : '',
+        `<b>Alert:</b> <code>${alertType}</code> [<b>${severity}</b>]`,
+        `<b>Symbol:</b> #${normSym}`,
+        metricsJson.price_current ? `<b>Current Price:</b> <code>$${metricsJson.price_current}</code>` : '',
+        metricsJson.price_expansion_15m_pct ? `<b>15m Expansion:</b> <code>+${metricsJson.price_expansion_15m_pct}%</code>` : '',
+        metricsJson.taker_sell_dominance_pct ? `<b>Taker Sell Dominance:</b> <code>${metricsJson.taker_sell_dominance_pct}%</code>` : '',
+        metricsJson.net_flow_usd ? `<b>Net Large Flow:</b> <code>${flowUsd}</code>` : '',
+        metricsJson.concentration_pct ? `<b>Concentration Index:</b> <code>${metricsJson.concentration_pct}%</code> (High Risk)` : '',
+        metricsJson.peak_size_usdt ? `<b>Spoof Wall Size:</b> <code>$${Math.round(metricsJson.peak_size_usdt).toLocaleString()}</code> (${metricsJson.lifespan_seconds}s lifespan)` : '',
         ``,
-        `⚠️ *Risk Status:* ACTIVE — Monitor order book and taker exit pressure.`,
-        `🕒 _${new Date().toISOString()}_`
+        `⚠️ <b>Risk Status:</b> ACTIVE — Monitor order book and taker exit pressure.`,
+        `🕒 <i>${new Date().toISOString()}</i>`
       ].filter(Boolean).join('\n');
 
       await queueTelegramSignalAlert({
@@ -415,10 +415,7 @@ export async function createManipulationAlert(symbol, alertType, severity, metri
         direction: alertType.includes('ACCUMULATION') ? 'LONG' : 'SHORT',
         score: severity === 'CRITICAL' ? 95 : 85,
         entry_price: metricsJson.price_current || 0,
-        stop_loss: 0,
-        take_profit_1: 0,
-        take_profit_2: 0,
-        take_profit_3: 0,
+        customMessage: customMsg,
         metadata: {
           isWhaleAlert: true,
           alertType,

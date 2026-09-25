@@ -76,15 +76,74 @@ function formatPrice(val) {
   return '$' + num.toFixed(8);
 }
 
+// Normalizes text to HTML for Telegram delivery
+export function normalizeTelegramHtml(text) {
+  if (!text || typeof text !== 'string') return '';
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return text;
+  }
+  return text
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*([^*]+)\*/g, '<b>$1</b>')
+    .replace(/_([^_]+)_/g, '<i>$1</i>');
+}
+
 // 3. Canonical Telegram Alert Message Formatter
 export function formatEagleFlashTelegramAlert(item) {
   const p = item.payload || {};
-  if (p.metadata?.customMessage) {
-    return p.metadata.customMessage;
+  const customMsg = item.custom_message || p.customMessage || p.metadata?.customMessage;
+
+  const isWhaleOrOnChain = Boolean(
+    item.event_type === 'ONCHAIN_WHALE_ALERT' ||
+    item.event_type === 'WHALE_ALERT' ||
+    (item.signal_id && (item.signal_id.startsWith('ONCHAIN_') || item.signal_id.startsWith('WHALE_'))) ||
+    (p.signal_id && (p.signal_id.startsWith('ONCHAIN_') || p.signal_id.startsWith('WHALE_'))) ||
+    p.metadata?.isOnChainWhaleAlert ||
+    p.metadata?.isWhaleAlert ||
+    p.metadata?.isWhaleOrOnChain
+  );
+
+  // 1. If custom formatted message exists, normalize to HTML and return
+  if (customMsg) {
+    return normalizeTelegramHtml(customMsg);
   }
-  if (p.customMessage) {
-    return p.customMessage;
+
+  // 2. If it is an on-chain or whale alert without a custom message, format with institutional radar template
+  if (isWhaleOrOnChain) {
+    const symbol = (p.symbol || 'ASSET').toUpperCase();
+    const isDump = p.direction === 'SHORT' || (p.signal_id && p.signal_id.includes('DUMP'));
+    if (item.event_type === 'ONCHAIN_WHALE_ALERT' || (item.signal_id && item.signal_id.startsWith('ONCHAIN_')) || p.metadata?.isOnChainWhaleAlert) {
+      return (
+        `🐋 <b>ETHERSCAN WHALE ALERT</b> 🚨\n\n` +
+        `🪙 <b>Token / Asset:</b> <code>${symbol}</code>\n` +
+        `👤 <b>Whale Event:</b> Large On-Chain Transfer\n` +
+        `🔄 <b>Action:</b> <code>${isDump ? 'WHALE_EXCHANGE_DEPOSIT' : 'WHALE_ACCUMULATION'}</code> [<b>HIGH</b>]\n` +
+        `💰 <b>Amount:</b> <code>$${Math.round(p.entry_price || p.amount_usd || 100000).toLocaleString()}</code>\n` +
+        `🏛️ <b>Destination:</b> <code>${p.exchange || 'EXCHANGE'}</code>\n\n` +
+        `⚠️ <b>Analysis:</b> ${isDump ? 'Large holder moving assets to exchange infrastructure. Monitor for downward price pressure.' : 'Whale moving assets to private cold storage. Accumulation footprint.'}`
+      );
+    }
+    return (
+      `🚨 <b>EAGLE FLASH — WHALE RADAR</b> 🐋\n\n` +
+      `<b>Alert:</b> <code>${p.spike_type || 'ACCUMULATION_DISTRIBUTION'}</code>\n` +
+      `<b>Symbol:</b> #${symbol}\n` +
+      (p.current_price ? `<b>Price:</b> <code>$${p.current_price}</code>\n` : '') +
+      `⚠️ <b>Risk Status:</b> ACTIVE — Abnormal whale transaction flow detected.\n` +
+      `🕒 <i>${new Date().toISOString()}</i>`
+    );
   }
+
+  // 3. Strict Guard for True Trading Signals:
+  // A genuine EAGLE FLASH trading signal MUST have real entry price > 0 and stop loss > 0!
+  const stopLossNum = parseFloat(p.stop_price || p.stop_loss_price || p.stop_loss || 0);
+  const entryNum = parseFloat(p.entry_price || p.entryPrice || 0);
+
+  if (isNaN(stopLossNum) || stopLossNum <= 0 || isNaN(entryNum) || entryNum <= 0) {
+    console.warn(`⚠️ [OUTBOX_GUARD_REJECT] Signal ${p.signal_id || item.signal_id} rejected from trade broadcast: invalid entry ($${entryNum}) or stop loss ($${stopLossNum})`);
+    return null;
+  }
+
   const isLong = (p.direction || 'LONG').toUpperCase() === 'LONG';
   const sideIcon = isLong ? '🟢' : '🔴';
   const sideText = isLong ? 'LONG' : 'SHORT';
@@ -96,9 +155,9 @@ export function formatEagleFlashTelegramAlert(item) {
   const quality = p.spikeQuality || (eagleScore >= 80 ? 'HIGH' : eagleScore >= 65 ? 'MEDIUM' : 'LOW');
   const confidence = p.dataConfidence ? (p.dataConfidence >= 85 ? 'HIGH' : 'MEDIUM') : 'HIGH';
 
-  const entry = formatPrice(p.entry_price || p.entryPrice || 0);
-  const current = formatPrice(p.current_price || p.entry_price || p.entryPrice || 0);
-  const stopLoss = formatPrice(p.stop_price || p.stop_loss_price || 0);
+  const entry = formatPrice(entryNum);
+  const current = formatPrice(p.current_price || entryNum);
+  const stopLoss = formatPrice(stopLossNum);
   const tp1 = formatPrice(p.target_1_price || 0);
   const tp2 = formatPrice(p.target_2_price || 0);
   const tp3 = formatPrice(p.target_3_price || 0);
@@ -183,39 +242,82 @@ export async function queueTelegramSignalAlert(signal, candidate = {}) {
   const signalId = signal.signal_id || signal.signalId;
   if (!signalId) return { success: false, error: 'MISSING_SIGNAL_ID' };
 
-  const deduplicationKey = `OUTBOX-${signalId}-NEW_SIGNAL`;
+  const isWhaleOrOnChain = Boolean(
+    signal.metadata?.isOnChainWhaleAlert ||
+    candidate.metadata?.isOnChainWhaleAlert ||
+    signal.metadata?.isWhaleAlert ||
+    candidate.metadata?.isWhaleAlert ||
+    signalId.startsWith('ONCHAIN_') ||
+    signalId.startsWith('WHALE_')
+  );
+
+  // Invariant Guard: Real trading signals must have valid entry and stop loss
+  if (!isWhaleOrOnChain) {
+    const entry = parseFloat(signal.entry_price ?? candidate.entryPrice ?? 0);
+    const stop = parseFloat(signal.stop_price ?? signal.stop_loss ?? signal.stop_loss_price ?? candidate.stopPrice ?? 0);
+    if (isNaN(entry) || entry <= 0 || isNaN(stop) || stop <= 0) {
+      console.warn(`⚠️ [QUEUE_REJECTED] Rejecting invalid trade signal ${signalId}: entry=${entry}, stop=${stop}`);
+      return { success: false, error: 'INVALID_TRADE_PARAMETERS', details: { entry, stop } };
+    }
+  }
+
+  const customMessage =
+    signal.custom_message ||
+    signal.customMessage ||
+    signal.metadata?.customMessage ||
+    candidate.custom_message ||
+    candidate.customMessage ||
+    candidate.metadata?.customMessage ||
+    null;
+
+  let eventType = 'NEW_SIGNAL';
+  if (signal.metadata?.isOnChainWhaleAlert || candidate.metadata?.isOnChainWhaleAlert || signalId.startsWith('ONCHAIN_')) {
+    eventType = 'ONCHAIN_WHALE_ALERT';
+  } else if (signal.metadata?.isWhaleAlert || candidate.metadata?.isWhaleAlert || signalId.startsWith('WHALE_')) {
+    eventType = 'WHALE_ALERT';
+  }
+
+  const deduplicationKey = `OUTBOX-${signalId}-${eventType}`;
   const now = new Date().toISOString();
 
   const payload = {
     signal_id: signalId,
     symbol: signal.symbol,
-    exchange: signal.exchange_id || candidate.exchange || 'BYBIT',
+    exchange: signal.exchange_id || candidate.exchange || (isWhaleOrOnChain ? 'ONCHAIN' : 'BYBIT'),
     direction: signal.direction,
-    entry_price: signal.entry_price,
-    current_price: signal.entry_price,
-    stop_price: signal.stop_price,
-    target_1_price: signal.target_1_price,
-    target_2_price: signal.target_2_price,
-    target_3_price: signal.target_3_price,
-    eagle_score: signal.eagle_score,
-    rvol: signal.rvol,
-    volume_z_score: signal.volume_z_score,
-    oi_change_pct: signal.oi_change_pct,
-    funding_rate: candidate.fundingRate,
+    entry_price: signal.entry_price ?? candidate.entryPrice,
+    current_price: signal.current_price ?? signal.entry_price ?? candidate.entryPrice,
+    stop_price: signal.stop_price ?? signal.stop_loss ?? signal.stop_loss_price,
+    target_1_price: signal.target_1_price ?? signal.take_profit_1,
+    target_2_price: signal.target_2_price ?? signal.take_profit_2,
+    target_3_price: signal.target_3_price ?? signal.take_profit_3,
+    eagle_score: signal.eagle_score ?? signal.score ?? candidate.eagleScore,
+    rvol: signal.rvol ?? candidate.rvol,
+    volume_z_score: signal.volume_z_score ?? candidate.volumeZScore,
+    oi_change_pct: signal.oi_change_pct ?? candidate.oiChangePct,
+    funding_rate: signal.funding_rate ?? candidate.fundingRate,
     turnoverM: candidate.openInterestUsd ? (candidate.openInterestUsd / 1000000).toFixed(1) : undefined,
     spike_type: candidate.spikeType,
     spike_quality: candidate.spikeQuality,
-    detected_at: signal.detected_at,
+    detected_at: signal.detected_at || now,
     isBigCap: candidate.isBigCap,
     invalidation_condition: candidate.invalidation_condition,
     trigger_reasons: candidate.triggerReasons || candidate.rationale_json,
+    customMessage,
+    metadata: {
+      ...(candidate.metadata || {}),
+      ...(signal.metadata || {}),
+      customMessage,
+      isWhaleOrOnChain,
+    },
   };
 
   const outboxRecord = {
     id: crypto.randomUUID ? crypto.randomUUID() : `outbox-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     signal_id: signalId,
-    event_type: 'NEW_SIGNAL',
+    event_type: eventType,
     payload,
+    custom_message: customMessage,
     status: 'PENDING',
     attempt_count: 0,
     created_at: now,

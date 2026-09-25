@@ -324,10 +324,13 @@ export async function processOnChainWhaleTransfer(transfer) {
   }
 
   // 1. Persist to whale_trades table
+  const isStable = ['USDT', 'USDC', 'DAI', 'FDUSD', 'TUSD', 'BUSD'].includes(transfer.symbol.toUpperCase());
+  const targetSymbol = transfer.symbol === 'ETH' ? 'ETHUSDT' : isStable ? transfer.symbol : `${transfer.symbol}USDT`;
+
   await recordWhaleTrade({
-    symbol: transfer.symbol === 'ETH' ? 'ETHUSDT' : `${transfer.symbol}USDT`,
+    symbol: targetSymbol,
     exchange: 'ETHERSCAN_ONCHAIN',
-    side: transfer.action === 'WHALE_EXCHANGE_DEPOSIT' ? 'SELL' : 'BUY',
+    side: transfer.action === 'WHALE_EXCHANGE_DEPOSIT' ? (isStable ? 'BUY' : 'SELL') : (isStable ? 'SELL' : 'BUY'),
     amount_usdt: transfer.amountUsd,
     execution_price: transfer.amountTokens > 0 ? (transfer.amountUsd / transfer.amountTokens) : 0,
     detected_at: transfer.timestamp
@@ -336,11 +339,15 @@ export async function processOnChainWhaleTransfer(transfer) {
   // 2. If Exchange Deposit >= $100k, raise high/critical Manipulation Alert
   if (transfer.action === 'WHALE_EXCHANGE_DEPOSIT' && transfer.amountUsd >= 100000) {
     const severity = transfer.amountUsd >= 500000 ? 'CRITICAL' : 'HIGH';
-    const alertId = `ONCHAIN_DUMP_${transfer.symbol}_${transfer.txHash.slice(0, 10)}`;
+    const alertId = isStable
+      ? `ONCHAIN_INFLOW_${transfer.symbol}_${transfer.txHash.slice(0, 10)}`
+      : `ONCHAIN_DUMP_${transfer.symbol}_${transfer.txHash.slice(0, 10)}`;
+
+    const alertType = isStable ? 'DRY_POWDER_ACCUMULATION' : 'PUMP_AND_DUMP_RISK';
 
     const alertRecord = await createManipulationAlert(
-      transfer.symbol === 'ETH' ? 'ETHUSDT' : `${transfer.symbol}USDT`,
-      'PUMP_AND_DUMP_RISK',
+      targetSymbol,
+      alertType,
       severity,
       {
         onchain_action: transfer.action,
@@ -350,35 +357,47 @@ export async function processOnChainWhaleTransfer(transfer) {
         amount_usd: transfer.amountUsd,
         tx_hash: transfer.txHash,
         etherscan_url: transfer.etherscanUrl,
-        warning: 'Massive token transfer to exchange deposit hot wallet. Potential market dumping risk.'
+        warning: isStable
+          ? 'Massive stablecoin inflow to exchange deposit wallet. Purchasing power expansion.'
+          : 'Massive token transfer to exchange deposit hot wallet. Potential market dumping risk.'
       }
     );
 
-    // 3. Enqueue directly into Telegram Outbox with exact requested format
+    // 3. Enqueue directly into Telegram Outbox with HTML format
     try {
-      const formattedTgMsg = [
-        `🐋 *ETHERSCAN WHALE ALERT* 🚨`,
-        ``,
-        `🪙 *Token / Asset:* \`${transfer.symbol}\` ${transfer.contractAddress ? `(\`${truncateAddress(transfer.contractAddress)}\`)` : ''}`,
-        `👤 *Whale Address:* \`${transfer.fromTruncated}\``,
-        `🔄 *Action:* \`${transfer.action}\` [*${severity}*]`,
-        `💰 *Amount:* \`$${transfer.amountUsd.toLocaleString()}\` (${transfer.amountTokens.toLocaleString()} ${transfer.symbol})`,
-        `🏛️ *Destination:* \`${transfer.targetName}\``,
-        `🔗 *Etherscan:* [View Transaction](${transfer.etherscanUrl})`,
-        ``,
-        `⚠️ *Analysis:* Large holder moving assets to exchange infrastructure. Monitor for downward price pressure.`
-      ].join('\n');
+      const formattedTgMsg = isStable
+        ? [
+            `🐋 <b>ETHERSCAN STABLECOIN INFLOW</b> 💰`,
+            ``,
+            `🪙 <b>Stablecoin:</b> <code>${transfer.symbol}</code>`,
+            `👤 <b>Whale Address:</b> <code>${transfer.fromTruncated}</code>`,
+            `🔄 <b>Action:</b> <code>EXCHANGE_DEPOSIT</code> [<b>${severity}</b>]`,
+            `💰 <b>Amount:</b> <code>$${Math.round(transfer.amountUsd).toLocaleString()}</code>`,
+            `🏛️ <b>Destination:</b> <code>${transfer.targetName}</code>`,
+            `🔗 <b>Etherscan:</b> <a href="${transfer.etherscanUrl}">View Transaction</a>`,
+            ``,
+            `💡 <b>Analysis:</b> Whale deposited dry powder into exchange. Indicates prospective purchasing power.`
+          ].join('\n')
+        : [
+            `🐋 <b>ETHERSCAN WHALE ALERT</b> 🚨`,
+            ``,
+            `🪙 <b>Token / Asset:</b> <code>${transfer.symbol}</code> ${transfer.contractAddress ? `(<code>${truncateAddress(transfer.contractAddress)}</code>)` : ''}`,
+            `👤 <b>Whale Address:</b> <code>${transfer.fromTruncated}</code>`,
+            `🔄 <b>Action:</b> <code>${transfer.action}</code> [<b>${severity}</b>]`,
+            `💰 <b>Amount:</b> <code>$${Math.round(transfer.amountUsd).toLocaleString()}</code> (${transfer.amountTokens.toLocaleString()} ${transfer.symbol})`,
+            `🏛️ <b>Destination:</b> <code>${transfer.targetName}</code>`,
+            `🔗 <b>Etherscan:</b> <a href="${transfer.etherscanUrl}">View Transaction</a>`,
+            ``,
+            `⚠️ <b>Analysis:</b> Large holder moving assets to exchange infrastructure. Monitor for downward price pressure.`
+          ].join('\n');
 
       await queueTelegramSignalAlert({
         signal_id: alertId,
-        symbol: transfer.symbol === 'ETH' ? 'ETHUSDT' : `${transfer.symbol}USDT`,
-        direction: 'SHORT',
+        symbol: targetSymbol,
+        direction: isStable ? 'LONG' : 'SHORT',
         score: severity === 'CRITICAL' ? 96 : 88,
         entry_price: transfer.amountTokens > 0 ? (transfer.amountUsd / transfer.amountTokens) : 0,
-        stop_loss: 0,
-        take_profit_1: 0,
-        take_profit_2: 0,
-        take_profit_3: 0,
+        customMessage: formattedTgMsg,
         metadata: {
           isOnChainWhaleAlert: true,
           txHash: transfer.txHash,
