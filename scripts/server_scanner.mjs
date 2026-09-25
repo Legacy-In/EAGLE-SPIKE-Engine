@@ -41,6 +41,8 @@ console.log('🦅 Starting Eagle Flash 24/7 Cloud Market Scanner...');
 console.log(`📡 Backend Endpoint: ${SERVER_URL}/api/spikes`);
 console.log(`⏱️ Scan Interval: ${SCAN_INTERVAL_MS / 1000}s`);
 
+import { createSignal } from '../backend/services/signal-creation.mjs';
+
 // Ingest Bybit Linear Tickers
 async function fetchBybitTickers() {
   try {
@@ -195,17 +197,35 @@ async function runScanCycle() {
       }
     }
 
-    if (qualifiedSignals.length > 0) {
-      console.log(`⚡ [CLOUD SCANNER] Discovered ${qualifiedSignals.length} qualified spike anomalies! Forwarding...`);
+    console.log(
+      `[SCANNER_CYCLE] candidates=${topCandidates.length} evaluated=${all.length} qualified=${qualifiedSignals.length} duration=${Math.round(Date.now() - start)}ms`
+    );
 
-      // Post to local spikes API (which dispatches to Telegram)
-      const postRes = await fetch(`${SERVER_URL}/api/spikes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signals: qualifiedSignals, forceAlert: true }),
-      });
-      const postJson = await postRes.json();
-      console.log('✅ Spikes POST Response:', postJson.message || postJson.success);
+    if (qualifiedSignals.length > 0) {
+      console.log(`⚡ [CLOUD SCANNER] Discovered ${qualifiedSignals.length} qualified spike anomalies! Persisting & Forwarding...`);
+
+      // 1. Atomic Database Persistence via Canonical Signal Creation Service
+      for (const sig of qualifiedSignals) {
+        try {
+          const createRes = await createSignal(sig);
+          console.log(`[SCANNER_SIGNAL] symbol=${sig.symbol} exchange=${sig.exchange} decision=${createRes.success ? 'CREATED' : createRes.error_code || 'REJECTED'} id=${createRes.signal_id || 'NONE'}`);
+        } catch (csErr) {
+          console.error(`[SCANNER_SIGNAL_ERROR] symbol=${sig.symbol}:`, csErr?.message);
+        }
+      }
+
+      // 2. Post to local spikes API (which dispatches to Telegram)
+      try {
+        const postRes = await fetch(`${SERVER_URL}/api/spikes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signals: qualifiedSignals, forceAlert: true }),
+        });
+        const postJson = await postRes.json();
+        console.log('✅ Spikes POST Response:', postJson.message || postJson.success);
+      } catch (postErr) {
+        console.warn('⚠️ Spikes API forward notice:', postErr?.message);
+      }
     } else {
       console.log(
         `[CLOUD SCANNER] Checked ${all.length} contracts (${Math.round(Date.now() - start)}ms) · Markets normal.`

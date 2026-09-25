@@ -2076,6 +2076,10 @@
           <div class="kpi-lbl">Snapshots Stored</div>
           <div class="kpi-val tabular" id="diag-life-snapshots">0</div>
         </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">Supabase Realtime (Client WS)</div>
+          <div class="kpi-val tabular c-emerald" id="diag-realtime-state">SUBSCRIBED</div>
+        </div>
       </div>
 
       <div class="table-wrap" style="padding:14px; font-family:var(--font-mono); font-size:11px; line-height:1.8;">
@@ -3020,13 +3024,25 @@ const LifecycleEngine = {
     } catch (e) {}
   },
 
-  // 5. Directional Return Calculation
+  // Format price dynamically supporting standard and micro-prices (e.g. PEPE)
+  formatPrice(p) {
+    if (p === null || p === undefined || isNaN(p)) return '—';
+    const num = Number(p);
+    if (num === 0) return '$0.00';
+    if (num >= 1000) return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (num >= 1) return '$' + num.toFixed(2);
+    if (num >= 0.01) return '$' + num.toFixed(4);
+    if (num >= 0.0001) return '$' + num.toFixed(6);
+    return '$' + num.toFixed(8);
+  },
+
+  // 5. Directional Return Calculation (Strictly Deterministic)
   calculateReturn(signalType, signalPrice, currentPrice) {
-    if (!signalPrice || !currentPrice) return 0;
-    if (signalType.includes('LONG')) {
+    if (!signalPrice || !currentPrice || signalPrice <= 0) return 0;
+    const isLong = String(signalType).includes('LONG');
+    if (isLong) {
       return parseFloat((((currentPrice - signalPrice) / signalPrice) * 100).toFixed(2));
     } else {
-      // Directional return for short
       return parseFloat((((signalPrice - currentPrice) / signalPrice) * 100).toFixed(2));
     }
   },
@@ -3349,6 +3365,21 @@ const LifecycleEngine = {
       const t3HitAt = s.t3_hit_at || ((rawStatus === 'T3_HIT' || mfe >= 8.0) ? (s.resolved_at || s.updated_at) : null);
       const stopHitAt = s.stop_hit_at || (lifecycleStatus === 'STOP_HIT' ? (s.resolved_at || s.updated_at) : null);
 
+      // Resolve CURRENT market price: Prioritize live quote from API or active WebSocket tickers
+      let resolvedCurrentPrice = parseFloat(s.current_price !== undefined && s.current_price !== null ? s.current_price : 0);
+      let dataConfidence = s.data_quality || s.data_confidence || 'LIVE';
+
+      if (resolvedCurrentPrice <= 0 && typeof State !== 'undefined' && State.symbols) {
+        const liveSym = State.symbols.get(normSym) || State.symbols.get(s.symbol);
+        if (liveSym && liveSym.lastPrice) {
+          resolvedCurrentPrice = liveSym.lastPrice;
+          dataConfidence = 'LIVE';
+        }
+      }
+      if (resolvedCurrentPrice <= 0) {
+        resolvedCurrentPrice = parseFloat(s.exit_price || s.entry_price) || 0;
+      }
+
       return {
         signalId: s.signal_id,
         symbol: normSym,
@@ -3364,7 +3395,8 @@ const LifecycleEngine = {
         detectedAtLocal: detectedDate.toLocaleString(),
         signalPrice: parseFloat(s.entry_price) || 0,
         signalMarkPrice: parseFloat(s.entry_price) || 0,
-        currentPrice: parseFloat(s.exit_price || s.entry_price) || 0,
+        currentPrice: resolvedCurrentPrice,
+        currentRoiPct: s.current_roi_pct !== undefined && s.current_roi_pct !== null ? parseFloat(s.current_roi_pct) : null,
         target1Price: parseFloat(s.target_1_price) || 0,
         target2Price: parseFloat(s.target_2_price) || 0,
         target3Price: parseFloat(s.target_3_price) || 0,
@@ -3554,12 +3586,36 @@ const LifecycleEngine = {
 
     list.forEach((s, idx) => {
       const age = this.formatAge(now - s.detectedAt);
-      const isLong = s.signalType.includes('LONG');
+      const isLong = s.direction === 'LONG' || s.signalType.includes('LONG');
       const sigBadge = `<span class="signal-badge ${isLong ? 'sig-long' : 'sig-short'}">${s.signalType}</span>`;
       const statusBadge = this.getStatusBadge(s.status);
       const mfeFormatted = s.mfePct !== null ? `<span class="c-emerald font-bold tabular">+${s.mfePct.toFixed(2)}%</span>` : '<span class="c-dark">—</span>';
       const maeFormatted = s.maePct !== null ? `<span class="c-red font-bold tabular">${s.maePct.toFixed(2)}%</span>` : '<span class="c-dark">—</span>';
       const sparklineHtml = this.renderSparkline(s.checkpoints, s.mfePct, s.maePct, isLong);
+
+      // Verify real-time price from State.symbols if available
+      let curPrice = s.currentPrice;
+      let dataQuality = s.dataConfidence || 'LIVE';
+      if (typeof State !== 'undefined' && State.symbols) {
+        const liveSym = State.symbols.get(s.symbol) || State.symbols.get(s.canonicalSymbol);
+        if (liveSym && liveSym.lastPrice) {
+          curPrice = liveSym.lastPrice;
+          s.currentPrice = curPrice;
+          dataQuality = 'LIVE';
+        }
+      }
+
+      // Strictly deterministic CURRENT % calculated from Entry and Current
+      const curRoi = (s.signalPrice > 0 && curPrice > 0)
+        ? this.calculateReturn(s.direction || s.signalType, s.signalPrice, curPrice)
+        : (s.currentRoiPct ?? 0);
+
+      const qualityBg = dataQuality === 'LIVE' ? 'rgba(62,207,142,0.15)' :
+                        dataQuality === 'FRESH' ? 'rgba(0,245,212,0.15)' :
+                        dataQuality === 'DEGRADED' ? 'rgba(255,170,0,0.15)' : 'rgba(255,255,255,0.08)';
+      const qualityColor = dataQuality === 'LIVE' ? '#3ecf8e' :
+                           dataQuality === 'FRESH' ? '#00f5d4' :
+                           dataQuality === 'DEGRADED' ? '#ffaa00' : '#888';
 
       html += `
         <tr onclick="LifecycleEngine.openDetailModal('${s.signalId}')" style="cursor:pointer;">
@@ -3567,11 +3623,14 @@ const LifecycleEngine = {
           <td class="tabular font-bold" style="color:var(--cyan); font-size:11px;">${s.signalId}</td>
           <td class="tabular font-bold" style="color:var(--text);">${s.symbol}</td>
           <td>${sparklineHtml}</td>
+          <td><span class="${isLong ? 'c-emerald' : 'c-red'} font-bold">${s.direction || (isLong ? 'LONG' : 'SHORT')}</span></td>
           <td>${sigBadge}</td>
+          <td class="tabular font-bold" style="color:var(--emerald);">${s.initialSnapshot?.signalScore || s.eagleScore || '—'}</td>
           <td class="tabular c-muted" style="font-size:11px;">${s.detectedAtLocal ? s.detectedAtLocal.slice(11) : '—'}</td>
           <td class="tabular font-bold">${age}</td>
-          <td class="tabular font-bold">$${s.signalPrice >= 1 ? s.signalPrice.toFixed(2) : s.signalPrice.toFixed(4)}</td>
-          <td class="tabular">$${s.currentPrice >= 1 ? s.currentPrice.toFixed(2) : s.currentPrice.toFixed(4)}</td>
+          <td class="tabular font-bold">${this.formatPrice(s.signalPrice)}</td>
+          <td class="tabular font-bold">${this.formatPrice(curPrice)} <span style="font-size:9px; padding:1px 4px; border-radius:3px; background:${qualityBg}; color:${qualityColor}; font-weight:600;">${dataQuality}</span></td>
+          <td class="tabular font-bold ${curRoi >= 0 ? 'c-emerald' : 'c-red'}">${curRoi >= 0 ? '+' : ''}${curRoi.toFixed(2)}%</td>
           <td>${this.formatPct(s.checkpoints['4H'], '4H', s.detectedAt, 4 * 3600)}</td>
           <td>${this.formatPct(s.checkpoints['8H'], '8H', s.detectedAt, 8 * 3600)}</td>
           <td>${this.formatPct(s.checkpoints['1D'], '1D', s.detectedAt, 24 * 3600)}</td>
@@ -3581,7 +3640,9 @@ const LifecycleEngine = {
           <td class="c-muted" style="font-size:10px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
             ${s.rejection ? s.rejection.rejectionReason : s.warnings?.length > 0 ? s.warnings[s.warnings.length - 1].reason : '—'}
           </td>
-          <td class="tabular font-bold" style="color:var(--emerald);">${s.initialSnapshot?.signalScore || s.eagleScore || '—'}</td>
+          <td class="c-muted tabular" style="font-size:11px;">
+            ${s.rejection?.rejectionTimestamp ? this.formatAge(s.rejection.rejectionTimestamp - s.detectedAt) : '—'}
+          </td>
           <td>
             <button class="btn btn-sm" onclick="event.stopPropagation(); LifecycleEngine.openDetailModal('${s.signalId}')">Inspect ↗</button>
           </td>
@@ -3599,8 +3660,8 @@ const LifecycleEngine = {
     this.selectedSignalId = signalId;
     this.replayStepIndex = 0;
 
-    const isLong = s.signalType.includes('LONG');
-    const dirReturn = this.calculateReturn(s.signalType, s.signalPrice, s.currentPrice);
+    const isLong = s.direction === 'LONG' || s.signalType.includes('LONG');
+    const dirReturn = this.calculateReturn(s.direction || s.signalType, s.signalPrice, s.currentPrice);
     const returnColor = dirReturn >= 0 ? 'var(--emerald)' : 'var(--red)';
 
     document.getElementById('ld-symbol').innerText = s.symbol;
@@ -3610,8 +3671,8 @@ const LifecycleEngine = {
     document.getElementById('ld-status-badge').innerHTML = this.getStatusBadge(s.status);
     document.getElementById('ld-detected').innerText = `${s.detectedAtLocal} (${s.detectedAtUTC.slice(11, 19)} UTC)`;
     document.getElementById('ld-age').innerText = this.formatAge(Date.now() - s.detectedAt);
-    document.getElementById('ld-entry-price').innerText = '$' + s.signalPrice;
-    document.getElementById('ld-current-price').innerText = '$' + s.currentPrice;
+    document.getElementById('ld-entry-price').innerText = this.formatPrice(s.signalPrice);
+    document.getElementById('ld-current-price').innerText = this.formatPrice(s.currentPrice);
     document.getElementById('ld-return').innerHTML = `<span style="color:${returnColor}; font-weight:700;">${dirReturn >= 0 ? '+' : ''}${dirReturn}%</span>`;
 
     // 1. Time Checkpoints Grid
@@ -3631,15 +3692,15 @@ const LifecycleEngine = {
 
     // 2. Extremes (MFE / MAE)
     document.getElementById('ld-mfe-pct').innerText = (s.mfePct >= 0 ? '+' : '') + s.mfePct.toFixed(2) + '%';
-    document.getElementById('ld-mfe-price').innerText = '$' + s.mfePrice;
+    document.getElementById('ld-mfe-price').innerText = this.formatPrice(s.mfePrice);
     document.getElementById('ld-mfe-time').innerText = `Time to peak: ${this.formatAge(s.timeToMFE)}`;
 
     document.getElementById('ld-mae-pct').innerText = (s.maePct || 0).toFixed(2) + '%';
-    document.getElementById('ld-mae-price').innerText = '$' + (s.maePrice || s.signalPrice);
+    document.getElementById('ld-mae-price').innerText = this.formatPrice(s.maePrice || s.signalPrice);
     document.getElementById('ld-mae-time').innerText = `Time to adverse: ${this.formatAge(s.timeToMAE || 0)}`;
 
-    document.getElementById('ld-post-high').innerText = '$' + (s.postSignalHigh || s.signalPrice);
-    document.getElementById('ld-post-low').innerText = '$' + (s.postSignalLow || s.signalPrice);
+    document.getElementById('ld-post-high').innerText = this.formatPrice(s.postSignalHigh || s.signalPrice);
+    document.getElementById('ld-post-low').innerText = this.formatPrice(s.postSignalLow || s.signalPrice);
 
     // 3. What Happened So Far Summary
     const summaryContainer = document.getElementById('ld-summary-bullets');
@@ -4446,6 +4507,24 @@ const LifecycleEngine = {
       },
 
       async fetchLatestSignals(limit = 100) {
+        // Try to fetch from /api/journal first to retrieve live quotes & quality metadata
+        try {
+          const apiRes = await fetch('/api/journal');
+          if (apiRes.ok) {
+            const apiJson = await apiRes.json();
+            if (apiJson && apiJson.success && Array.isArray(apiJson.signals) && apiJson.signals.length > 0) {
+              this.signals = apiJson.signals;
+              renderSupabaseSignalsView(apiJson.signals);
+              if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.mergeSupabaseSignals) {
+                LifecycleEngine.mergeSupabaseSignals(apiJson.signals);
+              }
+              return;
+            }
+          }
+        } catch (e) {
+          // If /api/journal is not available (e.g. static host), fall back to Supabase client
+        }
+
         if (!this.client) return;
         try {
           const { data, error } = await this.client
@@ -4504,13 +4583,27 @@ const LifecycleEngine = {
       subscribeRealtime() {
         if (!this.client) return;
         try {
+          if (typeof State !== 'undefined') State.realtimeSignalsState = 'CONNECTING';
           this.client
             .channel('public:signals')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'signals' }, () => {
               this.fetchLatestSignals();
             })
-            .subscribe();
-        } catch (e) {}
+            .subscribe((status) => {
+              if (typeof State !== 'undefined') State.realtimeSignalsState = status;
+              const dRealtimeState = document.getElementById('diag-realtime-state');
+              if (dRealtimeState) {
+                dRealtimeState.innerText = status;
+                dRealtimeState.className = 'kpi-val tabular ' + (status === 'SUBSCRIBED' ? 'c-emerald' : status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' ? 'c-red' : 'c-amber');
+              }
+              const txt = document.getElementById('supabase-status-text');
+              if (txt && status === 'SUBSCRIBED') {
+                txt.innerText = 'POSTGRES LIVE (REALTIME)';
+              }
+            });
+        } catch (e) {
+          if (typeof State !== 'undefined') State.realtimeSignalsState = 'ERROR';
+        }
       }
     };
 
@@ -4623,9 +4716,9 @@ const LifecycleEngine = {
             <td><span class="tabular font-bold ${sideClass}">${s.direction}</span></td>
             <td class="tabular font-bold">${s.eagle_score || '—'}</td>
             <td class="tabular c-emerald">${s.rvol ? s.rvol.toFixed(1) + 'x' : '—'}</td>
-            <td class="tabular">$${s.entry_price || '—'}</td>
-            <td class="tabular c-red">$${s.stop_price ? parseFloat(s.stop_price).toFixed(4) : '—'}</td>
-            <td class="tabular c-emerald">$${s.target_1_price ? parseFloat(s.target_1_price).toFixed(4) : '—'}</td>
+            <td class="tabular">${LifecycleEngine.formatPrice(s.entry_price)}</td>
+            <td class="tabular c-red">${LifecycleEngine.formatPrice(s.stop_price)}</td>
+            <td class="tabular c-emerald">${LifecycleEngine.formatPrice(s.target_1_price)}</td>
             <td class="tabular c-emerald font-bold">+${mfe.toFixed(2)}%</td>
             <td class="tabular c-red font-bold">-${mae.toFixed(2)}%</td>
             <td class="tabular ${ret15m.startsWith('+') ? 'c-emerald' : (ret15m.startsWith('-') ? 'c-red' : 'c-dark')}">${ret15m}</td>
@@ -5355,19 +5448,13 @@ function showScoreBreakdown(symbol) {
     // Data Confidence
     s.dataConfidence = Math.min(100, Math.max(70, 95 - Math.round(ageMs / 1000)));
 
-    // Signal Candidate Generation
+    // Signal Candidate Generation (Scanner visual indicators only; authoritative signals are persisted by backend engine)
     if (s.signalScore >= 72 && s.returns5m > 1.2 && rvol >= State.settings.rvolThreshold) {
       s.signal = 'LONG CANDIDATE';
       s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
-      if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
-        LifecycleEngine.recordSignal(s, { rvolThreshold: State.settings.rvolThreshold });
-      }
     } else if (s.signalScore >= 72 && s.returns5m < -1.2 && rvol >= State.settings.rvolThreshold) {
       s.signal = 'SHORT CANDIDATE';
       s.signalConfidence = s.signalScore >= 82 ? 'HIGH' : 'MEDIUM';
-      if (typeof LifecycleEngine !== 'undefined' && LifecycleEngine.recordSignal) {
-        LifecycleEngine.recordSignal(s, { rvolThreshold: State.settings.rvolThreshold });
-      }
     } else if (rvol >= 1.5 || s.signalScore >= 64) {
       s.signal = 'WATCH';
       s.signalConfidence = 'LOW';
@@ -6508,6 +6595,12 @@ function loadAllScannerRows() {
       }
       const dLifeDb = document.getElementById('diag-life-db');
       if (dLifeDb) dLifeDb.innerText = LifecycleEngine.db ? 'EagleFlash_DB (OK)' : 'localStorage (FALLBACK)';
+      const dRealtime = document.getElementById('diag-realtime-state');
+      if (dRealtime) {
+        const rState = State.realtimeSignalsState || 'SUBSCRIBED';
+        dRealtime.innerText = rState;
+        dRealtime.className = 'kpi-val tabular ' + (rState === 'SUBSCRIBED' ? 'c-emerald' : rState === 'CHANNEL_ERROR' || rState === 'TIMED_OUT' ? 'c-red' : 'c-amber');
+      }
       document.getElementById('diag-ws-state').innerText = State.wsConnected ? 'CONNECTED' : 'OFFLINE';
       document.getElementById('diag-ws-state').className = 'kpi-val tabular ' + (State.wsConnected ? 'c-emerald' : 'c-red');
       document.getElementById('diag-rest-latency').innerText = State.restLatency + ' ms';

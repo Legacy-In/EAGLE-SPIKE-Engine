@@ -14,7 +14,7 @@
     "bigcap:worker": "node scripts/bigcap_worker.mjs",
     "sync:audit": "node scripts/audit_sync.mjs",
     "checkpoint:worker": "node scripts/checkpoint_evaluator.mjs",
-    "test": "npx.cmd --yes tsx --test tests/atr-math.test.ts tests/pre-implementation-verification.test.ts tests/market-discovery.test.ts tests/supabase-lifecycle.test.ts tests/scanner-signals.test.ts tests/spike-intelligence.test.ts tests/signals-heatmap.test.ts tests/btc-positioning.test.ts tests/bigcap-engine.test.ts tests/short-detection.test.ts && node --test tests/lifecycle.test.mjs tests/engine.test.mjs && node scripts/security_audit.mjs && node scripts/verify_clean.mjs && node scripts/validate_html_js.mjs && node scripts/verify_record_count.mjs && node scripts/audit_sync.mjs"
+    "test": "npx.cmd --yes tsx --test tests/telegram-outbox.test.ts tests/signal-creation-pipeline.test.ts tests/live-price-integrity.test.ts tests/atr-math.test.ts tests/pre-implementation-verification.test.ts tests/market-discovery.test.ts tests/supabase-lifecycle.test.ts tests/scanner-signals.test.ts tests/spike-intelligence.test.ts tests/signals-heatmap.test.ts tests/btc-positioning.test.ts tests/bigcap-engine.test.ts tests/short-detection.test.ts && node --test tests/lifecycle.test.mjs tests/engine.test.mjs && node scripts/security_audit.mjs && node scripts/verify_clean.mjs && node scripts/validate_html_js.mjs && node scripts/verify_record_count.mjs && node scripts/audit_sync.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

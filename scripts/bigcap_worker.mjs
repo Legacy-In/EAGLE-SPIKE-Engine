@@ -18,6 +18,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { createSignal, calculateAtrStopsAndTargets } from '../backend/services/signal-creation.mjs';
 
 // 1. Environment & Configuration Loading
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -181,20 +182,8 @@ export function synthesizeRationale({
 // 5. TP / SL FORMULAS & TARGET CALCULATOR
 // ============================================================================
 
-export function calculateTradeTargets(entryPrice, direction) {
-  if (direction === 'LONG') {
-    return {
-      stopLossPrice: parseFloat((entryPrice * (1 - 0.008)).toFixed(4)),  // -0.8%
-      targetPrice1: parseFloat((entryPrice * (1 + 0.015)).toFixed(4)),   // +1.5%
-      targetPrice2: parseFloat((entryPrice * (1 + 0.035)).toFixed(4)),   // +3.5%
-    };
-  } else {
-    return {
-      stopLossPrice: parseFloat((entryPrice * (1 + 0.008)).toFixed(4)),  // +0.8%
-      targetPrice1: parseFloat((entryPrice * (1 - 0.015)).toFixed(4)),   // -1.5%
-      targetPrice2: parseFloat((entryPrice * (1 - 0.035)).toFixed(4)),   // -3.5%
-    };
-  }
+export function calculateTradeTargets(entryPrice, direction, high24h = 0, low24h = 0) {
+  return calculateAtrStopsAndTargets(entryPrice, direction, high24h, low24h);
 }
 
 // ============================================================================
@@ -397,16 +386,27 @@ async function updatePositionStatusInDb(signalId, status, exitPrice, realizedPnl
   if (!supabase) return;
   try {
     const now = new Date().toISOString();
-    await supabase
-      .from('big_cap_signals')
-      .update({
-        status,
-        current_price: exitPrice,
-        realized_pnl_pct: realizedPnl,
-        closed_at: now,
-        updated_at: now,
-      })
-      .eq('signal_id', signalId);
+    await Promise.allSettled([
+      supabase
+        .from('big_cap_signals')
+        .update({
+          status,
+          current_price: exitPrice,
+          realized_pnl_pct: realizedPnl,
+          closed_at: now,
+          updated_at: now,
+        })
+        .eq('signal_id', signalId),
+      supabase
+        .from('signals')
+        .update({
+          status,
+          exit_price: exitPrice,
+          resolved_at: now,
+          updated_at: now,
+        })
+        .eq('signal_id', signalId),
+    ]);
   } catch (err) {
     console.error(`Failed to update signal ${signalId} in Supabase:`, err?.message);
   }
@@ -415,13 +415,22 @@ async function updatePositionStatusInDb(signalId, status, exitPrice, realizedPnl
 async function updateCurrentPriceInDb(signalId, currentPrice) {
   if (!supabase) return;
   try {
-    await supabase
-      .from('big_cap_signals')
-      .update({
-        current_price: currentPrice,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('signal_id', signalId);
+    const now = new Date().toISOString();
+    await Promise.allSettled([
+      supabase
+        .from('big_cap_signals')
+        .update({
+          current_price: currentPrice,
+          updated_at: now,
+        })
+        .eq('signal_id', signalId),
+      supabase
+        .from('signals')
+        .update({
+          updated_at: now,
+        })
+        .eq('signal_id', signalId),
+    ]);
   } catch (e) {}
 }
 
@@ -592,13 +601,14 @@ export async function processBigCapSymbol(symbol) {
   const qualifies = (primaryRvol >= session.rvolThreshold) && (Math.abs(primaryZScore) >= 1.8) && (oiDelta >= 1.5 || Math.abs(priceDelta15m) >= 0.8);
 
   if (!qualifies) {
+    console.log(`[BIGCAP_CYCLE] symbol=${symbol} decision=SCANNING rvol=${primaryRvol.toFixed(2)}/${session.rvolThreshold} z=${primaryZScore.toFixed(2)}/1.8 oiDelta=${oiDelta}%`);
     return { symbol, status: 'SCANNING', metrics: metricsObj };
   }
 
   // 7. Qualify Signal Setup
   const direction = (priceDelta15m >= 0 || trend1h === 'BULLISH') ? 'LONG' : 'SHORT';
   const { bestTf } = selectBestTimeframe(metricsObj['5m'], metricsObj['15m'], metricsObj['1h']);
-  const targets = calculateTradeTargets(currentPrice, direction);
+  const targets = calculateTradeTargets(currentPrice, direction, ticker.high24h, ticker.low24h);
 
   const eagleScore = Math.min(99, Math.round(50 + (primaryRvol * 10) + (Math.abs(primaryZScore) * 5) + (Math.abs(oiDelta) * 3)));
 
@@ -615,42 +625,61 @@ export async function processBigCapSymbol(symbol) {
   });
 
   const now = Date.now();
-  const dateStr = new Date(now).toISOString().slice(0, 10).replace(/-/g, '');
-  const signalId = `BIGCAP-${dateStr}-${symbol}-${direction}-${now.toString().slice(-4)}`;
-
-  const newSignal = {
-    signal_id: signalId,
+  const candidate = {
     symbol,
+    exchange: 'BINANCE',
     direction,
-    best_timeframe: bestTf,
-    entry_price: currentPrice,
-    stop_loss_price: targets.stopLossPrice,
-    target_price_1: targets.targetPrice1,
-    target_price_2: targets.targetPrice2,
-    current_price: currentPrice,
-    eagle_score: eagleScore,
+    entryPrice: currentPrice,
+    eagleScore,
     rvol: primaryRvol,
-    z_score: primaryZScore,
-    oi_delta_pct: oiDelta,
+    volumeZScore: primaryZScore,
+    oiChangePct: oiDelta,
+    best_timeframe: bestTf,
     session_tag: session.tag,
-    status: 'ACTIVE',
     rationale_json: rationale,
-    detected_at: now,
+    strategyVersion: 'v2.0',
+    isBigCap: true,
+    detectedAt: now,
   };
 
-  // Lock and persist
-  ActivePositions.set(symbol, newSignal);
-  console.log(`\n🚀 [NEW BIG CAP SIGNAL] ${signalId}`);
-  console.log(`   Symbol: ${symbol} | Direction: ${direction} | Best TF: ${bestTf} | Entry: $${currentPrice}`);
-  console.log(`   TP1: $${targets.targetPrice1} (+1.5%) | TP2: $${targets.targetPrice2} (+3.5%) | SL: $${targets.stopLossPrice} (-0.8%)`);
-  console.log(`   Rationale: \n   • ${rationale.join('\n   • ')}`);
+  const createResult = await createSignal(candidate, { isBigCap: true });
+  console.log(`[BIGCAP_CYCLE] symbol=${symbol} decision=QUALIFIED score=${eagleScore} rvol=${primaryRvol} result=${createResult.success ? 'CREATED' : createResult.error_code || 'REJECTED'} id=${createResult.signalId || 'NONE'}`);
 
-  const persisted = await persistNewSignal(newSignal);
-  if (persisted) {
-    await sendBigCapTelegramAlert(newSignal);
+  if (createResult.success) {
+    const signalId = createResult.signalId;
+    const newSignal = {
+      signal_id: signalId,
+      symbol,
+      direction,
+      best_timeframe: bestTf,
+      entry_price: currentPrice,
+      stop_loss_price: targets.stopLossPrice,
+      target_price_1: targets.targetPrice1,
+      target_price_2: targets.targetPrice2,
+      target_price_3: targets.targetPrice3,
+      current_price: currentPrice,
+      eagle_score: eagleScore,
+      rvol: primaryRvol,
+      z_score: primaryZScore,
+      oi_delta_pct: oiDelta,
+      session_tag: session.tag,
+      status: 'ACTIVE',
+      rationale_json: rationale,
+      detected_at: now,
+    };
+
+    // Lock position in memory
+    ActivePositions.set(symbol, newSignal);
+    console.log(`\n🚀 [NEW BIG CAP SIGNAL] ${signalId}`);
+    console.log(`   Symbol: ${symbol} | Direction: ${direction} | Best TF: ${bestTf} | Entry: $${currentPrice}`);
+    console.log(`   TP1: $${targets.targetPrice1} | TP2: $${targets.targetPrice2} | SL: $${targets.stopLossPrice} (-${targets.stopLossPct}%)`);
+    console.log(`   Rationale: \n   • ${rationale.join('\n   • ')}`);
+
+    // Note: Canonical Telegram alert is automatically queued in telegram_signal_outbox via createSignal()
+    return { symbol, status: 'NEW_SIGNAL', signal: newSignal };
+  } else {
+    return { symbol, status: 'SKIPPED', error: createResult.error || createResult.error_code };
   }
-
-  return { symbol, status: 'NEW_SIGNAL', signal: newSignal };
 }
 
 // Daemon execution loop

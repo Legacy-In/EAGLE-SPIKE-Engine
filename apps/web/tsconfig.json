@@ -31,7 +31,8 @@
       "@sigma/services/*": ["../../services/*"],
       "@sigma/services": ["../../services"],
       "@sigma/infrastructure/*": ["../../infrastructure/*"],
-      "@sigma/infrastructure": ["../../infrastructure"]
+      "@sigma/infrastructure": ["../../infrastructure"],
+      "@sigma/backend/*": ["../../backend/*"]
     }
   },
   "include": [
@@ -42,7 +43,8 @@
     "../../packages/**/*.ts",
     "../../packages/**/*.tsx",
     "../../services/**/*.ts",
-    "../../infrastructure/**/*.ts"
+    "../../infrastructure/**/*.ts",
+    "../../backend/**/*"
   ],
   "exclude": ["node_modules"]
 }

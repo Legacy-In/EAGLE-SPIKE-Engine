@@ -24,6 +24,16 @@ module.exports = {
       restart_delay: 5000,
     },
     {
+      name: 'eagle-flash-telegram-outbox-worker',
+      script: 'scripts/telegram_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+      },
+      autorestart: true,
+      restart_delay: 5000,
+    },
+    {
       name: 'eagle-flash-cloud-scanner',
       script: 'scripts/server_scanner.mjs',
       cwd: './',

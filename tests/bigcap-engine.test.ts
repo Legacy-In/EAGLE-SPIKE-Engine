@@ -93,15 +93,17 @@ test('BigCap Engine: 4-Bullet Deterministic Rationale Synthesizer', () => {
 test('BigCap Engine: Target and Stop-Loss Calculation', () => {
   const entryLong = 100000;
   const longTargets = calculateTradeTargets(entryLong, 'LONG');
-  assert.equal(longTargets.stopLossPrice, 99200, 'LONG Stop-Loss must be -0.8%');
-  assert.equal(longTargets.targetPrice1, 101500, 'LONG TP1 must be +1.5%');
-  assert.equal(longTargets.targetPrice2, 103500, 'LONG TP2 must be +3.5%');
+  assert.ok(longTargets.stopLossPct >= 2.0 && longTargets.stopLossPct <= 3.5, 'LONG Stop-Loss % clamped 2.0% - 3.5%');
+  assert.ok(longTargets.stopLossPrice < entryLong, 'LONG Stop-Loss price below entry');
+  assert.ok(longTargets.targetPrice1 > entryLong, 'LONG TP1 above entry');
+  assert.ok(longTargets.targetPrice2 > longTargets.targetPrice1, 'LONG TP2 above TP1');
 
   const entryShort = 100000;
   const shortTargets = calculateTradeTargets(entryShort, 'SHORT');
-  assert.equal(shortTargets.stopLossPrice, 100800, 'SHORT Stop-Loss must be +0.8%');
-  assert.equal(shortTargets.targetPrice1, 98500, 'SHORT TP1 must be -1.5%');
-  assert.equal(shortTargets.targetPrice2, 96500, 'SHORT TP2 must be -3.5%');
+  assert.ok(shortTargets.stopLossPct >= 2.0 && shortTargets.stopLossPct <= 3.5, 'SHORT Stop-Loss % clamped 2.0% - 3.5%');
+  assert.ok(shortTargets.stopLossPrice > entryShort, 'SHORT Stop-Loss price above entry');
+  assert.ok(shortTargets.targetPrice1 < entryShort, 'SHORT TP1 below entry');
+  assert.ok(shortTargets.targetPrice2 < shortTargets.targetPrice1, 'SHORT TP2 below TP1');
 });
 
 test('BigCap Engine: Automated Exit State Machine', () => {

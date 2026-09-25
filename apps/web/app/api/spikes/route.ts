@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { spikeEventStore } from '@sigma/services/spike-intelligence/event-store';
 import { alertDispatcher } from '@sigma/services/telegram/alert-dispatcher';
 import { SpikeEventRecord, TelegramAlertPayload } from '@sigma/services/spike-intelligence/types';
+import { createSignal } from '@sigma/backend/services/signal-creation.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -174,42 +175,26 @@ export async function POST(req: NextRequest) {
       const recorded = spikeEventStore.recordEvent(eventRecord);
       recordedEvents.push(recorded);
 
-      // Auto-dispatch alert if high-confidence (Score >= 70 or forceAlert)
-      if (score >= 70 || body.forceAlert) {
-        const payload: TelegramAlertPayload = {
-          eventId: recorded.eventId,
-          symbol: recorded.symbol,
-          eventType: 'SPIKE_DETECTED',
-          state: recorded.spikePhase,
-          price: recorded.price,
-          returns5m: recorded.returns['5m'] || 0,
-          returns15m: recorded.returns['15m'] || 0,
-          returns1h: recorded.returns['1h'] || 0,
-          rvol: recorded.rvol['5m'] || 1.0,
-          volumeZ: recorded.volumeZScore || 0,
-          openInterestUsd: recorded.derivatives.openInterestUsd,
-          oiChangePct: recorded.derivatives.oiChange15mPct,
-          takerFlowPct: recorded.orderFlow.takerImbalancePct,
-          rsi: 50,
-          eagleScore: recorded.eagleScore,
-          spikeType: recorded.spikeType,
-          spikeQuality: recorded.spikeQuality,
-          dataConfidence: recorded.dataConfidence,
-          btcRegime: recorded.btcRegime,
-          triggerReasons: recorded.triggerReasons,
-          timestamp: recorded.timestamp,
-          cooldownSeconds: body.forceAlert ? 5 : 20 * 60,
-        };
-
-        // Fire alert in background (non-blocking)
-        alertDispatcher
-          .dispatchAlert(undefined, payload, { force: !!body.forceAlert })
-          .then((dispatched) => {
-            if (dispatched) dispatchedCount++;
-          })
-          .catch((err) => {
-            console.error('Failed to dispatch alert to Telegram:', err?.message);
-          });
+      // Persist to Postgres database via canonical createSignal service
+      try {
+        const createRes = await createSignal({
+          symbol,
+          exchange: item.exchange || 'BYBIT',
+          direction: item.direction || (returns5m < 0 ? 'SHORT' : 'LONG'),
+          entryPrice: price,
+          eagleScore: score,
+          rvol,
+          volumeZScore: volumeZ,
+          oiChangePct,
+          detectedAt: item.timestamp || Date.now(),
+          strategyVersion: item.strategyVersion || 'v1.5',
+          rationale_json: item.triggerReasons,
+        });
+        if (createRes?.success) {
+          console.log(`[SPIKES_API] Signal persisted: ${createRes.signal_id}`);
+        }
+      } catch (err: any) {
+        console.warn('[SPIKES_API] Persistence notice:', err?.message);
       }
     }
 

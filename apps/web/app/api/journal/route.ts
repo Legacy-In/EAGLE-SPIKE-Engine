@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { LivePriceService } from '@/lib/live-prices';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,17 +8,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yyswmlsrvrq
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5c3dtbHNydnJxd2h6dGJrdGxtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5NTcyMzEsImV4cCI6MjEwNTUzMzIzMX0.GLZLSZR2vXTdzECLBKcS9YURb3DmEfH7ojFaTd1a_JA';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-function computeDataConfidence(updatedAtStr?: string | null): 'LIVE' | 'FRESH' | 'STALE' | 'DEGRADED' | 'UNAVAILABLE' {
-  if (!updatedAtStr) return 'UNAVAILABLE';
-  const deltaSec = (Date.now() - new Date(updatedAtStr).getTime()) / 1000;
-  if (isNaN(deltaSec) || deltaSec < 0) return 'UNAVAILABLE';
-  if (deltaSec <= 5) return 'LIVE';
-  if (deltaSec <= 30) return 'FRESH';
-  if (deltaSec <= 60) return 'STALE';
-  if (deltaSec <= 300) return 'DEGRADED';
-  return 'UNAVAILABLE';
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -91,22 +81,26 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 4. Transform raw database rows into Named-Field Data Contract
-    const transformedSignals = (rawSignals || []).map((row) => {
+    // 4. Resolve Live Perpetual Market Prices & Transform raw rows
+    const transformedSignals = await Promise.all((rawSignals || []).map(async (row) => {
       const cp = checkpointsMap[row.signal_id] || {};
       const ex = extremesMap[row.signal_id] || {};
 
-      const entryPrice = parseFloat(row.entry_price || 0);
-      const exitPrice = row.exit_price ? parseFloat(row.exit_price) : null;
-      const currentPrice = exitPrice !== null ? exitPrice : entryPrice;
+      const normSymbol = (row.symbol || '').toUpperCase().replace(/[-_]/g, '');
+      const exch = (row.exchange_id || 'BYBIT').toUpperCase() as 'BYBIT' | 'BINANCE' | 'MEXC' | 'WEEX';
+      const exchangeSymbol = row.market_id || `${exch}:${normSymbol}`;
 
-      // Directional ROI
-      let currentRoiPct = parseFloat(row.net_pnl_pct || row.gross_pnl_pct || 0);
-      if (isNaN(currentRoiPct) && entryPrice > 0 && currentPrice > 0) {
-        currentRoiPct = row.direction === 'SHORT'
-          ? parseFloat((((entryPrice - currentPrice) / entryPrice) * 100).toFixed(2))
-          : parseFloat((((currentPrice - entryPrice) / entryPrice) * 100).toFixed(2));
-      }
+      // Immutable Historical Entry Price
+      const entryPrice = parseFloat(row.entry_price || 0);
+
+      // Resolve VERIFIED live market perpetual price directly from exchange
+      const liveQuote = await LivePriceService.getLivePrice(exch, normSymbol);
+      const currentPrice = liveQuote.price;
+
+      // Deterministic CURRENT ROI %: strictly derived from ENTRY and verified CURRENT price
+      const currentRoiPct = currentPrice !== null && entryPrice > 0
+        ? LivePriceService.calculateROI(row.direction || 'LONG', entryPrice, currentPrice)
+        : null;
 
       // Qualification & Lifecycle state resolution
       let qualificationStatus: 'WATCH' | 'CANDIDATE' | 'QUALIFIED' | 'CONFIRMED' | 'DISQUALIFIED' = 'QUALIFIED';
@@ -115,7 +109,7 @@ export async function GET(req: NextRequest) {
       const rawStatus = (row.status || '').toUpperCase();
       if (rawStatus === 'REJECTED') {
         const hasActivation = Boolean(row.entry_price && row.entry_price > 0 && row.created_at);
-        const hasStopHit = Boolean(row.resolved_at && (ex.mae_pct <= -2.0 || currentRoiPct < -2.0));
+        const hasStopHit = Boolean(row.resolved_at && (ex.mae_pct <= -2.0 || (currentRoiPct !== null && currentRoiPct < -2.0)));
         if (hasActivation && hasStopHit) {
           qualificationStatus = 'QUALIFIED';
           lifecycleStatus = 'STOP_HIT';
@@ -128,7 +122,6 @@ export async function GET(req: NextRequest) {
         lifecycleStatus = 'STOP_HIT';
       } else if (rawStatus === 'CLOSED' || rawStatus === 'T1_HIT' || rawStatus === 'T2_HIT' || rawStatus === 'T3_HIT') {
         qualificationStatus = 'QUALIFIED';
-        // Note: For legacy records where status was stored as T1_HIT, if resolved_at is set, it's CLOSED
         lifecycleStatus = row.resolved_at ? 'CLOSED' : 'ACTIVE';
       } else if (rawStatus === 'EXPIRED') {
         lifecycleStatus = 'EXPIRED';
@@ -152,21 +145,23 @@ export async function GET(req: NextRequest) {
         ? (row.resolved_at || row.updated_at)
         : null;
 
-      const normSymbol = (row.symbol || '').toUpperCase().replace(/[-_]/g, '');
-      const exchange = (row.exchange_id || 'BYBIT').toUpperCase();
-      const exchangeSymbol = row.market_id || `${exchange}:${normSymbol}`;
-
       return {
         signal_id: row.signal_id,
         canonical_symbol: normSymbol,
         exchange_symbol: exchangeSymbol,
-        exchange,
+        exchange: exch,
         direction: row.direction || 'LONG',
         qualification_status: qualificationStatus,
         lifecycle_status: lifecycleStatus,
         entry_price: entryPrice,
         current_price: currentPrice,
         current_roi_pct: currentRoiPct,
+        current_price_source: liveQuote.source,
+        current_price_exchange: liveQuote.exchange,
+        current_price_symbol: liveQuote.marketId,
+        current_price_timestamp: liveQuote.timestamp,
+        current_price_age_ms: liveQuote.ageMs,
+        data_quality: liveQuote.dataQuality,
         target_1_price: parseFloat(row.target_1_price || 0),
         target_2_price: parseFloat(row.target_2_price || 0),
         target_3_price: parseFloat(row.target_3_price || 0),
@@ -181,14 +176,13 @@ export async function GET(req: NextRequest) {
         t1_hit_at: t1HitAt,
         t2_hit_at: t2HitAt,
         t3_hit_at: t3HitAt,
-        stop_hit_at: stopHitAt,
+        stopHitAt: stopHitAt,
         closed_at: row.resolved_at || null,
         last_checkpoint_at: ex.updated_at || row.updated_at || row.detected_at,
-        data_confidence: computeDataConfidence(row.updated_at || row.detected_at),
         market_class: normSymbol === 'BTCUSDT' || normSymbol === 'ETHUSDT' || normSymbol === 'SOLUSDT' ? 'BIG_CAP' : 'MID_CAP',
         chronology_precision: 'TICK',
       };
-    });
+    }));
 
     return NextResponse.json({
       success: true,
