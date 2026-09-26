@@ -152,7 +152,8 @@ export function formatEagleFlashTelegramAlert(item) {
   const market = 'Perpetual';
 
   const eagleScore = p.eagleScore || p.eagle_score || 75;
-  const quality = p.spikeQuality || (eagleScore >= 80 ? 'HIGH' : eagleScore >= 65 ? 'MEDIUM' : 'LOW');
+  const entryQuality = p.entry_quality || (eagleScore >= 80 ? 'EXCELLENT' : eagleScore >= 65 ? 'GOOD' : 'FAIR');
+  const chaseRisk = p.chase_risk || 'LOW';
   const confidence = p.dataConfidence ? (p.dataConfidence >= 85 ? 'HIGH' : 'MEDIUM') : 'HIGH';
 
   const entry = formatPrice(entryNum);
@@ -162,6 +163,10 @@ export function formatEagleFlashTelegramAlert(item) {
   const tp2 = formatPrice(p.target_2_price || 0);
   const tp3 = formatPrice(p.target_3_price || 0);
 
+  // Risk Unit 1R calculation
+  const riskRVal = parseFloat(p.risk_r || Math.abs(entryNum - stopLossNum));
+  const riskRFormatted = formatPrice(riskRVal);
+
   const rvol = (p.rvol || 1.0).toFixed(2);
   const volM = p.volume_usd ? `$${(p.volume_usd / 1000000).toFixed(1)}M` : (p.turnoverM ? `$${p.turnoverM}M` : 'Active');
   const oiChange = p.oi_change_pct != null ? `${p.oi_change_pct >= 0 ? '+' : ''}${p.oi_change_pct}%` : '+0.0%';
@@ -169,7 +174,10 @@ export function formatEagleFlashTelegramAlert(item) {
   const takerFlow = p.taker_flow || (isLong ? 'BUY' : 'SELL');
   const priceXoi = p.positioning_state || 'POSITIONING BUILD';
 
-  const signalType = p.spike_type || (p.isBigCap ? 'MACRO TREND / IMPULSE' : 'MOMENTUM / BREAKOUT');
+  const strategyCombo = Array.isArray(p.strategy_combination) && p.strategy_combination.length > 0
+    ? p.strategy_combination.join(' + ')
+    : (p.primary_strategy || p.spike_type || (p.isBigCap ? 'MACRO TREND / IMPULSE' : 'BREAKOUT'));
+
   const detectedIso = p.detected_at
     ? new Date(p.detected_at).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
     : new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
@@ -186,10 +194,13 @@ export function formatEagleFlashTelegramAlert(item) {
     `━━━━━━━━━━━━━━━━━━━━\n\n` +
     `${sideIcon} <b>${sideText}</b>\n` +
     `<b>${symbol}</b>\n\n` +
+    `<b>Strategy:</b>\n<code>${strategyCombo}</code>\n\n` +
     `<b>Exchange:</b> ${exchange}\n` +
     `<b>Market:</b> ${market}\n\n` +
     `<b>Eagle Score:</b> ${eagleScore}\n` +
-    `<b>Signal Quality:</b> ${quality}\n` +
+    `<b>Signal Quality:</b> ${p.spike_quality || entryQuality}\n` +
+    `<b>Entry Quality:</b> ${entryQuality}\n` +
+    `<b>Chase Risk:</b> ${chaseRisk}\n` +
     `<b>Data Confidence:</b> ${confidence}\n\n` +
     `━━━━━━━━━━━━━━━━━━━━\n\n` +
     `<b>ENTRY</b>\n${entry}\n\n` +
@@ -198,6 +209,7 @@ export function formatEagleFlashTelegramAlert(item) {
     `<b>TP1</b>\n${tp1}\n\n` +
     `<b>TP2</b>\n${tp2}\n\n` +
     `<b>TP3</b>\n${tp3}\n\n` +
+    `<b>Risk Unit:</b> 1R = ${riskRFormatted}\n\n` +
     `━━━━━━━━━━━━━━━━━━━━\n\n` +
     `<b>RVOL:</b> ${rvol}x\n` +
     `<b>Volume:</b> ${volM}\n` +
@@ -206,7 +218,6 @@ export function formatEagleFlashTelegramAlert(item) {
     `<b>Taker Flow:</b> ${takerFlow}\n` +
     `<b>Price × OI:</b> ${priceXoi}\n\n` +
     `━━━━━━━━━━━━━━━━━━━━\n\n` +
-    `<b>Signal Type:</b>\n${signalType}\n\n` +
     `<b>Detected:</b>\n${detectedIso}\n\n` +
     `<b>Signal ID:</b>\n<code>${signalId}</code>\n\n` +
     `━━━━━━━━━━━━━━━━━━━━\n\n` +
@@ -297,12 +308,18 @@ export async function queueTelegramSignalAlert(signal, candidate = {}) {
     oi_change_pct: signal.oi_change_pct ?? candidate.oiChangePct,
     funding_rate: signal.funding_rate ?? candidate.fundingRate,
     turnoverM: candidate.openInterestUsd ? (candidate.openInterestUsd / 1000000).toFixed(1) : undefined,
-    spike_type: candidate.spikeType,
-    spike_quality: candidate.spikeQuality,
+    spike_type: signal.spike_type || candidate.spikeType,
+    spike_quality: signal.spike_quality || candidate.spikeQuality,
     detected_at: signal.detected_at || now,
     isBigCap: candidate.isBigCap,
     invalidation_condition: candidate.invalidation_condition,
     trigger_reasons: candidate.triggerReasons || candidate.rationale_json,
+    primary_strategy: signal.primary_strategy || candidate.primaryStrategy,
+    secondary_strategies: signal.secondary_strategies || candidate.secondaryStrategies || [],
+    strategy_combination: signal.strategy_combination || candidate.strategyCombination || [],
+    risk_r: signal.risk_r ?? candidate.riskR,
+    entry_quality: signal.entry_quality || candidate.entryQuality,
+    chase_risk: signal.chase_risk || candidate.chaseRisk,
     customMessage,
     metadata: {
       ...(candidate.metadata || {}),

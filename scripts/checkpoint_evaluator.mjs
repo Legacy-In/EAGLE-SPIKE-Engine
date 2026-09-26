@@ -99,10 +99,10 @@ export async function runCheckpointEvaluation() {
   const runTimestamp = new Date().toISOString();
   console.log(`\n🦅 [${runTimestamp}] Starting Checkpoint Evaluation Run...`);
 
-  // Fetch all signals with their existing checkpoints
+  // Fetch all signals with their existing checkpoints and canonical targets
   const { data: signals, error: sigErr } = await supabase
     .from('signals')
-    .select('id, signal_id, symbol, direction, entry_price, detected_at, status, signal_checkpoints(*), signal_extremes(*)')
+    .select('id, signal_id, symbol, direction, entry_price, target_1_price, target_2_price, target_3_price, stop_price, detected_at, status, signal_checkpoints(*), signal_extremes(*)')
     .order('detected_at', { ascending: false });
 
   if (sigErr) {
@@ -163,24 +163,74 @@ export async function runCheckpointEvaluation() {
       }
     }
 
-    // Determine status transition: CONFIRMED if positive breakout sustained across 4H, REJECTED if drawdown > 2.5%
+    // Determine canonical TP/SL hits and status transitions
     const allCps = s.signal_checkpoints || [];
     const maxRet = Math.max(...allCps.map(c => c.directional_return_pct || 0), latestReturnPct);
     const minRet = Math.min(...allCps.map(c => c.directional_return_pct || 0), latestReturnPct);
 
+    const t1 = parseFloat(s.target_1_price || 0);
+    const t2 = parseFloat(s.target_2_price || 0);
+    const t3 = parseFloat(s.target_3_price || 0);
+    const sl = parseFloat(s.stop_price || 0);
+
     let newStatus = s.status;
-    if (s.status === 'ACTIVE') {
-      if (minRet <= -2.5) {
-        newStatus = 'REJECTED';
-      } else if (existingTypes.has('4H') && maxRet >= 1.5) {
-        newStatus = 'CONFIRMED';
+    const nowIso = new Date().toISOString();
+    const updatePayload = { updated_at: nowIso };
+
+    // Fetch latest price for milestone evaluation
+    const latestPrice = await fetchPriceAtTimestamp(s.symbol, Date.now());
+
+    if (latestPrice && latestPrice > 0 && s.status === 'ACTIVE') {
+      const isStopBreached = isLong ? (latestPrice <= sl) : (latestPrice >= sl);
+      const isTp3Breached = isLong ? (t3 > 0 && latestPrice >= t3) : (t3 > 0 && latestPrice <= t3);
+      const isTp2Breached = isLong ? (t2 > 0 && latestPrice >= t2) : (t2 > 0 && latestPrice <= t2);
+      const isTp1Breached = isLong ? (t1 > 0 && latestPrice >= t1) : (t1 > 0 && latestPrice <= t1);
+
+      // Conservative STOP-FIRST rule: If stop breached, stop takes precedence immediately
+      if (isStopBreached) {
+        newStatus = 'STOP_HIT';
+        updatePayload.status = 'STOP_HIT';
+        updatePayload.stop_hit_at = nowIso;
+        updatePayload.stop_hit_price = latestPrice;
+        updatePayload.exit_price = latestPrice;
+        updatePayload.resolved_at = nowIso;
+      } else if (isTp3Breached) {
+        newStatus = 'T3_HIT';
+        updatePayload.status = 'T3_HIT';
+        updatePayload.tp3_hit_at = nowIso;
+        updatePayload.tp3_hit_price = latestPrice;
+        updatePayload.exit_price = latestPrice;
+        updatePayload.resolved_at = nowIso;
+      } else if (isTp2Breached) {
+        newStatus = 'T2_HIT';
+        updatePayload.status = 'T2_HIT';
+        updatePayload.tp2_hit_at = nowIso;
+        updatePayload.tp2_hit_price = latestPrice;
+        // Trailing stop: move stop to TP1
+        if (t1 > 0) updatePayload.stop_price = t1;
+      } else if (isTp1Breached) {
+        newStatus = 'T1_HIT';
+        updatePayload.status = 'T1_HIT';
+        updatePayload.tp1_hit_at = nowIso;
+        updatePayload.tp1_hit_price = latestPrice;
+        // Trailing stop: move stop to Entry
+        updatePayload.stop_price = entryPrice;
+      } else {
+        // Fallback lifecycle confirmation
+        if (minRet <= -2.5) {
+          newStatus = 'REJECTED';
+          updatePayload.status = 'REJECTED';
+        } else if (existingTypes.has('4H') && maxRet >= 1.5) {
+          newStatus = 'CONFIRMED';
+          updatePayload.status = 'CONFIRMED';
+        }
       }
     }
 
     if (newStatus !== s.status) {
       await supabase
         .from('signals')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq('signal_id', s.signal_id);
       console.log(`🔄 Updated signal ${s.signal_id} status: ${s.status} -> ${newStatus}`);
       statusUpdates++;

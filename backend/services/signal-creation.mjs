@@ -66,49 +66,45 @@ export const SignalTelemetry = {
   activeCooldowns: new Map(), // `${exchange}:${symbol}` -> timestamp
 };
 
-// 3. ATR14 Stop Loss & Take Profit Target Calculation
-// Baseline: ATR14 on 15m (or 24h fallback). Raw stop = 1.5 * ATR14.
-// Stop percentage clamped to 2.0% - 3.5%. T1 = 1.2 * ATR, T2 = 2.5 * ATR, T3 = 5.0 * ATR.
-export function calculateAtrStopsAndTargets(entryPrice, direction, high24h = 0, low24h = 0) {
-  if (!entryPrice || entryPrice <= 0) {
-    throw new Error(`Invalid entry price for ATR calculation: ${entryPrice}`);
-  }
+import {
+  detectStrategies,
+  resolveStrategyPriority,
+  calculateEntryQualityAndChaseRisk,
+  calculateDynamicTpSl,
+  roundToTick,
+} from '../engine/strategy-combination-engine.mjs';
 
-  // 15M ATR estimate or 24h high/low fallback
-  let atr = (high24h > low24h && low24h > 0)
-    ? Math.max(entryPrice * 0.015, (high24h - low24h) / 10)
-    : entryPrice * 0.018;
-
-  const rawStopPct = (1.5 * atr) / entryPrice;
-  const clampedStopPct = Math.max(0.02, Math.min(0.035, rawStopPct));
-  const effectiveAtr = (clampedStopPct * entryPrice) / 1.5;
-
-  const isLong = direction === 'LONG';
-  const stopLossPrice = isLong
-    ? entryPrice * (1 - clampedStopPct)
-    : entryPrice * (1 + clampedStopPct);
-
-  const targetPrice1 = isLong
-    ? entryPrice + (1.2 * effectiveAtr)
-    : entryPrice - (1.2 * effectiveAtr);
-
-  const targetPrice2 = isLong
-    ? entryPrice + (2.5 * effectiveAtr)
-    : entryPrice - (2.5 * effectiveAtr);
-
-  const targetPrice3 = isLong
-    ? entryPrice + (5.0 * effectiveAtr)
-    : entryPrice - (5.0 * effectiveAtr);
-
-  const decimals = entryPrice >= 1000 ? 2 : entryPrice >= 1 ? 4 : entryPrice >= 0.001 ? 6 : 8;
+// 3. ATR14 Stop Loss & Dynamic Take Profit Target Calculation
+// Canonical Strategy Combination & Dynamic TP/SL Engine integration.
+export function calculateAtrStopsAndTargets(entryPrice, direction, high24h = 0, low24h = 0, options = {}) {
+  const dynamic = calculateDynamicTpSl({
+    entryPrice,
+    direction,
+    high24h,
+    low24h,
+    atr: options.atr || options.atr14 || 0,
+    recentSwingHigh: options.recentSwingHigh,
+    recentSwingLow: options.recentSwingLow,
+    primaryStrategy: options.primaryStrategy || 'BREAKOUT',
+    secondaryStrategies: options.secondaryStrategies || [],
+    tickSize: options.tickSize || (entryPrice >= 1000 ? 0.01 : entryPrice >= 1 ? 0.0001 : 0.000001),
+  });
 
   return {
-    atr: parseFloat(effectiveAtr.toFixed(decimals)),
-    stopLossPrice: parseFloat(stopLossPrice.toFixed(decimals)),
-    targetPrice1: parseFloat(targetPrice1.toFixed(decimals)),
-    targetPrice2: parseFloat(targetPrice2.toFixed(decimals)),
-    targetPrice3: parseFloat(targetPrice3.toFixed(decimals)),
-    stopLossPct: parseFloat((clampedStopPct * 100).toFixed(2)),
+    atr: dynamic.atr,
+    stopLossPrice: dynamic.stopLossPrice,
+    targetPrice1: dynamic.tp1Price,
+    targetPrice2: dynamic.tp2Price,
+    targetPrice3: dynamic.tp3Price,
+    stopLossPct: dynamic.stopLossPct,
+    riskR: dynamic.riskR,
+    tp1R: dynamic.tp1R,
+    tp2R: dynamic.tp2R,
+    tp3R: dynamic.tp3R,
+    primaryStrategy: dynamic.primaryStrategy,
+    secondaryStrategies: dynamic.secondaryStrategies,
+    strategyCombination: dynamic.strategyCombination,
+    tpSlVersion: dynamic.tpSlVersion,
   };
 }
 
@@ -242,8 +238,36 @@ export async function createSignal(candidate, options = {}) {
 
   console.log(`[DEDUP_CHECK] symbol=${symbol} exchange=${exchange} decision=ALLOW`);
 
-  // Calculate ATR targets
-  const targets = calculateAtrStopsAndTargets(entryPrice, direction, candidate.high24h, candidate.low24h);
+  // 1. Quantitative Strategy Detection & Deterministic Priority Resolution
+  const detectedStrategies = detectStrategies(candidate, candidate);
+  const { primaryStrategy, secondaryStrategies, strategyCombination } = resolveStrategyPriority(detectedStrategies);
+
+  // 2. Resolve Contract Tick Size & Precision
+  const tickSize = candidate.tickSize || (entryPrice >= 1000 ? 0.01 : entryPrice >= 1 ? 0.0001 : 0.000001);
+
+  // 3. Calculate Dynamic TP/SL via Single Authoritative Engine
+  const dynamicTpSl = calculateDynamicTpSl({
+    entryPrice,
+    direction,
+    atr: candidate.atr || candidate.atr14 || 0,
+    high24h: candidate.high24h,
+    low24h: candidate.low24h,
+    recentSwingHigh: candidate.recentSwingHigh,
+    recentSwingLow: candidate.recentSwingLow,
+    primaryStrategy,
+    secondaryStrategies,
+    tickSize,
+  });
+
+  // 4. Calculate Entry Quality and Chase Risk
+  const { entryQuality, chaseRisk } = calculateEntryQualityAndChaseRisk({
+    entryPrice,
+    atr: dynamicTpSl.atr,
+    returns5m: candidate.returns5m,
+    returns15m: candidate.returns15m,
+    breakoutPrice: candidate.breakoutPrice,
+    primaryStrategy,
+  });
 
   // Generate deterministic identities
   const { signalId, idempotencyKey } = generateDeterministicIdentities({
@@ -263,15 +287,24 @@ export async function createSignal(candidate, options = {}) {
     direction,
     strategy_version: strategyVersion,
     entry_price: entryPrice,
-    target_1_price: targets.targetPrice1,
-    target_2_price: targets.targetPrice2,
-    target_3_price: targets.targetPrice3,
-    stop_price: targets.stopLossPrice,
+    target_1_price: dynamicTpSl.tp1Price,
+    target_2_price: dynamicTpSl.tp2Price,
+    target_3_price: dynamicTpSl.tp3Price,
+    stop_price: dynamicTpSl.stopLossPrice,
     eagle_score: eagleScore,
     rvol,
     volume_z_score: volumeZScore,
     oi_change_pct: oiChangePct,
     detected_at: new Date(now).toISOString(),
+    primary_strategy: primaryStrategy,
+    secondary_strategies: secondaryStrategies,
+    strategy_combination: strategyCombination,
+    risk_r: dynamicTpSl.riskR,
+    atr_value: dynamicTpSl.atr,
+    atr_multiplier: dynamicTpSl.atrMultiplier,
+    entry_quality: entryQuality,
+    chase_risk: chaseRisk,
+    tp_sl_version: dynamicTpSl.tpSlVersion,
   };
 
   const snapshotPayload = {
@@ -290,9 +323,18 @@ export async function createSignal(candidate, options = {}) {
     rsi: parseFloat(candidate.rsi || 50),
     trend: candidate.trend || (direction === 'LONG' ? 'BULLISH' : 'BEARISH'),
     spike_phase: candidate.spikePhase || (direction === 'LONG' ? 'ACCELERATION' : 'BREAKDOWN'),
-    positioning_state: 'LEVERAGE_EXPANSION',
+    positioning_state: primaryStrategy,
     market_breadth: 54.0,
     btc_regime: candidate.btcRegime || 'NEUTRAL',
+    primary_strategy: primaryStrategy,
+    secondary_strategies: secondaryStrategies,
+    strategy_combination: strategyCombination,
+    risk_r: dynamicTpSl.riskR,
+    atr_value: dynamicTpSl.atr,
+    atr_multiplier: dynamicTpSl.atrMultiplier,
+    entry_quality: entryQuality,
+    chase_risk: chaseRisk,
+    tp_sl_version: dynamicTpSl.tpSlVersion,
   };
 
   const extremesPayload = {
@@ -318,20 +360,28 @@ export async function createSignal(candidate, options = {}) {
     direction,
     best_timeframe: candidate.best_timeframe || candidate.bestTf || '15m',
     entry_price: entryPrice,
-    stop_loss_price: targets.stopLossPrice,
-    target_price_1: targets.targetPrice1,
-    target_price_2: targets.targetPrice2,
+    stop_loss_price: dynamicTpSl.stopLossPrice,
+    target_price_1: dynamicTpSl.tp1Price,
+    target_price_2: dynamicTpSl.tp2Price,
+    target_price_3: dynamicTpSl.tp3Price,
     current_price: entryPrice,
     eagle_score: eagleScore,
     rvol,
     z_score: volumeZScore,
     oi_delta_pct: oiChangePct,
     session_tag: candidate.session_tag || 'LONDON_NY_OVERLAP',
+    primary_strategy: primaryStrategy,
+    secondary_strategies: secondaryStrategies,
+    strategy_combination: strategyCombination,
+    risk_r: dynamicTpSl.riskR,
+    entry_quality: entryQuality,
+    chase_risk: chaseRisk,
+    tp_sl_version: dynamicTpSl.tpSlVersion,
     rationale_json: candidate.rationale_json || candidate.triggerReasons || [
-      `${symbol} qualified with RVOL ${rvol}x and Eagle Score ${eagleScore}`,
-      `ATR14 Stop calculated at $${targets.stopLossPrice} (-${targets.stopLossPct}%)`,
-      `Initial Target 1 established at $${targets.targetPrice1}`,
-      `Position anchored to authoritative signals table`
+      `${symbol} qualified under strategy combination: ${strategyCombination.join(' + ')}`,
+      `Dynamic Risk Unit (1R): $${dynamicTpSl.riskR} (SL: $${dynamicTpSl.stopLossPrice}, -${dynamicTpSl.stopLossPct}%)`,
+      `Targets: TP1 $${dynamicTpSl.tp1Price} (${dynamicTpSl.tp1R}R) · TP2 $${dynamicTpSl.tp2Price} (${dynamicTpSl.tp2R}R) · TP3 $${dynamicTpSl.tp3Price} (${dynamicTpSl.tp3R}R)`,
+      `Execution Grade: Quality=${entryQuality} · ChaseRisk=${chaseRisk}`
     ],
   } : null;
 
@@ -348,11 +398,15 @@ export async function createSignal(candidate, options = {}) {
       ...signalPayload,
       funding_rate: candidate.fundingRate,
       turnoverM: candidate.openInterestUsd ? (candidate.openInterestUsd / 1000000).toFixed(1) : undefined,
-      spike_type: candidate.spikeType,
-      spike_quality: candidate.spikeQuality,
+      spike_type: strategyCombination.join(' + '),
+      spike_quality: entryQuality,
       isBigCap,
       invalidation_condition: candidate.invalidation_condition,
       trigger_reasons: candidate.triggerReasons || candidate.rationale_json,
+      entry_quality: entryQuality,
+      chase_risk: chaseRisk,
+      risk_r: dynamicTpSl.riskR,
+      strategy_combination: strategyCombination,
     },
     chat_id: process.env.TELEGRAM_CHAT_ID || null,
     deduplication_key: `OUTBOX-${signalId}-NEW_SIGNAL`,
@@ -409,7 +463,14 @@ export async function createSignal(candidate, options = {}) {
   // 2. Compensating Transaction Fallback with Guaranteed Rollback
   try {
     // Primary row insert
-    const { error: sigErr } = await supabase.from('signals').insert(signalPayload);
+    let insertSignalPayload = { ...signalPayload };
+    let { error: sigErr } = await supabase.from('signals').insert(insertSignalPayload);
+    if (sigErr && sigErr.message && sigErr.message.includes('schema cache')) {
+      const dynamicColumns = ['primary_strategy', 'secondary_strategies', 'strategy_combination', 'risk_r', 'atr_value', 'atr_multiplier', 'entry_quality', 'chase_risk', 'tp_sl_version'];
+      dynamicColumns.forEach(col => delete insertSignalPayload[col]);
+      const retry = await supabase.from('signals').insert(insertSignalPayload);
+      sigErr = retry.error;
+    }
     if (sigErr) {
       if (sigErr.code === '23505') {
         SignalTelemetry.signalsDeduplicatedTotal++;
@@ -421,10 +482,14 @@ export async function createSignal(candidate, options = {}) {
 
     // Secondary inserts with rollback on error
     try {
-      const [snapRes, extRes] = await Promise.all([
-        supabase.from('signal_snapshots').insert(snapshotPayload),
-        supabase.from('signal_extremes').insert(extremesPayload),
-      ]);
+      let insertSnapPayload = { ...snapshotPayload };
+      let snapRes = await supabase.from('signal_snapshots').insert(insertSnapPayload);
+      if (snapRes.error && snapRes.error.message && snapRes.error.message.includes('schema cache')) {
+        const dynamicColumns = ['primary_strategy', 'secondary_strategies', 'strategy_combination', 'risk_r', 'atr_value', 'atr_multiplier', 'entry_quality', 'chase_risk', 'tp_sl_version'];
+        dynamicColumns.forEach(col => delete insertSnapPayload[col]);
+        snapRes = await supabase.from('signal_snapshots').insert(insertSnapPayload);
+      }
+      const extRes = await supabase.from('signal_extremes').insert(extremesPayload);
       if (snapRes.error) throw new Error(`Snapshot insert error: ${snapRes.error.message}`);
       if (extRes.error) throw new Error(`Extremes insert error: ${extRes.error.message}`);
 
@@ -444,10 +509,16 @@ export async function createSignal(candidate, options = {}) {
       // Big Cap sync if applicable
       if (isBigCap && bigCapPayload) {
         try {
-          const bcRes = await supabase.from('big_cap_signals').insert({
+          let bcPayload = {
             signal_id: signalId,
             ...bigCapPayload,
-          });
+          };
+          let bcRes = await supabase.from('big_cap_signals').insert(bcPayload);
+          if (bcRes.error && bcRes.error.message && bcRes.error.message.includes('schema cache')) {
+            const dynamicCols = ['primary_strategy', 'secondary_strategies', 'strategy_combination', 'risk_r', 'entry_quality', 'chase_risk', 'tp_sl_version'];
+            dynamicCols.forEach(col => delete bcPayload[col]);
+            bcRes = await supabase.from('big_cap_signals').insert(bcPayload);
+          }
           if (bcRes.error) console.warn('Big cap table sync notice:', bcRes.error.message);
         } catch (bcErr) {
           console.warn('Big cap table sync notice:', bcErr?.message);
