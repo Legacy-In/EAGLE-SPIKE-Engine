@@ -44,7 +44,20 @@ const DATA_DIR = path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(DATA_DIR)) {
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
 }
-const LOCAL_OUTBOX_PATH = path.join(DATA_DIR, 'notification_outbox.json');
+
+export function isTestExecution() {
+  return (
+    process.env.NODE_ENV === 'test' ||
+    Boolean(process.env.TEST_MODE) ||
+    Boolean(process.env.VITEST) ||
+    process.argv.some(a => a.includes('test') || a.includes('tsx'))
+  );
+}
+
+export function getLocalNotificationOutboxPath() {
+  const fileName = isTestExecution() ? 'test_notification_outbox.json' : 'notification_outbox.json';
+  return path.join(DATA_DIR, fileName);
+}
 
 // Telemetry counters
 export const NotificationTelemetry = {
@@ -72,9 +85,10 @@ export function getNotificationBackoffMs(attemptCount) {
 
 // Local outbox persistence helpers
 function readLocalOutbox() {
+  const outboxPath = getLocalNotificationOutboxPath();
   try {
-    if (fs.existsSync(LOCAL_OUTBOX_PATH)) {
-      const raw = fs.readFileSync(LOCAL_OUTBOX_PATH, 'utf-8');
+    if (fs.existsSync(outboxPath)) {
+      const raw = fs.readFileSync(outboxPath, 'utf-8');
       return JSON.parse(raw);
     }
   } catch (e) {}
@@ -82,8 +96,9 @@ function readLocalOutbox() {
 }
 
 function writeLocalOutbox(items) {
+  const outboxPath = getLocalNotificationOutboxPath();
   try {
-    fs.writeFileSync(LOCAL_OUTBOX_PATH, JSON.stringify(items, null, 2), 'utf-8');
+    fs.writeFileSync(outboxPath, JSON.stringify(items, null, 2), 'utf-8');
   } catch (e) {}
 }
 
@@ -141,7 +156,7 @@ export async function queueNotificationAlerts(notifications) {
   if (!Array.isArray(notifications) || notifications.length === 0) return { success: true, count: 0 };
 
   let pgSuccess = false;
-  if (supabase) {
+  if (supabase && !isTestExecution()) {
     try {
       const recordsToInsert = notifications.map(n => ({
         signal_id: n.signal_id,
@@ -210,7 +225,7 @@ export async function queueNotificationAlerts(notifications) {
 export async function fetchPendingOutbox(channelType, limit = 10) {
   const nowIso = new Date().toISOString();
 
-  if (supabase) {
+  if (supabase && !isTestExecution()) {
     try {
       const { data, error } = await supabase
         .from('notification_outbox')
@@ -265,7 +280,7 @@ export async function updateOutboxItemStatus(id, channelType, status, options = 
     NotificationTelemetry.failuresTotal++;
   }
 
-  if (supabase) {
+  if (supabase && !isTestExecution()) {
     try {
       await supabase
         .from('notification_outbox')

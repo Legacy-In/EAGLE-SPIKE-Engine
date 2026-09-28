@@ -43,7 +43,20 @@ const DATA_DIR = path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(DATA_DIR)) {
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
 }
-const LOCAL_OUTBOX_PATH = path.join(DATA_DIR, 'telegram_outbox.json');
+
+export function isTestExecution() {
+  return (
+    process.env.NODE_ENV === 'test' ||
+    Boolean(process.env.TEST_MODE) ||
+    Boolean(process.env.VITEST) ||
+    process.argv.some(a => a.includes('test') || a.includes('tsx'))
+  );
+}
+
+export function getLocalTelegramOutboxPath() {
+  const fileName = isTestExecution() ? 'test_telegram_outbox.json' : 'telegram_outbox.json';
+  return path.join(DATA_DIR, fileName);
+}
 
 // Telemetry counters
 export const OutboxTelemetry = {
@@ -232,9 +245,10 @@ export function formatEagleFlashTelegramAlert(item) {
 
 // 4. File-Based Outbox Persistence Layer (Zero-Loss Guarantee)
 function readLocalOutbox() {
-  if (!fs.existsSync(LOCAL_OUTBOX_PATH)) return [];
+  const outboxPath = getLocalTelegramOutboxPath();
+  if (!fs.existsSync(outboxPath)) return [];
   try {
-    const raw = fs.readFileSync(LOCAL_OUTBOX_PATH, 'utf-8');
+    const raw = fs.readFileSync(outboxPath, 'utf-8');
     return JSON.parse(raw);
   } catch {
     return [];
@@ -242,8 +256,9 @@ function readLocalOutbox() {
 }
 
 function writeLocalOutbox(records) {
+  const outboxPath = getLocalTelegramOutboxPath();
   try {
-    fs.writeFileSync(LOCAL_OUTBOX_PATH, JSON.stringify(records, null, 2));
+    fs.writeFileSync(outboxPath, JSON.stringify(records, null, 2));
   } catch (err) {
     console.error('Failed to write local outbox backup:', err?.message);
   }
@@ -348,9 +363,9 @@ export async function queueTelegramSignalAlert(signal, candidate = {}) {
     deduplication_key: deduplicationKey,
   };
 
-  // 1. Attempt Supabase PostgreSQL insert
+  // 1. Attempt Supabase PostgreSQL insert (bypassed during test execution)
   let dbPersisted = false;
-  if (supabase) {
+  if (supabase && !isTestExecution()) {
     try {
       const { error } = await supabase.from('telegram_signal_outbox').insert(outboxRecord);
       if (!error) {
@@ -401,8 +416,8 @@ export async function fetchPendingOutbox(limit = 5) {
   const nowIso = new Date().toISOString();
   const pending = [];
 
-  // Try Supabase first
-  if (supabase) {
+  // Try Supabase first (bypassed in test execution)
+  if (supabase && !isTestExecution()) {
     try {
       const { data, error } = await supabase
         .from('telegram_signal_outbox')
@@ -433,7 +448,7 @@ export async function fetchPendingOutbox(limit = 5) {
 // 7. Lock Record for Dispatch (SENDING)
 export async function lockOutboxRecord(id) {
   const nowIso = new Date().toISOString();
-  if (supabase) {
+  if (supabase && !isTestExecution()) {
     try {
       await supabase
         .from('telegram_signal_outbox')
@@ -460,7 +475,7 @@ export async function markOutboxSent(id, messageId) {
   OutboxTelemetry.sentTotal++;
   OutboxTelemetry.lastSentAt = nowIso;
 
-  if (supabase) {
+  if (supabase && !isTestExecution()) {
     try {
       await supabase
         .from('telegram_signal_outbox')
@@ -500,7 +515,7 @@ export async function markOutboxFailure(id, errorMsg, attemptCount) {
   }
   OutboxTelemetry.lastError = errorMsg;
 
-  if (supabase) {
+  if (supabase && !isTestExecution()) {
     try {
       await supabase
         .from('telegram_signal_outbox')

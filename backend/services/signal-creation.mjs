@@ -24,6 +24,8 @@ import {
   generateCommitmentMetadata,
   commitSignalToBlockchain,
 } from './blockchain-proof.mjs';
+import { isValidActiveSymbol, isBlacklistedSymbol } from './symbol-validator.mjs';
+import { isSignatureInCooldown, recordSignatureDispatch, getRemainingCooldownMs } from './signal-dedup.mjs';
 
 // 1. Environment & Supabase Configuration
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -231,18 +233,31 @@ export async function createSignal(candidate, options = {}) {
     return { success: false, error: 'INVALID_CANDIDATE_DATA' };
   }
 
-  // Deduplication check: Same exchange + symbol cooldown (15 minutes)
+  // Strict Symbol Validation: Reject blacklisted, synthetic or unlisted symbols unless explicitly forced in mock test
+  if (!options.force && (isBlacklistedSymbol(symbol) || !isValidActiveSymbol(symbol, exchange))) {
+    SignalTelemetry.signalsRejectedTotal++;
+    console.warn(`[SIGNAL_CREATE_REJECTED] Invalid or blacklisted symbol: ${symbol} (${exchange})`);
+    return {
+      success: false,
+      error_code: 'INVALID_OR_BLACKLISTED_SYMBOL',
+      reason: `Symbol ${symbol} is not an active exchange perpetual or is blacklisted.`,
+    };
+  }
+
+  // 30-Minute Deduplication check on SYMBOL + DIRECTION
   const cooldownKey = `${exchange}:${symbol}`;
   const lastDetectedAt = SignalTelemetry.activeCooldowns.get(cooldownKey) || 0;
-  const cooldownPeriodMs = options.cooldownMs || (15 * 60 * 1000);
+  const cooldownPeriodMs = options.cooldownMs || (30 * 60 * 1000); // 30 minutes default
 
-  if (now - lastDetectedAt < cooldownPeriodMs && !options.force) {
+  if (!options.force && (now - lastDetectedAt < cooldownPeriodMs || isSignatureInCooldown(symbol, direction, cooldownPeriodMs))) {
     SignalTelemetry.signalsDeduplicatedTotal++;
-    console.log(`[DEDUP_CHECK] symbol=${symbol} exchange=${exchange} decision=DUPLICATE (Cooldown active for ${Math.round((cooldownPeriodMs - (now - lastDetectedAt)) / 1000)}s)`);
+    const remainingMs = Math.max(cooldownPeriodMs - (now - lastDetectedAt), getRemainingCooldownMs(symbol, direction, cooldownPeriodMs));
+    const remainingS = Math.round(remainingMs / 1000);
+    console.log(`[DEDUP_CHECK] symbol=${symbol} direction=${direction} decision=DUPLICATE (Cooldown active for ${remainingS}s)`);
     return {
       success: false,
       error_code: 'DEDUPLICATED',
-      reason: `Cooldown active for ${exchange}:${symbol}`,
+      reason: `30-minute cooldown active for ${symbol}:${direction} (${remainingS}s remaining)`,
     };
   }
 
@@ -465,6 +480,7 @@ export async function createSignal(candidate, options = {}) {
 
     if (!rpcErr && rpcRes && rpcRes.success) {
       SignalTelemetry.activeCooldowns.set(cooldownKey, now);
+      recordSignatureDispatch(symbol, direction);
       SignalTelemetry.signalsCreatedTotal++;
       SignalTelemetry.persistenceSuccessTotal++;
       SignalTelemetry.lastSignalCreatedAt = new Date(now).toISOString();
@@ -586,6 +602,7 @@ export async function createSignal(candidate, options = {}) {
     }
 
     SignalTelemetry.activeCooldowns.set(cooldownKey, now);
+    recordSignatureDispatch(symbol, direction);
     SignalTelemetry.signalsCreatedTotal++;
     SignalTelemetry.persistenceSuccessTotal++;
     SignalTelemetry.lastSignalCreatedAt = new Date(now).toISOString();

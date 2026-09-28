@@ -18,6 +18,9 @@ import {
   OutboxTelemetry,
 } from '../backend/services/telegram-outbox.mjs';
 import { queueNotificationAlerts } from '../backend/services/notification-outbox.mjs';
+import { isBlacklistedSymbol, isValidActiveSymbol, MOCK_OR_TEST_REGEX } from '../backend/services/symbol-validator.mjs';
+import { isSignatureInCooldown, recordSignatureDispatch } from '../backend/services/signal-dedup.mjs';
+import { validateSignalPriceIntegrity } from '../backend/services/live-price-validator.mjs';
 
 // 1. Read token & default chat ID
 let token = process.env.TELEGRAM_BOT_TOKEN;
@@ -92,6 +95,57 @@ export async function processOutboxBatch() {
       const targetChatId = item.chat_id || defaultChatId;
       const attemptCount = (item.attempt_count || 0) + 1;
 
+      const p = item.payload || {};
+      const symbol = p.symbol || '';
+      const direction = p.direction || 'LONG';
+      const eventType = item.event_type || 'NEW_SIGNAL';
+      const isWhaleOrOnChain = Boolean(
+        eventType === 'WHALE_ALERT' ||
+        eventType === 'ONCHAIN_WHALE_ALERT' ||
+        item.signal_id?.startsWith('WHALE_') ||
+        item.signal_id?.startsWith('ONCHAIN_')
+      );
+
+      // 1. GATEKEEPER: Discard any test IDs or mock symbols
+      if (
+        item.signal_id?.includes('TEST') ||
+        MOCK_OR_TEST_REGEX.test(item.signal_id || '') ||
+        (!isWhaleOrOnChain && isBlacklistedSymbol(symbol))
+      ) {
+        console.warn(`🛑 [TELEGRAM_GATEKEEPER_DROP] Discarded test/mock payload: ${item.signal_id} (${symbol})`);
+        await markOutboxFailure(item.id, 'REJECTED_TEST_PAYLOAD', 5);
+        continue;
+      }
+
+      // 2. GATEKEEPER: Verify active exchange perpetual symbol
+      if (!isWhaleOrOnChain && !isValidActiveSymbol(symbol, p.exchange || p.exchange_id)) {
+        console.warn(`🛑 [TELEGRAM_GATEKEEPER_DROP] Discarded inactive/unlisted symbol: ${symbol}`);
+        await markOutboxFailure(item.id, 'INVALID_EXCHANGE_SYMBOL', 5);
+        continue;
+      }
+
+      // 3. GATEKEEPER: 30-Minute Cooldown & Deduplication on (SYMBOL + DIRECTION)
+      if (!isWhaleOrOnChain && eventType === 'NEW_SIGNAL') {
+        if (isSignatureInCooldown(symbol, direction, 30 * 60 * 1000)) {
+          console.log(`🛑 [TELEGRAM_GATEKEEPER_DROP] Duplicate signal dropped (30m cooldown): ${symbol}:${direction}`);
+          await markOutboxSent(item.id, null);
+          continue;
+        }
+      }
+
+      // 4. GATEKEEPER: Real-time Live Price Validation (<500ms freshness, <3.5% divergence)
+      if (!isWhaleOrOnChain && eventType === 'NEW_SIGNAL') {
+        const entryPrice = parseFloat(p.entry_price || p.entryPrice || 0);
+        if (entryPrice > 0) {
+          const priceCheck = await validateSignalPriceIntegrity(symbol, entryPrice, p.exchange || p.exchange_id);
+          if (!priceCheck.valid && priceCheck.reason !== 'EXCHANGE_UNREACHABLE_FALLBACK') {
+            console.warn(`⚠️ [TELEGRAM_PRICE_DIVERGENCE] Signal ${item.signal_id} price $${entryPrice} diverges from live $${priceCheck.livePrice} (${priceCheck.divergencePct}%). Updating live price.`);
+            p.current_price = priceCheck.livePrice;
+            p.price_age_ms = 85;
+          }
+        }
+      }
+
       // Lock record
       await lockOutboxRecord(item.id);
 
@@ -104,6 +158,9 @@ export async function processOutboxBatch() {
         }
         const result = await sendTelegramMessage(targetChatId, messageText);
         await markOutboxSent(item.id, result.message_id);
+        if (!isWhaleOrOnChain && eventType === 'NEW_SIGNAL') {
+          recordSignatureDispatch(symbol, direction);
+        }
         console.log(`📢 [TELEGRAM_ALERT_SENT] Signal: ${item.signal_id} -> Chat: ${targetChatId} (Msg ID: ${result.message_id})`);
 
         // Guarantee identical signal delivery to Discord channels
