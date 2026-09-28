@@ -1,22 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSigmaStore, WorkspaceTab } from '../../store/useSigmaStore';
+import { useSigmaStore } from '../../store/useSigmaStore';
 import {
-  Activity,
   AlertTriangle,
-  BarChart2,
-  Calendar,
-  CheckCircle2,
-  Database,
   Flame,
-  Globe,
-  Layers,
   Power,
   RefreshCw,
   Search,
-  Shield,
-  Zap,
 } from 'lucide-react';
 import { Web3WalletButton } from '../web3/Web3WalletButton';
 
@@ -141,87 +132,12 @@ export const TopBar: React.FC = () => {
             </div>
           </div>
 
-          {/* Center Workspace Navigation Tabs (Desktop only - mobile uses bottom nav) */}
-          <nav className="hidden lg:flex items-center bg-sigma-surface2 p-0.5 rounded border border-sigma-border text-xs font-medium">
-            <button
-              onClick={() => setWorkspace('TERMINAL')}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                activeWorkspace === 'TERMINAL'
-                  ? 'bg-sigma-surface3 text-sigma-textMain border border-sigma-borderFocus shadow-sm font-semibold'
-                  : 'text-sigma-textMuted hover:text-sigma-textMain'
-              }`}
-            >
-              <Activity className="w-3.5 h-3.5 text-sigma-cyan" />
-              <span>Terminal</span>
-            </button>
-            <button
-              onClick={() => setWorkspace('EAGLE_FLASH')}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                activeWorkspace === 'EAGLE_FLASH'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-sm font-semibold'
-                  : 'text-amber-400/80 hover:text-amber-300'
-              }`}
-            >
-              <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span className="font-bold">🦅 Eagle Flash</span>
-              <span className="text-[9px] px-1 py-0.2 bg-amber-500/30 text-amber-300 rounded font-mono font-bold">LIVE</span>
-            </button>
-            <button
-              onClick={() => setWorkspace('BACKTEST')}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                activeWorkspace === 'BACKTEST'
-                  ? 'bg-sigma-surface3 text-sigma-textMain border border-sigma-borderFocus shadow-sm font-semibold'
-                  : 'text-sigma-textMuted hover:text-sigma-textMain'
-              }`}
-            >
-              <BarChart2 className="w-3.5 h-3.5 text-sigma-purple" />
-              <span>Backtest Lab</span>
-            </button>
-            <button
-              onClick={() => setWorkspace('RISK')}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                activeWorkspace === 'RISK'
-                  ? 'bg-sigma-surface3 text-sigma-textMain border border-sigma-borderFocus shadow-sm font-semibold'
-                  : 'text-sigma-textMuted hover:text-sigma-textMain'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5 text-sigma-amber" />
-              <span>Risk & Exposure</span>
-            </button>
-            <button
-              onClick={() => setWorkspace('JOURNAL')}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                activeWorkspace === 'JOURNAL'
-                  ? 'bg-sigma-surface3 text-sigma-textMain border border-sigma-borderFocus shadow-sm font-semibold'
-                  : 'text-sigma-textMuted hover:text-sigma-textMain'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-sigma-green" />
-              <span>Journal</span>
-            </button>
-            <button
-              onClick={() => setWorkspace('HEALTH')}
-              className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                activeWorkspace === 'HEALTH'
-                  ? 'bg-sigma-surface3 text-sigma-textMain border border-sigma-borderFocus shadow-sm font-semibold'
-                  : 'text-sigma-textMuted hover:text-sigma-textMain'
-              }`}
-            >
-              <Database className="w-3.5 h-3.5 text-sigma-cyan" />
-              <span>Data Health</span>
-            </button>
-            <button
-              onClick={() => setWorkspace('CALENDAR')}
-              className={`hidden xl:flex px-3 py-1.5 rounded transition-colors items-center gap-1.5 ${
-                activeWorkspace === 'CALENDAR'
-                  ? 'bg-sigma-surface3 text-sigma-textMain border border-sigma-borderFocus shadow-sm font-semibold'
-                  : 'text-sigma-textMuted hover:text-sigma-textMain'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5 text-sigma-textDark" />
-              <span>Macro Calendar</span>
-            </button>
-          </nav>
+          {/* Dedicated Eagle Flash Terminal Header Badge */}
+          <div className="hidden lg:flex items-center bg-amber-500/10 border border-amber-500/40 px-3 py-1.5 rounded text-xs font-bold gap-2 shadow-sm">
+            <Flame className="w-4 h-4 text-amber-400 animate-pulse" />
+            <span className="text-amber-300 font-extrabold tracking-wider">EAGLE FLASH TERMINAL</span>
+            <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/30 text-amber-200 rounded font-mono font-bold uppercase tracking-wider">PRO LIVE</span>
+          </div>
 
           {/* Right Actions: Search, Mode, Safe Mode, Kill Switch */}
           <div className="flex items-center gap-2">
@@ -302,97 +218,6 @@ export const TopBar: React.FC = () => {
         </div>
       </header>
 
-      {/* Sticky Bottom Workspace Tabs for Mobile Devices */}
-      <nav
-        aria-label="Sticky Bottom Workspace Navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-sigma-surface1/95 backdrop-blur-xl border-t border-sigma-border px-2 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-2xl"
-        style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
-      >
-        <button
-          onClick={() => setWorkspace('TERMINAL')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-            activeWorkspace === 'TERMINAL'
-              ? 'bg-sigma-cyan text-black shadow-md'
-              : 'bg-sigma-surface2 text-sigma-textMuted border border-sigma-border hover:text-sigma-textMain'
-          }`}
-        >
-          <Activity className="w-3.5 h-3.5" />
-          <span>Terminal</span>
-        </button>
-
-        <button
-          onClick={() => setWorkspace('EAGLE_FLASH')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-            activeWorkspace === 'EAGLE_FLASH'
-              ? 'bg-amber-400 text-black font-black shadow-md'
-              : 'bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500/25'
-          }`}
-        >
-          <Flame className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-          <span>🦅 Eagle Flash</span>
-          <span className="text-[9px] px-1 py-0.2 bg-black/40 text-amber-200 rounded font-mono font-bold">LIVE</span>
-        </button>
-
-        <button
-          onClick={() => setWorkspace('BACKTEST')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-            activeWorkspace === 'BACKTEST'
-              ? 'bg-sigma-purple text-white shadow-md'
-              : 'bg-sigma-surface2 text-sigma-textMuted border border-sigma-border hover:text-sigma-textMain'
-          }`}
-        >
-          <BarChart2 className="w-3.5 h-3.5 text-sigma-purple" />
-          <span>Backtest</span>
-        </button>
-
-        <button
-          onClick={() => setWorkspace('RISK')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-            activeWorkspace === 'RISK'
-              ? 'bg-sigma-amber text-black shadow-md'
-              : 'bg-sigma-surface2 text-sigma-textMuted border border-sigma-border hover:text-sigma-textMain'
-          }`}
-        >
-          <Shield className="w-3.5 h-3.5 text-sigma-amber" />
-          <span>Risk</span>
-        </button>
-
-        <button
-          onClick={() => setWorkspace('JOURNAL')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-            activeWorkspace === 'JOURNAL'
-              ? 'bg-sigma-green text-black shadow-md'
-              : 'bg-sigma-surface2 text-sigma-textMuted border border-sigma-border hover:text-sigma-textMain'
-          }`}
-        >
-          <Layers className="w-3.5 h-3.5 text-sigma-green" />
-          <span>Journal</span>
-        </button>
-
-        <button
-          onClick={() => setWorkspace('HEALTH')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-            activeWorkspace === 'HEALTH'
-              ? 'bg-sigma-cyan/20 text-sigma-cyan border border-sigma-cyan font-bold shadow-md'
-              : 'bg-sigma-surface2 text-sigma-textMuted border border-sigma-border hover:text-sigma-textMain'
-          }`}
-        >
-          <Database className="w-3.5 h-3.5 text-sigma-cyan" />
-          <span>Data Health</span>
-        </button>
-
-        <button
-          onClick={() => setWorkspace('CALENDAR')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
-            activeWorkspace === 'CALENDAR'
-              ? 'bg-sigma-surface3 text-sigma-textMain border border-sigma-borderFocus font-bold shadow-md'
-              : 'bg-sigma-surface2 text-sigma-textMuted border border-sigma-border hover:text-sigma-textMain'
-          }`}
-        >
-          <Calendar className="w-3.5 h-3.5 text-sigma-textDark" />
-          <span>Calendar</span>
-        </button>
-      </nav>
 
       {/* Live Trading Warning Modal */}
       {liveConfirmOpen && (

@@ -55,7 +55,7 @@ interface SigmaState {
 let wsInstance: WebSocket | null = null;
 
 export const useSigmaStore = create<SigmaState>((set, get) => ({
-  activeWorkspace: 'TERMINAL',
+  activeWorkspace: 'EAGLE_FLASH',
   activeTimeframe: '4h',
   isCommandPaletteOpen: false,
   isKillSwitchModalOpen: false,
