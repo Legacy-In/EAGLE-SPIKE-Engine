@@ -53,56 +53,57 @@ npm run build
 
 ---
 
-## 4. 24/7 Process Management (PM2)
+## 4. 24/7 Process Management & Multi-Worker Ecosystem
 
-Using PM2 ensures automatic restarts on crashes, reboot persistence, and 24/7 autonomous operation for the Web App, Telegram Bot, and Cloud Market Scanner:
+EAGLE FLASH provides two execution modes to launch all 10 system services simultaneously:
 
-### The 3-in-1 Production Ecosystem (`ecosystem.config.cjs`)
-```javascript
-module.exports = {
-  apps: [
-    {
-      name: 'eagle-flash-web',
-      script: 'npm',
-      args: 'run start',
-      cwd: './apps/web',
-      env: { NODE_ENV: 'production', PORT: 3000 },
-      instances: 1,
-      autorestart: true,
-      max_memory_restart: '1G'
-    },
-    {
-      name: 'eagle-flash-telegram-bot',
-      script: 'scripts/telegram_poll.mjs',
-      cwd: './',
-      env: { NODE_ENV: 'production' },
-      autorestart: true,
-      restart_delay: 5000
-    },
-    {
-      name: 'eagle-flash-cloud-scanner',
-      script: 'scripts/server_scanner.mjs',
-      cwd: './',
-      env: { NODE_ENV: 'production', SCAN_INTERVAL_MS: 30000 },
-      autorestart: true,
-      restart_delay: 5000
-    }
-  ]
-};
-```
-
-### Launch Everything with 1 Command:
+### Mode A: Zero-Dependency Native Orchestrator (Cross-Platform Dev & Staging)
+Launch the entire system from a single terminal with zero external binary dependencies (no PM2 needed):
 ```bash
-# Start all 3 services (Web App + Telegram Bot + 24/7 Cloud Scanner)
+# Start all 10 processes (Next.js workstation + 9 quantitative workers):
 npm run start:all
 
-# Save for auto-start on server reboot
+# Start only the 9 backend workers (headless / without Web UI):
+npm run start:workers
+```
+- **Staggered Startup**: Staggers child process launches by 300ms to eliminate socket bursts, port contention, and database rate-limiting.
+- **Color-Coded Streaming**: Real-time console logs are tagged with distinct service badges (`[SCANNER]`, `[TP/SL]`, `[DISCORD]`, `[TG-OUT]`, `[TG-BOT]`, `[BIGCAP]`, `[CHKPNT]`, `[WHALE]`, `[ETH-WHALE]`, `[WEB]`).
+- **Clean Signal Handling**: Intercepts `Ctrl+C` (`SIGINT`) and `SIGTERM` to gracefully kill all child processes without leaving background orphans.
+
+---
+
+### Mode B: Production PM2 Cluster (`ecosystem.config.cjs`)
+For 24/7 autonomous production servers requiring auto-restart on memory leaks/crashes and system reboot persistence:
+
+```bash
+# Launch PM2 daemon across all 10 services
+npm run pm2:start
+
+# Inspect cluster health and resource consumption
+npm run pm2:status
+
+# Stream real-time logs across all workers
+npm run pm2:logs
+
+# Save process list for auto-boot upon server reboot
 pm2 save
 pm2 startup
 
-# Monitor live logs
-pm2 logs
+# Stop PM2 cluster
+npm run pm2:stop
 ```
+
+#### Monitored Services in `ecosystem.config.cjs`:
+1. `eagle-flash-web` (Port 3000 Next.js Workstation)
+2. `eagle-flash-cloud-scanner` (`scripts/server_scanner.mjs`)
+3. `eagle-flash-tpsl-monitor` (`scripts/tpsl_monitor_worker.mjs`)
+4. `eagle-flash-discord-worker` (`scripts/discord_worker.mjs`)
+5. `eagle-flash-telegram-outbox-worker` (`scripts/telegram_worker.mjs`)
+6. `eagle-flash-telegram-bot` (`scripts/telegram_poll.mjs`)
+7. `eagle-flash-bigcap-worker` (`scripts/bigcap_worker.mjs`)
+8. `eagle-flash-checkpoint-worker` (`scripts/checkpoint_evaluator.mjs --loop`)
+9. `eagle-flash-whale-detector` (`scripts/whale_detector_worker.mjs`)
+10. `eagle-flash-etherscan-scanner` (`scripts/etherscan_whale_worker.mjs`)
 
 ---
 

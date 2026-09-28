@@ -3,7 +3,7 @@
 [![GitHub Pages](https://img.shields.io/badge/Live%20Terminal-GitHub%20Pages-brightgreen?style=for-the-badge&logo=github)](https://fahad0013.github.io/EAGLE-FLASH/)
 [![Next.js 15](https://img.shields.io/badge/Workstation-Next.js%2015-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Telegram Bot](https://img.shields.io/badge/Telegram%20Bot-@eaglespike__bot-2CA5E0?style=for-the-badge&logo=telegram)](https://t.me/eaglespike_bot)
-[![Tests](https://img.shields.io/badge/Tests-36%2F36%20Passing-success?style=for-the-badge)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-157%2F157%20Passing-success?style=for-the-badge)](tests/)
 [![Security Audit](https://img.shields.io/badge/Security-Zero%20Secret%20Exposure-blue?style=for-the-badge)](SECURITY.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
@@ -140,10 +140,31 @@ npm run dev
 ```
 Open `http://localhost:3000`.
 
-### 3. Telegram Bot Background Polling Daemon
-If running locally without a public webhook endpoint:
+### 3. Unified Multi-Worker Ecosystem (Single Command)
+Run all 10 services (Next.js workstation + 9 quantitative background workers) simultaneously with zero setup:
 ```bash
-node scripts/telegram_poll.mjs
+# Start all 10 processes with staggered startup and color-coded unified console:
+npm run start:all
+
+# Or start only the 9 backend workers (headless / without Web server):
+npm run start:workers
+```
+Press `Ctrl+C` to gracefully terminate all child processes cleanly without orphaned background tasks.
+
+### 4. Production PM2 Daemon Management
+For 24/7 autonomous production servers:
+```bash
+# Launch PM2 cluster across all 10 services
+npm run pm2:start
+
+# View process status & resource usage
+npm run pm2:status
+
+# Stream unified real-time logs
+npm run pm2:logs
+
+# Gracefully stop all services
+npm run pm2:stop
 ```
 
 ---
