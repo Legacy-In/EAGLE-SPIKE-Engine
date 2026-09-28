@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { queueNotificationAlerts } from './notification-outbox.mjs';
 
 // 1. Environment & Credential Ingestion
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -373,6 +374,25 @@ export async function queueTelegramSignalAlert(signal, candidate = {}) {
 
   OutboxTelemetry.queuedTotal++;
   console.log(`📬 [TELEGRAM_OUTBOX_QUEUED] Signal: ${signalId} (DB: ${dbPersisted ? 'OK' : 'FILE_FALLBACK'})`);
+
+  // 3. Mirror directly into Multi-Channel Outbox for instant Discord broadcast
+  try {
+    const discordOutboxRecord = {
+      signal_id: signalId,
+      event_type: eventType,
+      channel_type: 'DISCORD',
+      channel_id: null,
+      payload,
+      custom_message: customMessage,
+      deduplication_key: `OUTBOX-${signalId}-${eventType}-DISCORD`,
+    };
+    queueNotificationAlerts([discordOutboxRecord]).catch(err => {
+      console.warn('⚠️ Auto-mirror to Discord outbox warning:', err?.message);
+    });
+  } catch (mirrorErr) {
+    // Non-blocking fallback
+  }
+
   return { success: true, id: outboxRecord.id, deduplication_key: deduplicationKey };
 }
 

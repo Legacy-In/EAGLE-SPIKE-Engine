@@ -168,6 +168,23 @@ export function buildStopHitDiscordEmbed(item) {
   return { embeds: [embed] };
 }
 
+// Helper: Normalize HTML to Discord Markdown
+export function htmlToDiscordMarkdown(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/<b>(.*?)<\/b>/gi, '**$1**')
+    .replace(/<strong>(.*?)<\/strong>/gi, '**$1**')
+    .replace(/<code>(.*?)<\/code>/gi, '`$1`')
+    .replace(/<i>(.*?)<\/i>/gi, '*$1*')
+    .replace(/<em>(.*?)<\/em>/gi, '*$1*')
+    .replace(/<a\s+(?:[^>]*?\s+)?href=["']([^"']*)["'][^>]*>(.*?)<\/a>/gi, '[$2]($1)')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"');
+}
+
 /**
  * Format WHALE_RADAR Embed
  */
@@ -177,24 +194,35 @@ export function buildWhaleRadarDiscordEmbed(item) {
   const isDump = p.direction === 'SHORT' || (p.signal_id && p.signal_id.includes('DUMP'));
   const amountUsd = p.amount_usd || p.entry_price || 150000;
   const action = isDump ? 'WHALE_EXCHANGE_DEPOSIT (SELL PRESSURE)' : 'WHALE_ACCUMULATION (COLD STORAGE)';
+  const customMsg = item.custom_message || p.customMessage || p.metadata?.customMessage;
+
+  const fields = [
+    { name: 'Asset / Token', value: `\`${symbol}\``, inline: true },
+    { name: 'Action Class', value: `\`${action}\``, inline: true },
+    { name: 'Estimated USD', value: `**$${Math.round(amountUsd).toLocaleString()}**`, inline: true },
+
+    { name: 'Network', value: '`Ethereum / Base RPC`', inline: true },
+    { name: 'Destination', value: `\`${p.exchange || 'EXCHANGE INFRASTRUCTURE'}\``, inline: true },
+    { name: 'Confidence', value: '`VERIFIED ON-CHAIN`', inline: true },
+
+    { name: 'Analysis Note', value: isDump 
+      ? '⚠️ Large holder moving assets to exchange deposit addresses. Monitor for downward order book pressure.' 
+      : '📥 Whale withdrawing assets into private cold storage. Clear accumulation signature.', inline: false },
+  ];
+
+  if (p.metadata?.txHash) {
+    fields.push({
+      name: 'Etherscan Verification',
+      value: `[View On-Chain Tx](https://etherscan.io/tx/${p.metadata.txHash})`,
+      inline: false,
+    });
+  }
 
   const embed = {
     title: '🐋 EAGLE FLASH — WHALE RADAR ALERT',
-    description: `### 🚨 Large On-Chain Transfer Detected — #${symbol}`,
+    description: customMsg ? htmlToDiscordMarkdown(customMsg) : `### 🚨 Large On-Chain Transfer Detected — #${symbol}`,
     color: 0xFFD700, // Gold
-    fields: [
-      { name: 'Asset / Token', value: `\`${symbol}\``, inline: true },
-      { name: 'Action Class', value: `\`${action}\``, inline: true },
-      { name: 'Estimated USD', value: `**$${Math.round(amountUsd).toLocaleString()}**`, inline: true },
-
-      { name: 'Network', value: '`Ethereum / Base RPC`', inline: true },
-      { name: 'Destination', value: `\`${p.exchange || 'EXCHANGE INFRASTRUCTURE'}\``, inline: true },
-      { name: 'Confidence', value: '`VERIFIED ON-CHAIN`', inline: true },
-
-      { name: 'Analysis Note', value: isDump 
-        ? '⚠️ Large holder moving assets to exchange deposit addresses. Monitor for downward order book pressure.' 
-        : '📥 Whale withdrawing assets into private cold storage. Clear accumulation signature.', inline: false },
-    ],
+    fields,
     footer: {
       text: 'Eagle Flash On-Chain Telemetry & Etherscan RPC Scanner',
     },

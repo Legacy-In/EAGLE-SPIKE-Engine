@@ -17,6 +17,7 @@ import {
   formatEagleFlashTelegramAlert,
   OutboxTelemetry,
 } from '../backend/services/telegram-outbox.mjs';
+import { queueNotificationAlerts } from '../backend/services/notification-outbox.mjs';
 
 // 1. Read token & default chat ID
 let token = process.env.TELEGRAM_BOT_TOKEN;
@@ -104,6 +105,19 @@ export async function processOutboxBatch() {
         const result = await sendTelegramMessage(targetChatId, messageText);
         await markOutboxSent(item.id, result.message_id);
         console.log(`📢 [TELEGRAM_ALERT_SENT] Signal: ${item.signal_id} -> Chat: ${targetChatId} (Msg ID: ${result.message_id})`);
+
+        // Guarantee identical signal delivery to Discord channels
+        try {
+          queueNotificationAlerts([{
+            signal_id: item.signal_id,
+            event_type: item.event_type || 'NEW_SIGNAL',
+            channel_type: 'DISCORD',
+            channel_id: null,
+            payload: item.payload,
+            custom_message: item.custom_message,
+            deduplication_key: `OUTBOX-${item.signal_id}-${item.event_type || 'NEW_SIGNAL'}-DISCORD`,
+          }]).catch(() => {});
+        } catch (mErr) {}
       } catch (err) {
         console.warn(`⚠️ [TELEGRAM_ALERT_FAILURE] Signal: ${item.signal_id} (Attempt ${attemptCount}/5): ${err.message}`);
         await markOutboxFailure(item.id, err.message, attemptCount);

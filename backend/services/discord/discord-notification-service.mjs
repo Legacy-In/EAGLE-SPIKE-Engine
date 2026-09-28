@@ -7,7 +7,7 @@
  */
 
 import { DiscordClient } from './discord-client.mjs';
-import { resolveDiscordChannel } from './discord-router.mjs';
+import { resolveDiscordChannel, resolveDiscordChannels } from './discord-router.mjs';
 import {
   buildNewSignalDiscordEmbed,
   buildTpMilestoneDiscordEmbed,
@@ -48,9 +48,12 @@ export class DiscordNotificationService {
       };
     }
 
-    // 2. Resolve destination Discord channel ID
-    const targetChannelId = resolveDiscordChannel(item);
-    if (!targetChannelId) {
+    // 2. Resolve destination Discord channel IDs
+    const targetChannels = typeof resolveDiscordChannels === 'function'
+      ? resolveDiscordChannels(item)
+      : [resolveDiscordChannel(item)].filter(Boolean);
+
+    if (!targetChannels || targetChannels.length === 0) {
       console.warn(`[DISCORD_NOTICE] No destination channel configured for event ${eventType}. Signal: ${item.signal_id}`);
       return { success: false, error: 'NO_CHANNEL_CONFIGURED' };
     }
@@ -88,8 +91,23 @@ export class DiscordNotificationService {
       return { success: false, error: 'FAILED_TO_BUILD_PAYLOAD' };
     }
 
-    // 4. Send via Discord REST client
-    const sendResult = await discordClient.sendMessage(targetChannelId, messagePayload);
-    return sendResult;
+    // 4. Send via Discord REST client to all target channels
+    let lastResult = null;
+    let anySuccess = false;
+    for (const channelId of targetChannels) {
+      try {
+        const res = await discordClient.sendMessage(channelId, messagePayload);
+        if (res && res.success) {
+          anySuccess = true;
+          lastResult = res;
+        }
+      } catch (err) {
+        console.warn(`⚠️ [DISCORD_SEND_WARN] Channel ${channelId} send failed:`, err?.message);
+      }
+    }
+
+    return anySuccess
+      ? { success: true, messageId: lastResult?.messageId }
+      : (lastResult || { success: false, error: 'DISPATCH_FAILED' });
   }
 }

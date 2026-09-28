@@ -19,6 +19,7 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { createSignal, calculateAtrStopsAndTargets } from '../backend/services/signal-creation.mjs';
+import { queueNotificationAlerts } from '../backend/services/notification-outbox.mjs';
 
 // 1. Environment & Configuration Loading
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -461,6 +462,23 @@ export function formatBigCapTelegramMessage(sig) {
 }
 
 export async function sendBigCapTelegramAlert(sig) {
+  // Mirror Big Cap alert to Discord channels (#big-cap and #signals)
+  try {
+    queueNotificationAlerts([{
+      signal_id: sig.signal_id || `BIGCAP-${Date.now()}-${sig.symbol}`,
+      event_type: 'NEW_SIGNAL',
+      channel_type: 'DISCORD',
+      channel_id: null,
+      payload: {
+        ...sig,
+        isBigCap: true,
+        primary_strategy: 'INSTITUTIONAL_BIG_CAP',
+        detected_at: new Date().toISOString(),
+      },
+      deduplication_key: `OUTBOX-${sig.signal_id || sig.symbol}-BIGCAP-DISCORD`,
+    }]).catch(() => {});
+  } catch (dErr) {}
+
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
