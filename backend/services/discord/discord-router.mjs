@@ -1,131 +1,174 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * 🦅 EAGLE FLASH — DISCORD EVENT & CHANNEL ROUTER
- * Directs trade signals, strategy sub-types, milestones, whale telemetry,
- * and blockchain proofs to configured Discord channel destinations.
+ * 🦅 EAGLE FLASH — STRICT DISCORD EVENT & CHANNEL ROUTING ENGINE
+ * Enforces dedicated channel separation:
+ * - Whale Alerts / On-Chain Dumps -> #whale-alerts
+ * - Quick Pumps / Volume Explosions / Extreme -> #quick-pump
+ * - Breakouts -> #breakouts
+ * - Squeezes / Accumulation / Pre-Spike -> #squeezes
+ * - Big-Cap Desk (BTC, ETH, SOL) -> #big-cap
+ * - Take-Profit Hits -> #tp-hits
+ * - Stop-Loss Hits -> #stop-loss
+ * - Blockchain Proofs -> #blockchain-proof
+ * - Bot Status -> #bot-status
+ * - General Standard Signals (Fallback) -> #signals
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-export function resolveDiscordChannels(item) {
-  const p = item.payload || item;
-  const eventType = item.event_type || 'NEW_SIGNAL';
-  const symbol = (p.symbol || '').toUpperCase().replace(/[-_]/g, '');
-  const phase = (p.phase || p.spike_phase || p.spikePhase || '').toUpperCase();
-  const type = (p.type || p.spike_type || p.spikeType || p.primary_strategy || '').toUpperCase();
-  const isBigCap = Boolean(p.isBigCap || ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(symbol));
-
-  const channels = new Set();
-
-  // 1. Channel Overrides via Item
-  if (item.channel_id && item.channel_id !== 'DEFAULT') {
-    channels.add(item.channel_id);
-    return Array.from(channels);
-  }
-
-  // 2. Specific Event Routing
-  switch (eventType) {
-    case 'TP1_HIT':
-    case 'TP2_HIT':
-    case 'TP3_HIT':
-      if (process.env.DISCORD_CHANNEL_TP_HITS) channels.add(process.env.DISCORD_CHANNEL_TP_HITS);
-      if (process.env.DISCORD_CHANNEL_SIGNALS) channels.add(process.env.DISCORD_CHANNEL_SIGNALS);
-      break;
-
-    case 'STOP_HIT':
-      if (process.env.DISCORD_CHANNEL_STOP_LOSS) channels.add(process.env.DISCORD_CHANNEL_STOP_LOSS);
-      if (process.env.DISCORD_CHANNEL_SIGNALS) channels.add(process.env.DISCORD_CHANNEL_SIGNALS);
-      break;
-
-    case 'WHALE_ALERT':
-    case 'WHALE_EVENT':
-    case 'ONCHAIN_WHALE_ALERT':
-      if (process.env.DISCORD_CHANNEL_WHALES) channels.add(process.env.DISCORD_CHANNEL_WHALES);
-      if (process.env.DISCORD_CHANNEL_SIGNALS) channels.add(process.env.DISCORD_CHANNEL_SIGNALS);
-      break;
-
-    case 'BLOCKCHAIN_PROOF':
-    case 'BLOCKCHAIN_COMMITMENT':
-      if (process.env.DISCORD_CHANNEL_BLOCKCHAIN_PROOF) channels.add(process.env.DISCORD_CHANNEL_BLOCKCHAIN_PROOF);
-      break;
-
-    case 'BOT_STATUS':
-      if (process.env.DISCORD_CHANNEL_BOT_STATUS) channels.add(process.env.DISCORD_CHANNEL_BOT_STATUS);
-      break;
-
-    case 'NEW_SIGNAL':
-    default:
-      // Always broadcast all trading signals to the main signals feed
-      if (process.env.DISCORD_CHANNEL_SIGNALS) channels.add(process.env.DISCORD_CHANNEL_SIGNALS);
-
-      // Dedicated category channels
-      if (isBigCap && process.env.DISCORD_CHANNEL_BIG_CAP) {
-        channels.add(process.env.DISCORD_CHANNEL_BIG_CAP);
-      }
-      if ((type.includes('VOLUME_EXPLOSION') || phase === 'EXTREME' || type.includes('PUMP')) && process.env.DISCORD_CHANNEL_QUICK_PUMP) {
-        channels.add(process.env.DISCORD_CHANNEL_QUICK_PUMP);
-      }
-      if (type.includes('BREAKOUT') && process.env.DISCORD_CHANNEL_BREAKOUTS) {
-        channels.add(process.env.DISCORD_CHANNEL_BREAKOUTS);
-      }
-      if ((type.includes('ACCUMULATION') || phase === 'PRE_SPIKE' || type.includes('SQUEEZE')) && process.env.DISCORD_CHANNEL_SQUEEZES) {
-        channels.add(process.env.DISCORD_CHANNEL_SQUEEZES);
-      }
-      break;
-  }
-
-  return Array.from(channels).filter(Boolean);
+export function getWhaleChannel() {
+  return process.env.DISCORD_CHANNEL_WHALE_ALERTS || process.env.DISCORD_CHANNEL_WHALES || null;
 }
 
+export function getTpHitsChannel() {
+  return process.env.DISCORD_CHANNEL_TP_HITS || null;
+}
+
+export function getStopLossChannel() {
+  return process.env.DISCORD_CHANNEL_STOP_LOSS || null;
+}
+
+export function getBlockchainProofChannel() {
+  return process.env.DISCORD_CHANNEL_BLOCKCHAIN_PROOF || null;
+}
+
+export function getBotStatusChannel() {
+  return process.env.DISCORD_CHANNEL_BOT_STATUS || null;
+}
+
+export function getBigCapChannel() {
+  return process.env.DISCORD_CHANNEL_BIG_CAP || null;
+}
+
+export function getQuickPumpChannel() {
+  return process.env.DISCORD_CHANNEL_QUICK_PUMP || null;
+}
+
+export function getBreakoutsChannel() {
+  return process.env.DISCORD_CHANNEL_BREAKOUTS || null;
+}
+
+export function getSqueezesChannel() {
+  return process.env.DISCORD_CHANNEL_SQUEEZES || null;
+}
+
+export function getSignalsChannel() {
+  return process.env.DISCORD_CHANNEL_SIGNALS || null;
+}
+
+/**
+ * Resolves the single authoritative dedicated Discord channel for an event/signal item.
+ * NEVER blindly routes specialized alerts or sub-categorized signals to #signals.
+ *
+ * @param {object} item - Outbox item with event_type and payload
+ * @returns {string|null} - Discord Channel ID
+ */
 export function resolveDiscordChannel(item) {
+  if (!item) return getSignalsChannel();
+
   const p = item.payload || item;
-  const eventType = item.event_type || 'NEW_SIGNAL';
+  const eventType = (item.event_type || p.event_type || 'NEW_SIGNAL').toUpperCase();
   const symbol = (p.symbol || '').toUpperCase().replace(/[-_]/g, '');
   const phase = (p.phase || p.spike_phase || p.spikePhase || '').toUpperCase();
   const type = (p.type || p.spike_type || p.spikeType || p.primary_strategy || '').toUpperCase();
+  const signalId = (p.signal_id || item.signal_id || '').toUpperCase();
+  const actionClass = (p.action || p.actionClass || p.whaleAction || '').toUpperCase();
+
+  // 1. Whale Alerts / On-Chain Dumps / Etherscan Scans
+  // (WHALE_ACCUMULATION, PUMP_AND_DUMP_RISK, WHALE_EXCHANGE_DEPOSIT, WHALE_ALERT, ONCHAIN_WHALE_ALERT)
+  const isWhale = Boolean(
+    eventType === 'WHALE_ALERT' ||
+    eventType === 'WHALE_EVENT' ||
+    eventType === 'ONCHAIN_WHALE_ALERT' ||
+    signalId.startsWith('WHALE_') ||
+    signalId.startsWith('ONCHAIN_') ||
+    type.includes('WHALE') ||
+    type.includes('PUMP_AND_DUMP') ||
+    actionClass.includes('WHALE') ||
+    actionClass.includes('DEPOSIT') ||
+    actionClass.includes('ACCUMULATION')
+  );
+  if (isWhale) {
+    return getWhaleChannel() || getSignalsChannel();
+  }
+
+  // 2. Take-Profit Hits (TP_HIT, TP1_HIT, TP2_HIT, TP3_HIT, T1_HIT, etc.)
+  if (
+    eventType.startsWith('TP') ||
+    eventType.includes('TP_HIT') ||
+    eventType.startsWith('T1_') ||
+    eventType.startsWith('T2_') ||
+    eventType.startsWith('T3_')
+  ) {
+    return getTpHitsChannel() || getSignalsChannel();
+  }
+
+  // 3. Stop-Loss Hits (SL_HIT, STOP_HIT, STOP_LOSS)
+  if (
+    eventType === 'SL_HIT' ||
+    eventType === 'STOP_HIT' ||
+    eventType.includes('STOP_LOSS')
+  ) {
+    return getStopLossChannel() || getSignalsChannel();
+  }
+
+  // 4. Blockchain Proof & Cryptographic Commitments
+  if (eventType === 'BLOCKCHAIN_PROOF' || eventType === 'BLOCKCHAIN_COMMITMENT') {
+    return getBlockchainProofChannel() || getSignalsChannel();
+  }
+
+  // 5. Bot Status & Diagnostics Heartbeat
+  if (eventType === 'BOT_STATUS') {
+    return getBotStatusChannel() || getSignalsChannel();
+  }
+
+  // 6. Big-Cap Desks (BTCUSDT, ETHUSDT, SOLUSDT)
   const isBigCap = Boolean(p.isBigCap || ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(symbol));
-
-  // 1. Channel Overrides via Item
-  if (item.channel_id && item.channel_id !== 'DEFAULT') {
-    return item.channel_id;
+  if (isBigCap) {
+    const bigCapChan = getBigCapChannel();
+    if (bigCapChan) return bigCapChan;
   }
 
-  // 2. Specific Event Routing
-  switch (eventType) {
-    case 'TP1_HIT':
-    case 'TP2_HIT':
-    case 'TP3_HIT':
-      return process.env.DISCORD_CHANNEL_TP_HITS || process.env.DISCORD_CHANNEL_SIGNALS || null;
-
-    case 'STOP_HIT':
-      return process.env.DISCORD_CHANNEL_STOP_LOSS || process.env.DISCORD_CHANNEL_SIGNALS || null;
-
-    case 'WHALE_ALERT':
-    case 'WHALE_EVENT':
-    case 'ONCHAIN_WHALE_ALERT':
-      return process.env.DISCORD_CHANNEL_WHALES || process.env.DISCORD_CHANNEL_SIGNALS || null;
-
-    case 'BLOCKCHAIN_PROOF':
-    case 'BLOCKCHAIN_COMMITMENT':
-      return process.env.DISCORD_CHANNEL_BLOCKCHAIN_PROOF || process.env.DISCORD_CHANNEL_SIGNALS || null;
-
-    case 'BOT_STATUS':
-      return process.env.DISCORD_CHANNEL_BOT_STATUS || process.env.DISCORD_CHANNEL_SIGNALS || null;
-
-    case 'NEW_SIGNAL':
-    default:
-      // Route by strategy / phase / asset tier if configured
-      if (isBigCap && process.env.DISCORD_CHANNEL_BIG_CAP) {
-        return process.env.DISCORD_CHANNEL_BIG_CAP;
-      }
-      if ((type.includes('VOLUME_EXPLOSION') || phase === 'EXTREME' || type.includes('PUMP')) && process.env.DISCORD_CHANNEL_QUICK_PUMP) {
-        return process.env.DISCORD_CHANNEL_QUICK_PUMP;
-      }
-      if (type.includes('BREAKOUT') && process.env.DISCORD_CHANNEL_BREAKOUTS) {
-        return process.env.DISCORD_CHANNEL_BREAKOUTS;
-      }
-      if ((type.includes('ACCUMULATION') || phase === 'PRE_SPIKE' || type.includes('SQUEEZE')) && process.env.DISCORD_CHANNEL_SQUEEZES) {
-        return process.env.DISCORD_CHANNEL_SQUEEZES;
-      }
-      return process.env.DISCORD_CHANNEL_SIGNALS || null;
+  // 7. Quick Pumps / Volume Explosions / Extreme Phase Signals (VOLUME_EXPLOSION, EXTREME)
+  const isQuickPump = Boolean(
+    type.includes('VOLUME_EXPLOSION') ||
+    phase === 'EXTREME' ||
+    type.includes('PUMP')
+  );
+  if (isQuickPump) {
+    const pumpChan = getQuickPumpChannel();
+    if (pumpChan) return pumpChan;
   }
+
+  // 8. Breakouts (BREAKOUT)
+  const isBreakout = Boolean(type.includes('BREAKOUT'));
+  if (isBreakout) {
+    const breakoutChan = getBreakoutsChannel();
+    if (breakoutChan) return breakoutChan;
+  }
+
+  // 9. Squeezes / Accumulation / Pre-Spike (ACCUMULATION, PRE_SPIKE, LONG_SQUEEZE, SHORT_SQUEEZE)
+  const isSqueeze = Boolean(
+    type.includes('ACCUMULATION') ||
+    phase === 'PRE_SPIKE' ||
+    type.includes('SQUEEZE')
+  );
+  if (isSqueeze) {
+    const squeezeChan = getSqueezesChannel();
+    if (squeezeChan) return squeezeChan;
+  }
+
+  // 10. General Standard Signals (Fallback ONLY if no specific sub-category matches)
+  return getSignalsChannel();
+}
+
+/**
+ * Resolves destination channel array for Discord dispatcher.
+ * Adheres strictly to single dedicated channel separation.
+ *
+ * @param {object} item
+ * @returns {string[]}
+ */
+export function resolveDiscordChannels(item) {
+  const primaryChannel = resolveDiscordChannel(item);
+  return primaryChannel ? [primaryChannel] : [];
 }

@@ -244,63 +244,75 @@ test('9. Discord Embed: Phase and Strategy Type Badges & Dynamic Colors', () => 
   assert.ok(preEmbed.fields.some(f => f.name === 'Strategy Type' && f.value.includes('📦 ACCUMULATION')));
 });
 
-test('10. Discord Router: Dynamic Phase & Type Multi-Channel Matrix', () => {
+test('10. Discord Router: Strict Dedicated Channel Separation Matrix', () => {
   process.env.DISCORD_CHANNEL_SIGNALS = 'CHAN_SIGNALS';
   process.env.DISCORD_CHANNEL_QUICK_PUMP = 'CHAN_PUMP';
   process.env.DISCORD_CHANNEL_BREAKOUTS = 'CHAN_BREAKOUTS';
   process.env.DISCORD_CHANNEL_SQUEEZES = 'CHAN_SQUEEZES';
   process.env.DISCORD_CHANNEL_BIG_CAP = 'CHAN_BIGCAP';
+  process.env.DISCORD_CHANNEL_TP_HITS = 'CHAN_TP';
+  process.env.DISCORD_CHANNEL_STOP_LOSS = 'CHAN_SL';
+  process.env.DISCORD_CHANNEL_WHALES = 'CHAN_WHALES';
 
-  // 1. VOLUME_EXPLOSION or EXTREME -> #quick-pump + #signals
+  // 1. VOLUME_EXPLOSION or EXTREME -> Strictly #quick-pump (NEVER #signals)
   const pumpItem = {
     event_type: 'NEW_SIGNAL',
     payload: { symbol: 'TAOUSDT', type: 'VOLUME_EXPLOSION', phase: 'NORMAL' },
   };
   const pumpChannels = resolveDiscordChannels(pumpItem);
-  assert.ok(pumpChannels.includes('CHAN_PUMP'), 'VOLUME_EXPLOSION must route to #quick-pump');
-  assert.ok(pumpChannels.includes('CHAN_SIGNALS'), 'Signals must include main channel');
+  assert.deepEqual(pumpChannels, ['CHAN_PUMP'], 'VOLUME_EXPLOSION must route strictly to #quick-pump');
 
   const extremeItem = {
     event_type: 'NEW_SIGNAL',
     payload: { symbol: 'FETUSDT', type: 'MOMENTUM', phase: 'EXTREME' },
   };
   const extremeChannels = resolveDiscordChannels(extremeItem);
-  assert.ok(extremeChannels.includes('CHAN_PUMP'), 'EXTREME phase must route to #quick-pump');
+  assert.deepEqual(extremeChannels, ['CHAN_PUMP'], 'EXTREME phase must route strictly to #quick-pump');
 
-  // 2. BREAKOUT -> #breakouts + #signals
+  // 2. BREAKOUT -> Strictly #breakouts (NEVER #signals)
   const breakoutItem = {
     event_type: 'NEW_SIGNAL',
     payload: { symbol: 'INJUSDT', type: 'BREAKOUT', phase: 'BREAKOUT' },
   };
   const breakoutChannels = resolveDiscordChannels(breakoutItem);
-  assert.ok(breakoutChannels.includes('CHAN_BREAKOUTS'), 'BREAKOUT type must route to #breakouts');
+  assert.deepEqual(breakoutChannels, ['CHAN_BREAKOUTS'], 'BREAKOUT type must route strictly to #breakouts');
 
-  // 3. ACCUMULATION or PRE_SPIKE -> #squeezes + #signals
+  // 3. ACCUMULATION or PRE_SPIKE -> Strictly #squeezes (NEVER #signals)
   const accumItem = {
     event_type: 'NEW_SIGNAL',
     payload: { symbol: 'RUNEUSDT', type: 'ACCUMULATION', phase: 'NORMAL' },
   };
   const accumChannels = resolveDiscordChannels(accumItem);
-  assert.ok(accumChannels.includes('CHAN_SQUEEZES'), 'ACCUMULATION type must route to #squeezes');
+  assert.deepEqual(accumChannels, ['CHAN_SQUEEZES'], 'ACCUMULATION type must route strictly to #squeezes');
 
   const preSpikeItem = {
     event_type: 'NEW_SIGNAL',
     payload: { symbol: 'ARUSDT', type: 'MOMENTUM', phase: 'PRE_SPIKE' },
   };
   const preSpikeChannels = resolveDiscordChannels(preSpikeItem);
-  assert.ok(preSpikeChannels.includes('CHAN_SQUEEZES'), 'PRE_SPIKE phase must route to #squeezes');
+  assert.deepEqual(preSpikeChannels, ['CHAN_SQUEEZES'], 'PRE_SPIKE phase must route strictly to #squeezes');
 
-  // 4. Big Cap (BTC, ETH, SOL) -> #big-cap + #signals
+  // 4. Big Cap (BTC, ETH, SOL) -> Strictly #big-cap (NEVER #signals)
   const btcItem = {
     event_type: 'NEW_SIGNAL',
     payload: { symbol: 'BTCUSDT', type: 'BREAKOUT', phase: 'NORMAL' },
   };
   const btcChannels = resolveDiscordChannels(btcItem);
-  assert.ok(btcChannels.includes('CHAN_BIGCAP'), 'BTCUSDT must route to #big-cap');
-  assert.ok(btcChannels.includes('CHAN_BREAKOUTS'), 'BTCUSDT BREAKOUT also routes to #breakouts');
-  assert.ok(btcChannels.includes('CHAN_SIGNALS'), 'BTCUSDT routes to #signals');
+  assert.deepEqual(btcChannels, ['CHAN_BIGCAP'], 'BTCUSDT must route strictly to #big-cap');
 
-  // 5. Default qualified signal -> #signals
+  // 5. Take Profit Hits -> Strictly #tp-hits (NEVER #signals)
+  const tpItem = { event_type: 'TP1_HIT', payload: { symbol: 'SOLUSDT' } };
+  assert.deepEqual(resolveDiscordChannels(tpItem), ['CHAN_TP'], 'TP hits must route strictly to #tp-hits');
+
+  // 6. Stop Loss Hits -> Strictly #stop-loss (NEVER #signals)
+  const slItem = { event_type: 'STOP_HIT', payload: { symbol: 'AVAXUSDT' } };
+  assert.deepEqual(resolveDiscordChannels(slItem), ['CHAN_SL'], 'SL hits must route strictly to #stop-loss');
+
+  // 7. Whale Alerts -> Strictly #whale-alerts (NEVER #signals)
+  const whaleItem = { event_type: 'WHALE_ALERT', payload: { symbol: 'ETH' } };
+  assert.deepEqual(resolveDiscordChannels(whaleItem), ['CHAN_WHALES'], 'Whales must route strictly to #whale-alerts');
+
+  // 8. Default qualified signal -> #signals (Fallback ONLY when no specific sub-category matches)
   const defaultItem = {
     event_type: 'NEW_SIGNAL',
     payload: { symbol: 'ATOMUSDT', type: 'MOMENTUM', phase: 'NORMAL' },

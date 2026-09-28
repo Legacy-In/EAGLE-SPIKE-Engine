@@ -11,6 +11,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
+import { resolveDiscordChannel } from './discord/discord-router.mjs';
 
 // 1. Environment & Credential Ingestion
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -142,12 +143,18 @@ export function buildSignalNotificationPayloads(signal, candidate = {}, eventTyp
     deduplication_key: `OUTBOX-${signalId}-${eventType}-TELEGRAM`,
   });
 
-  // 2. Discord Outbox Record
+  // 2. Discord Outbox Record (Strictly target dedicated channel)
+  const targetDiscordChannel = resolveDiscordChannel({
+    signal_id: signalId,
+    event_type: eventType,
+    payload: commonPayload,
+  });
+
   notifications.push({
     signal_id: signalId,
     event_type: eventType,
     channel_type: 'DISCORD',
-    channel_id: process.env.DISCORD_CHANNEL_SIGNALS || null,
+    channel_id: targetDiscordChannel || null,
     payload: commonPayload,
     deduplication_key: `OUTBOX-${signalId}-${eventType}-DISCORD`,
   });

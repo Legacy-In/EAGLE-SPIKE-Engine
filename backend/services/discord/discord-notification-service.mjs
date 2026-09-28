@@ -91,11 +91,12 @@ export class DiscordNotificationService {
       return { success: false, error: 'FAILED_TO_BUILD_PAYLOAD' };
     }
 
-    // 4. Send via Discord REST client to all target channels
+    // 4. Send via Discord REST client to dedicated target channel(s)
     let lastResult = null;
     let anySuccess = false;
     for (const channelId of targetChannels) {
       try {
+        console.log(`📡 [DISCORD_ROUTER] Routing ${eventType} (${p.symbol || 'ASSET'}) strictly to channel: ${channelId}`);
         const res = await discordClient.sendMessage(channelId, messagePayload);
         if (res && res.success) {
           anySuccess = true;
