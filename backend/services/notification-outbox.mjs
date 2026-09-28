@@ -109,12 +109,18 @@ export function buildSignalNotificationPayloads(signal, candidate = {}, eventTyp
   const signalId = signal.signal_id || signal.signalId;
   const notifications = [];
 
+  const phase = candidate.phase || candidate.spikePhase || signal.spike_phase || signal.phase || 'NORMAL';
+  const type = candidate.type || candidate.spikeType || signal.primary_strategy || 'BREAKOUT';
+
   const commonPayload = {
     ...signal,
     signal_id: signalId,
+    phase,
+    spike_phase: phase,
+    type,
+    spike_type: type,
     funding_rate: candidate.fundingRate,
     turnoverM: candidate.openInterestUsd ? (candidate.openInterestUsd / 1000000).toFixed(1) : undefined,
-    spike_type: signal.strategy_combination?.join(' + ') || signal.primary_strategy || 'MOMENTUM',
     entry_quality: signal.entry_quality || 'MEDIUM',
     chase_risk: signal.chase_risk || 'MEDIUM',
     risk_r: signal.risk_r || signal.riskR,

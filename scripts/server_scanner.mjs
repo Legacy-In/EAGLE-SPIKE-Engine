@@ -140,8 +140,29 @@ async function evaluateSymbol(t) {
     // Trigger only if score >= 70 and RVOL >= 1.8
     if (score < 70 || rvol < 1.8) return null;
 
-    const phase = ret5m >= 0 ? (isSqueeze ? 'ACCELERATION' : 'BREAKOUT') : 'BREAKDOWN';
-    const type = isSqueeze ? 'SHORT_SQUEEZE' : ret5m >= 0 ? 'MOMENTUM' : 'VOLUME_EXPLOSION';
+    // Quantitative Phase Derivation
+    let phase = 'NORMAL';
+    if (rvol >= 4.0 || volZ >= 3.5 || Math.abs(ret5m) >= 4.0) {
+      phase = 'EXTREME';
+    } else if (rvol >= 1.8 && Math.abs(ret5m) < 1.0) {
+      phase = 'PRE_SPIKE';
+    } else if (isSqueeze || ret5m >= 2.5) {
+      phase = 'ACCELERATION';
+    } else if (ret5m >= 1.0) {
+      phase = 'BREAKOUT';
+    }
+
+    // Quantitative Strategy Type Derivation
+    let type = 'MOMENTUM';
+    if (isSqueeze) {
+      type = 'SHORT_SQUEEZE';
+    } else if (rvol >= 3.5 || volZ >= 3.0 || phase === 'EXTREME') {
+      type = 'VOLUME_EXPLOSION';
+    } else if (phase === 'PRE_SPIKE' || (rvol >= 1.8 && Math.abs(ret5m) < 1.0)) {
+      type = 'ACCUMULATION';
+    } else if (Math.abs(ret5m) >= 1.8) {
+      type = 'BREAKOUT';
+    }
 
     const reasons = [
       `Eagle Score: ${score}/100`,
@@ -150,6 +171,8 @@ async function evaluateSymbol(t) {
     ];
     if (isSqueeze) reasons.push(`Severe negative funding squeeze (${fundingRate}%)`);
     if (volZ >= 2.5) reasons.push(`Volume anomaly z-score: ${volZ}σ`);
+    if (phase === 'EXTREME') reasons.push(`Statistical Climax: Volume & momentum surge`);
+    if (phase === 'PRE_SPIKE') reasons.push(`Volume accumulation compression without breakout`);
 
     return {
       symbol: sym,
@@ -163,8 +186,11 @@ async function evaluateSymbol(t) {
       returns1h: ret1h,
       openInterestUsd: turnoverM * 1000000 * 0.4,
       fundingRate,
+      phase,
       spikePhase: phase,
+      type,
       spikeType: type,
+      primaryStrategy: type,
       spikeQuality: score >= 85 ? 'HIGH' : 'MEDIUM',
       triggerReasons: reasons,
     };

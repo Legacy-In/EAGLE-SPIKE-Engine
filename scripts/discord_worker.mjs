@@ -51,6 +51,7 @@ async function runDispatchCycle() {
         const p = item.payload || {};
         const symbol = p.symbol || '';
         const direction = p.direction || 'LONG';
+        const type = p.type || p.spike_type || p.spikeType || p.primary_strategy || '';
         const eventType = item.event_type || 'NEW_SIGNAL';
         const isWhaleOrOnChain = Boolean(
           eventType === 'WHALE_ALERT' ||
@@ -77,10 +78,10 @@ async function runDispatchCycle() {
           continue;
         }
 
-        // 3. GATEKEEPER: 30-Minute Cooldown & Deduplication on (SYMBOL + DIRECTION)
+        // 3. GATEKEEPER: 30-Minute Cooldown & Deduplication on (SYMBOL + DIRECTION + TYPE)
         if (!isWhaleOrOnChain && eventType === 'NEW_SIGNAL') {
-          if (isSignatureInCooldown(symbol, direction, 30 * 60 * 1000)) {
-            console.log(`🛑 [DISCORD_GATEKEEPER_DROP] Duplicate signal dropped (30m cooldown): ${symbol}:${direction}`);
+          if (isSignatureInCooldown(symbol, direction, 30 * 60 * 1000, type)) {
+            console.log(`🛑 [DISCORD_GATEKEEPER_DROP] Duplicate signal dropped (30m cooldown): ${symbol}:${direction}${type ? `:${type}` : ''}`);
             await updateOutboxItemStatus(item.id, 'DISCORD', 'SENT', { externalMessageId: 'DEDUPLICATED_30M' });
             continue;
           }
@@ -106,7 +107,7 @@ async function runDispatchCycle() {
 
         if (result.success) {
           if (!isWhaleOrOnChain && eventType === 'NEW_SIGNAL') {
-            recordSignatureDispatch(symbol, direction);
+            recordSignatureDispatch(symbol, direction, type);
           }
           console.log(`✅ [DISCORD_SENT] Signal: ${item.signal_id} -> Message ID: ${result.messageId}`);
           await updateOutboxItemStatus(item.id, 'DISCORD', 'SENT', {

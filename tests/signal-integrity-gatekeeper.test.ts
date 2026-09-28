@@ -20,6 +20,7 @@ import {
   isSignatureInCooldown,
   recordSignatureDispatch,
   getRemainingCooldownMs,
+  clearAllSignatures,
 } from '../backend/services/signal-dedup.mjs';
 import { validateSignalPriceIntegrity } from '../backend/services/live-price-validator.mjs';
 
@@ -53,6 +54,7 @@ test('2. Symbol Validator: Accepts Legitimate Major Perpetual Pairs', () => {
 });
 
 test('3. Deduplication Engine: Strict 30-Minute Cooldown on (SYMBOL + DIRECTION)', () => {
+  clearAllSignatures();
   const testSym = `KASUSDT`;
   const testDir = 'LONG';
   const customCooldownMs = 30 * 60 * 1000; // 30 minutes

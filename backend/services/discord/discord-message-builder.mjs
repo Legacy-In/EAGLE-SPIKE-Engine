@@ -23,16 +23,55 @@ function formatPct(val) {
   return (num >= 0 ? '+' : '') + num.toFixed(2) + '%';
 }
 
+export function getPhaseBadge(phaseRaw) {
+  const phase = (phaseRaw || '').toUpperCase().trim();
+  switch (phase) {
+    case 'EXTREME':
+      return '🔴 EXTREME';
+    case 'PRE_SPIKE':
+      return '🟡 PRE_SPIKE';
+    case 'ACCELERATION':
+      return '⚡ ACCELERATION';
+    case 'BREAKOUT':
+      return '🚀 BREAKOUT';
+    case 'NORMAL':
+    default:
+      return '🟢 NORMAL';
+  }
+}
+
+export function getStrategyTypeBadge(typeRaw, fallbackStrategy = 'BREAKOUT') {
+  const type = (typeRaw || fallbackStrategy || '').toUpperCase().trim();
+  if (type.includes('VOLUME_EXPLOSION')) return '💥 VOLUME_EXPLOSION';
+  if (type.includes('SHORT_SQUEEZE') || type.includes('SQUEEZE')) return '🗜️ SHORT_SQUEEZE';
+  if (type.includes('ACCUMULATION')) return '📦 ACCUMULATION';
+  if (type.includes('MOMENTUM')) return '📈 MOMENTUM';
+  if (type.includes('BREAKOUT')) return '🚀 BREAKOUT';
+  return `⚡ ${type}`;
+}
+
 /**
  * Format NEW_SIGNAL Embed
  */
 export function buildNewSignalDiscordEmbed(signal) {
   const p = signal.payload || signal;
   const isLong = (p.direction || 'LONG').toUpperCase() === 'LONG';
-  const color = isLong ? 0x00FF88 : 0xFF3366; // Institutional Neon Green vs Coral Red
-  const dirIcon = isLong ? '🚀 LONG' : '🔴 SHORT';
   const symbol = (p.symbol || '').toUpperCase();
   const exchange = (p.exchange_id || p.exchange || 'BYBIT').toUpperCase();
+  const dirIcon = isLong ? '🚀 LONG' : '🔴 SHORT';
+
+  const phaseRaw = (p.phase || p.spike_phase || p.spikePhase || 'NORMAL').toUpperCase();
+  const typeRaw = (p.type || p.spike_type || p.spikeType || p.primary_strategy || 'BREAKOUT').toUpperCase();
+  const phaseBadge = getPhaseBadge(phaseRaw);
+  const strategyTypeBadge = getStrategyTypeBadge(typeRaw, p.primary_strategy);
+
+  // Dynamic institutional color: Climax Orange/Red for EXTREME, Gold for PRE_SPIKE, Neon for standard
+  let color = isLong ? 0x00FF88 : 0xFF3366;
+  if (phaseRaw === 'EXTREME') {
+    color = 0xFF4500; // Climax Fire Red-Orange
+  } else if (phaseRaw === 'PRE_SPIKE') {
+    color = 0xFFD700; // Accumulation Gold
+  }
 
   const entry = formatPrice(p.entry_price || p.entryPrice);
   const current = formatPrice(p.current_price || p.entry_price || p.entryPrice);
@@ -43,21 +82,24 @@ export function buildNewSignalDiscordEmbed(signal) {
 
   const riskR = p.risk_r ? formatPrice(p.risk_r) : '—';
   const score = Math.round(parseFloat(p.eagle_score || 75));
-  const strategy = p.strategy_combination?.join(' + ') || p.primary_strategy || 'BREAKOUT';
+  const rvol = parseFloat(p.rvol || p.relative_volume || 1.0).toFixed(2);
   const entryQuality = p.entry_quality || 'MEDIUM';
   const chaseRisk = p.chase_risk || 'LOW';
   const confidence = p.data_confidence || 'HIGH';
   const priceAge = p.price_age_ms ? `${p.price_age_ms}ms` : '< 500ms';
   const signalId = p.signal_id || signal.signal_id || 'EGL-CANONICAL';
 
+  const detectedAtDate = p.detected_at ? new Date(p.detected_at) : new Date();
+  const unixSec = Math.floor(detectedAtDate.getTime() / 1000);
+
   const embed = {
     title: '🦅 EAGLE FLASH — NEW SIGNAL',
-    description: `### ${dirIcon} — ${symbol}\n**Exchange:** \`${exchange}\` | **Market:** \`Perpetual\``,
+    description: `### ${dirIcon} — ${symbol}\n**Exchange:** \`${exchange}\` | **Phase:** \`${phaseBadge}\` | **Detected:** <t:${unixSec}:R>`,
     color,
     fields: [
-      { name: 'Strategy', value: `\`${strategy}\``, inline: true },
+      { name: 'Phase', value: `\`${phaseBadge}\``, inline: true },
+      { name: 'Strategy Type', value: `\`${strategyTypeBadge}\``, inline: true },
       { name: 'Eagle Score', value: `**${score}/100**`, inline: true },
-      { name: 'Signal Quality', value: `\`${entryQuality}\``, inline: true },
 
       { name: 'ENTRY', value: `**${entry}**`, inline: true },
       { name: 'CURRENT', value: `**${current}**`, inline: true },
@@ -67,18 +109,18 @@ export function buildNewSignalDiscordEmbed(signal) {
       { name: 'TP2 (Target 2)', value: `**${tp2}**`, inline: true },
       { name: 'TP3 (Target 3)', value: `**${tp3}**`, inline: true },
 
+      { name: 'RVOL', value: `**${rvol}x**`, inline: true },
       { name: 'Risk Unit (1R)', value: `\`${riskR}\``, inline: true },
-      { name: 'Chase Risk', value: `\`${chaseRisk}\``, inline: true },
-      { name: 'Data Confidence', value: `\`${confidence}\``, inline: true },
+      { name: 'Signal Quality', value: `\`${entryQuality}\``, inline: true },
 
+      { name: 'Exchange', value: `\`${exchange}\``, inline: true },
       { name: 'Price Age', value: `\`${priceAge}\``, inline: true },
-      { name: 'Data State', value: '`LIVE`', inline: true },
       { name: 'Blockchain Proof', value: p.transaction_hash ? `[Verified](${p.transaction_hash})` : '`PENDING`', inline: true },
     ],
     footer: {
       text: `Signal ID: ${signalId} · Eagle Flash Quant Intelligence`,
     },
-    timestamp: p.detected_at || new Date().toISOString(),
+    timestamp: detectedAtDate.toISOString(),
   };
 
   return { embeds: [embed] };

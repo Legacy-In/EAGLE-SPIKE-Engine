@@ -14,10 +14,17 @@ import {
   buildStopHitDiscordEmbed,
   buildWhaleRadarDiscordEmbed,
   buildBlockchainProofDiscordEmbed,
+  getPhaseBadge,
+  getStrategyTypeBadge,
 } from '../backend/services/discord/discord-message-builder.mjs';
-import { resolveDiscordChannel } from '../backend/services/discord/discord-router.mjs';
+import { resolveDiscordChannel, resolveDiscordChannels } from '../backend/services/discord/discord-router.mjs';
 import { getNotificationBackoffMs } from '../backend/services/notification-outbox.mjs';
 import { DiscordNotificationService } from '../backend/services/discord/discord-notification-service.mjs';
+import {
+  buildSignalSignature,
+  isSignatureInCooldown,
+  recordSignatureDispatch,
+} from '../backend/services/signal-dedup.mjs';
 
 test('1. Discord Embed Builder: NEW_SIGNAL LONG color and fields', () => {
   const signal = {
@@ -192,4 +199,134 @@ test('8. Guard Invariant: Rejection of Signals with $0 Entry or $0 Stop', async 
   const res = await DiscordNotificationService.dispatchOutboxItem(corruptSignal);
   assert.equal(res.success, false);
   assert.equal(res.error, 'INVALID_PRICE_GUARD');
+});
+
+test('9. Discord Embed: Phase and Strategy Type Badges & Dynamic Colors', () => {
+  // Test EXTREME Phase
+  const extremeSig = {
+    signal_id: 'EGL-EXTREME-TEST',
+    symbol: 'PEPEUSDT',
+    direction: 'LONG',
+    exchange: 'BYBIT',
+    entry_price: 0.000012,
+    current_price: 0.0000125,
+    stop_price: 0.0000115,
+    target_1_price: 0.000013,
+    phase: 'EXTREME',
+    type: 'VOLUME_EXPLOSION',
+    rvol: 4.8,
+  };
+
+  const extremeRes = buildNewSignalDiscordEmbed(extremeSig);
+  const extEmbed = extremeRes.embeds[0];
+  assert.equal(extEmbed.color, 0xFF4500, 'EXTREME phase should use Climax Fire Red-Orange');
+  assert.ok(extEmbed.fields.some(f => f.name === 'Phase' && f.value.includes('🔴 EXTREME')));
+  assert.ok(extEmbed.fields.some(f => f.name === 'Strategy Type' && f.value.includes('💥 VOLUME_EXPLOSION')));
+  assert.ok(extEmbed.fields.some(f => f.name === 'RVOL' && f.value.includes('4.80x')));
+  assert.ok(extEmbed.fields.some(f => f.name === 'Exchange' && f.value.includes('BYBIT')));
+
+  // Test PRE_SPIKE Phase
+  const preSpikeSig = {
+    signal_id: 'EGL-PRE-SPIKE-TEST',
+    symbol: 'NEARUSDT',
+    direction: 'LONG',
+    entry_price: 4.50,
+    stop_price: 4.35,
+    phase: 'PRE_SPIKE',
+    type: 'ACCUMULATION',
+    rvol: 2.1,
+  };
+
+  const preRes = buildNewSignalDiscordEmbed(preSpikeSig);
+  const preEmbed = preRes.embeds[0];
+  assert.equal(preEmbed.color, 0xFFD700, 'PRE_SPIKE phase should use Gold color');
+  assert.ok(preEmbed.fields.some(f => f.name === 'Phase' && f.value.includes('🟡 PRE_SPIKE')));
+  assert.ok(preEmbed.fields.some(f => f.name === 'Strategy Type' && f.value.includes('📦 ACCUMULATION')));
+});
+
+test('10. Discord Router: Dynamic Phase & Type Multi-Channel Matrix', () => {
+  process.env.DISCORD_CHANNEL_SIGNALS = 'CHAN_SIGNALS';
+  process.env.DISCORD_CHANNEL_QUICK_PUMP = 'CHAN_PUMP';
+  process.env.DISCORD_CHANNEL_BREAKOUTS = 'CHAN_BREAKOUTS';
+  process.env.DISCORD_CHANNEL_SQUEEZES = 'CHAN_SQUEEZES';
+  process.env.DISCORD_CHANNEL_BIG_CAP = 'CHAN_BIGCAP';
+
+  // 1. VOLUME_EXPLOSION or EXTREME -> #quick-pump + #signals
+  const pumpItem = {
+    event_type: 'NEW_SIGNAL',
+    payload: { symbol: 'TAOUSDT', type: 'VOLUME_EXPLOSION', phase: 'NORMAL' },
+  };
+  const pumpChannels = resolveDiscordChannels(pumpItem);
+  assert.ok(pumpChannels.includes('CHAN_PUMP'), 'VOLUME_EXPLOSION must route to #quick-pump');
+  assert.ok(pumpChannels.includes('CHAN_SIGNALS'), 'Signals must include main channel');
+
+  const extremeItem = {
+    event_type: 'NEW_SIGNAL',
+    payload: { symbol: 'FETUSDT', type: 'MOMENTUM', phase: 'EXTREME' },
+  };
+  const extremeChannels = resolveDiscordChannels(extremeItem);
+  assert.ok(extremeChannels.includes('CHAN_PUMP'), 'EXTREME phase must route to #quick-pump');
+
+  // 2. BREAKOUT -> #breakouts + #signals
+  const breakoutItem = {
+    event_type: 'NEW_SIGNAL',
+    payload: { symbol: 'INJUSDT', type: 'BREAKOUT', phase: 'BREAKOUT' },
+  };
+  const breakoutChannels = resolveDiscordChannels(breakoutItem);
+  assert.ok(breakoutChannels.includes('CHAN_BREAKOUTS'), 'BREAKOUT type must route to #breakouts');
+
+  // 3. ACCUMULATION or PRE_SPIKE -> #squeezes + #signals
+  const accumItem = {
+    event_type: 'NEW_SIGNAL',
+    payload: { symbol: 'RUNEUSDT', type: 'ACCUMULATION', phase: 'NORMAL' },
+  };
+  const accumChannels = resolveDiscordChannels(accumItem);
+  assert.ok(accumChannels.includes('CHAN_SQUEEZES'), 'ACCUMULATION type must route to #squeezes');
+
+  const preSpikeItem = {
+    event_type: 'NEW_SIGNAL',
+    payload: { symbol: 'ARUSDT', type: 'MOMENTUM', phase: 'PRE_SPIKE' },
+  };
+  const preSpikeChannels = resolveDiscordChannels(preSpikeItem);
+  assert.ok(preSpikeChannels.includes('CHAN_SQUEEZES'), 'PRE_SPIKE phase must route to #squeezes');
+
+  // 4. Big Cap (BTC, ETH, SOL) -> #big-cap + #signals
+  const btcItem = {
+    event_type: 'NEW_SIGNAL',
+    payload: { symbol: 'BTCUSDT', type: 'BREAKOUT', phase: 'NORMAL' },
+  };
+  const btcChannels = resolveDiscordChannels(btcItem);
+  assert.ok(btcChannels.includes('CHAN_BIGCAP'), 'BTCUSDT must route to #big-cap');
+  assert.ok(btcChannels.includes('CHAN_BREAKOUTS'), 'BTCUSDT BREAKOUT also routes to #breakouts');
+  assert.ok(btcChannels.includes('CHAN_SIGNALS'), 'BTCUSDT routes to #signals');
+
+  // 5. Default qualified signal -> #signals
+  const defaultItem = {
+    event_type: 'NEW_SIGNAL',
+    payload: { symbol: 'ATOMUSDT', type: 'MOMENTUM', phase: 'NORMAL' },
+  };
+  const defaultChannels = resolveDiscordChannels(defaultItem);
+  assert.deepEqual(defaultChannels, ['CHAN_SIGNALS'], 'Default signal routes only to #signals');
+});
+
+test('11. Deduplication Engine: SYMBOL:DIRECTION:TYPE composite signatures', () => {
+  const sym = 'SUIUSDT';
+  const dir = 'LONG';
+  const type1 = 'VOLUME_EXPLOSION';
+  const type2 = 'BREAKOUT';
+  const customCooldownMs = 30 * 60 * 1000;
+
+  // Signature check
+  assert.equal(buildSignalSignature(sym, dir, type1), 'SUIUSDT:LONG:VOLUME_EXPLOSION');
+  assert.equal(buildSignalSignature(sym, dir, type2), 'SUIUSDT:LONG:BREAKOUT');
+  assert.equal(buildSignalSignature(sym, dir), 'SUIUSDT:LONG');
+
+  // Record dispatch for VOLUME_EXPLOSION
+  recordSignatureDispatch(sym, dir, type1);
+
+  // Exact type in cooldown
+  assert.equal(isSignatureInCooldown(sym, dir, customCooldownMs, type1), true);
+
+  // Base symbol is also locked
+  assert.equal(isSignatureInCooldown(sym, dir, customCooldownMs), true);
 });

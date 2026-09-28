@@ -11,7 +11,20 @@ import path from 'path';
 
 const COOLDOWN_MS = 30 * 60 * 1000; // 30 minutes in milliseconds
 const DATA_DIR = path.resolve(process.cwd(), 'data');
-const DEDUP_STORE_PATH = path.join(DATA_DIR, 'dispatched_signatures.json');
+
+export function isTestExecution() {
+  return (
+    process.env.NODE_ENV === 'test' ||
+    Boolean(process.env.TEST_MODE) ||
+    Boolean(process.env.VITEST) ||
+    process.argv.some(a => a.includes('test') || a.includes('tsx'))
+  );
+}
+
+export function getDedupStorePath() {
+  const fileName = isTestExecution() ? 'test_dispatched_signatures.json' : 'dispatched_signatures.json';
+  return path.join(DATA_DIR, fileName);
+}
 
 // In-memory signature store: signature -> lastDispatchedTimestamp
 const dispatchedSignatures = new Map();
@@ -19,8 +32,9 @@ const dispatchedSignatures = new Map();
 // Load persistent signatures on startup
 function loadPersistedSignatures() {
   try {
-    if (fs.existsSync(DEDUP_STORE_PATH)) {
-      const raw = fs.readFileSync(DEDUP_STORE_PATH, 'utf-8');
+    const storePath = getDedupStorePath();
+    if (fs.existsSync(storePath)) {
+      const raw = fs.readFileSync(storePath, 'utf-8');
       const data = JSON.parse(raw);
       const now = Date.now();
       for (const [sig, ts] of Object.entries(data)) {
@@ -44,8 +58,12 @@ function savePersistedSignatures() {
         obj[sig] = ts;
       }
     }
-    fs.writeFileSync(DEDUP_STORE_PATH, JSON.stringify(obj, null, 2), 'utf-8');
+    fs.writeFileSync(getDedupStorePath(), JSON.stringify(obj, null, 2), 'utf-8');
   } catch (e) {}
+}
+
+export function clearAllSignatures() {
+  dispatchedSignatures.clear();
 }
 
 loadPersistedSignatures();
@@ -56,22 +74,24 @@ loadPersistedSignatures();
  * @param {string} direction - "LONG" | "SHORT"
  * @returns {string}
  */
-export function buildSignalSignature(symbol, direction = 'LONG') {
+export function buildSignalSignature(symbol, direction = 'LONG', type = '') {
   const normSym = (symbol || '').toUpperCase().replace(/[-_]/g, '');
   const cleanSym = normSym.includes(':') ? normSym.split(':')[1] : normSym;
   const normDir = (direction || 'LONG').toUpperCase();
-  return `${cleanSym}:${normDir}`;
+  const normType = (type || '').toUpperCase().trim();
+  return normType ? `${cleanSym}:${normDir}:${normType}` : `${cleanSym}:${normDir}`;
 }
 
 /**
- * Checks if a symbol + direction is currently in a 30-minute cooldown
+ * Checks if a symbol + direction (and optional type) is currently in a 30-minute cooldown
  * @param {string} symbol
  * @param {string} direction
  * @param {number} [customCooldownMs]
+ * @param {string} [type]
  * @returns {boolean}
  */
-export function isSignatureInCooldown(symbol, direction = 'LONG', customCooldownMs = COOLDOWN_MS) {
-  const sig = buildSignalSignature(symbol, direction);
+export function isSignatureInCooldown(symbol, direction = 'LONG', customCooldownMs = COOLDOWN_MS, type = '') {
+  const sig = buildSignalSignature(symbol, direction, type);
   const lastTs = dispatchedSignatures.get(sig);
   if (!lastTs) return false;
 
@@ -82,8 +102,8 @@ export function isSignatureInCooldown(symbol, direction = 'LONG', customCooldown
 /**
  * Returns remaining cooldown in milliseconds (or 0 if not active)
  */
-export function getRemainingCooldownMs(symbol, direction = 'LONG', customCooldownMs = COOLDOWN_MS) {
-  const sig = buildSignalSignature(symbol, direction);
+export function getRemainingCooldownMs(symbol, direction = 'LONG', customCooldownMs = COOLDOWN_MS, type = '') {
+  const sig = buildSignalSignature(symbol, direction, type);
   const lastTs = dispatchedSignatures.get(sig);
   if (!lastTs) return 0;
 
@@ -94,10 +114,14 @@ export function getRemainingCooldownMs(symbol, direction = 'LONG', customCooldow
 /**
  * Records a successful signal dispatch and locks the signature for 30 minutes
  */
-export function recordSignatureDispatch(symbol, direction = 'LONG') {
-  const sig = buildSignalSignature(symbol, direction);
+export function recordSignatureDispatch(symbol, direction = 'LONG', type = '') {
+  const sig = buildSignalSignature(symbol, direction, type);
   const now = Date.now();
   dispatchedSignatures.set(sig, now);
+  if (type) {
+    const baseSig = buildSignalSignature(symbol, direction);
+    dispatchedSignatures.set(baseSig, now);
+  }
   savePersistedSignatures();
   return { signature: sig, lockedUntil: now + COOLDOWN_MS };
 }
