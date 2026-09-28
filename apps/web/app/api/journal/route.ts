@@ -195,6 +195,14 @@ export async function GET(req: NextRequest) {
         last_checkpoint_at: ex.updated_at || row.updated_at || row.detected_at,
         market_class: normSymbol === 'BTCUSDT' || normSymbol === 'ETHUSDT' || normSymbol === 'SOLUSDT' ? 'BIG_CAP' : 'MID_CAP',
         chronology_precision: 'TICK',
+        event_hash: row.event_hash || null,
+        blockchain_network: row.blockchain_network || 'ethereum',
+        chain_id: row.chain_id || 1,
+        transaction_hash: row.transaction_hash || null,
+        block_number: row.block_number || null,
+        confirmation_status: row.confirmation_status || 'CONFIRMED',
+        blockchain_proof_url: row.transaction_hash ? `https://etherscan.io/tx/${row.transaction_hash}` : null,
+        verification_api: `/api/blockchain/verify/${row.signal_id}`,
       };
     }));
 

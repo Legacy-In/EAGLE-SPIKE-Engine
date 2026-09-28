@@ -18,6 +18,7 @@ import {
   Shield,
   Zap,
 } from 'lucide-react';
+import { Web3WalletButton } from '../web3/Web3WalletButton';
 
 export const TopBar: React.FC = () => {
   const {
@@ -261,6 +262,9 @@ export const TopBar: React.FC = () => {
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
+
+            {/* Web3 Non-Custodial Wallet Connect */}
+            <Web3WalletButton />
 
             {/* Trading Mode Toggle */}
             <button

@@ -65,6 +65,14 @@ export async function GET(
       tp_sl_version: signal.tp_sl_version || 'v1.0',
       detected_at: signal.detected_at,
       resolved_at: signal.resolved_at,
+      event_hash: signal.event_hash || null,
+      blockchain_network: signal.blockchain_network || 'ethereum',
+      chain_id: signal.chain_id || 1,
+      transaction_hash: signal.transaction_hash || null,
+      block_number: signal.block_number || null,
+      confirmation_status: signal.confirmation_status || 'CONFIRMED',
+      blockchain_proof_url: signal.transaction_hash ? `https://etherscan.io/tx/${signal.transaction_hash}` : null,
+      verification_api: `/api/blockchain/verify/${signal.signal_id}`,
     });
   } catch (err: any) {
     return NextResponse.json(

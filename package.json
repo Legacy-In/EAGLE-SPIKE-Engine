@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
-    "dotenv": "^18.0.1"
+    "dotenv": "^18.0.1",
+    "viem": "^2.56.9"
   }
 }

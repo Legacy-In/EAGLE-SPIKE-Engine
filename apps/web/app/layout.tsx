@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { Web3Provider } from '../providers/Web3Provider';
 
 export const metadata: Metadata = {
   title: 'SIGMA — Institutional BTC Quantitative Intelligence & Trading Platform',
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body className="bg-sigma-bg text-sigma-textMain min-h-screen antialiased selection:bg-sigma-green/20">
-        {children}
+        <Web3Provider>
+          {children}
+        </Web3Provider>
       </body>
     </html>
   );

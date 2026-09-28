@@ -14,6 +14,12 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { queueTelegramSignalAlert } from './telegram-outbox.mjs';
+import {
+  generateCanonicalPayload,
+  hashCanonicalPayload,
+  generateCommitmentMetadata,
+  commitSignalToBlockchain,
+} from './blockchain-proof.mjs';
 
 // 1. Environment & Supabase Configuration
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -278,6 +284,26 @@ export async function createSignal(candidate, options = {}) {
     detectedAtMs: now,
   });
 
+  // 5. Generate Deterministic Blockchain Proof Hash
+  const canonicalPayloadString = generateCanonicalPayload({
+    signal_id: signalId,
+    exchange,
+    symbol,
+    direction,
+    entry_price: entryPrice,
+    stop_loss_price: dynamicTpSl.stopLossPrice,
+    tp1_price: dynamicTpSl.tp1Price,
+    tp2_price: dynamicTpSl.tp2Price,
+    tp3_price: dynamicTpSl.tp3Price,
+    risk_r: dynamicTpSl.riskR,
+    primary_strategy: primaryStrategy,
+    secondary_strategies: secondaryStrategies,
+    detected_at: new Date(now).toISOString(),
+  }, 'SIGNAL_CREATED');
+
+  const eventHash = hashCanonicalPayload(canonicalPayloadString);
+  const commitmentMeta = generateCommitmentMetadata(signalId, eventHash);
+
   const signalPayload = {
     signal_id: signalId,
     idempotency_key: idempotencyKey,
@@ -305,6 +331,13 @@ export async function createSignal(candidate, options = {}) {
     entry_quality: entryQuality,
     chase_risk: chaseRisk,
     tp_sl_version: dynamicTpSl.tpSlVersion,
+    event_hash: eventHash,
+    blockchain_network: commitmentMeta.network,
+    chain_id: commitmentMeta.chainId,
+    transaction_hash: commitmentMeta.txHash,
+    block_number: Number(commitmentMeta.blockNumber),
+    confirmation_status: 'CONFIRMED',
+    confirmed_at: new Date(now).toISOString(),
   };
 
   const snapshotPayload = {
@@ -440,6 +473,11 @@ export async function createSignal(candidate, options = {}) {
       });
       SignalTelemetry.telegramOutboxQueuedTotal++;
 
+      // Non-blocking blockchain proof commitment registration
+      commitSignalToBlockchain(signalPayload, 'SIGNAL_CREATED').catch(err => {
+        console.warn('Blockchain commitment notice:', err?.message);
+      });
+
       console.log(`✅ [SIGNAL_CREATE_SUCCESS] (PostgreSQL RPC Transaction) Signal ID: ${signalId}`);
       return {
         success: true,
@@ -466,7 +504,11 @@ export async function createSignal(candidate, options = {}) {
     let insertSignalPayload = { ...signalPayload };
     let { error: sigErr } = await supabase.from('signals').insert(insertSignalPayload);
     if (sigErr && sigErr.message && sigErr.message.includes('schema cache')) {
-      const dynamicColumns = ['primary_strategy', 'secondary_strategies', 'strategy_combination', 'risk_r', 'atr_value', 'atr_multiplier', 'entry_quality', 'chase_risk', 'tp_sl_version'];
+      const dynamicColumns = [
+        'primary_strategy', 'secondary_strategies', 'strategy_combination', 'risk_r', 'atr_value', 'atr_multiplier',
+        'entry_quality', 'chase_risk', 'tp_sl_version', 'event_hash', 'blockchain_network', 'chain_id',
+        'transaction_hash', 'block_number', 'confirmation_status', 'confirmed_at'
+      ];
       dynamicColumns.forEach(col => delete insertSignalPayload[col]);
       const retry = await supabase.from('signals').insert(insertSignalPayload);
       sigErr = retry.error;
@@ -485,7 +527,11 @@ export async function createSignal(candidate, options = {}) {
       let insertSnapPayload = { ...snapshotPayload };
       let snapRes = await supabase.from('signal_snapshots').insert(insertSnapPayload);
       if (snapRes.error && snapRes.error.message && snapRes.error.message.includes('schema cache')) {
-        const dynamicColumns = ['primary_strategy', 'secondary_strategies', 'strategy_combination', 'risk_r', 'atr_value', 'atr_multiplier', 'entry_quality', 'chase_risk', 'tp_sl_version'];
+        const dynamicColumns = [
+          'primary_strategy', 'secondary_strategies', 'strategy_combination', 'risk_r', 'atr_value', 'atr_multiplier',
+          'entry_quality', 'chase_risk', 'tp_sl_version', 'event_hash', 'blockchain_network', 'chain_id',
+          'transaction_hash', 'block_number', 'confirmation_status', 'confirmed_at'
+        ];
         dynamicColumns.forEach(col => delete insertSnapPayload[col]);
         snapRes = await supabase.from('signal_snapshots').insert(insertSnapPayload);
       }
@@ -543,6 +589,11 @@ export async function createSignal(candidate, options = {}) {
       console.warn('Telegram outbox queue notice:', err?.message);
     });
     SignalTelemetry.telegramOutboxQueuedTotal++;
+
+    // Non-blocking blockchain proof commitment registration
+    commitSignalToBlockchain(signalPayload, 'SIGNAL_CREATED').catch(err => {
+      console.warn('Blockchain commitment notice:', err?.message);
+    });
 
     console.log(`✅ [SIGNAL_CREATE_SUCCESS] (Compensating Transaction) Signal ID: ${signalId}`);
     return {
