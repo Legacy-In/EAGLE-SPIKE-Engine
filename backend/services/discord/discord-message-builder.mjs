@@ -127,35 +127,38 @@ export function buildNewSignalDiscordEmbed(signal) {
 }
 
 /**
- * Format TP Milestone Embed (TP1, TP2, TP3)
+ * Format TP Milestone Embed (TP1, TP2, TP3, TP_HIT)
  */
 export function buildTpMilestoneDiscordEmbed(item, milestone = 'TP1') {
   const p = item.payload || item;
   const symbol = (p.symbol || '').toUpperCase();
   const dir = (p.direction || 'LONG').toUpperCase();
   const entry = formatPrice(p.entry_price || p.entryPrice);
-  const current = formatPrice(p.current_price || p.entry_price);
+  const current = formatPrice(p.current_price || p.exit_price || p.entry_price);
+  const effectiveMilestone = p.target_hit || p.milestone || milestone || 'TP1';
   const target = formatPrice(
-    milestone === 'TP1' ? (p.target_1_price || p.tp1_price) :
-    milestone === 'TP2' ? (p.target_2_price || p.tp2_price) :
-    (p.target_3_price || p.tp3_price)
+    effectiveMilestone === 'TP3' ? (p.target_3_price || p.targetPrice3 || p.tp3_price) :
+    effectiveMilestone === 'TP2' ? (p.target_2_price || p.targetPrice2 || p.tp2_price) :
+    (p.target_1_price || p.targetPrice1 || p.tp1_price)
   );
-  const roi = formatPct(p.current_roi_pct || p.roi || 0);
+  const roi = formatPct(p.realized_roi_pct || p.current_roi_pct || p.roi || 0);
   const mfe = formatPct(p.mfe_pct || 0);
   const mae = formatPct(p.mae_pct || 0);
-  const actionText = milestone === 'TP1' ? 'STOP MOVED TO ENTRY (BREAKEVEN)' : 'TRAILING STOP ACTIVE';
+  const actionText = effectiveMilestone === 'TP1' ? 'STOP MOVED TO ENTRY (BREAKEVEN)' : 
+                     effectiveMilestone === 'TP2' ? 'TRAILING STOP MOVED TO TP1' : 
+                     'FULL TARGET ACHIEVED (PROFIT SECURED)';
 
   const embed = {
-    title: `🦅 EAGLE FLASH — ${milestone} HIT`,
+    title: `🦅 EAGLE FLASH — ${effectiveMilestone} HIT`,
     description: `### 🎯 Target Achieved — ${symbol} (${dir})`,
-    color: 0x00E5FF, // Cyan
+    color: effectiveMilestone === 'TP3' ? 0xFFD700 : (effectiveMilestone === 'TP2' ? 0x00FF88 : 0x00E5FF),
     fields: [
       { name: 'Signal ID', value: `\`${p.signal_id || item.signal_id}\``, inline: true },
       { name: 'Direction', value: `\`${dir}\``, inline: true },
-      { name: 'Milestone', value: `**${milestone}_HIT**`, inline: true },
+      { name: 'Milestone', value: `**${effectiveMilestone}_HIT**`, inline: true },
 
       { name: 'Entry Price', value: `**${entry}**`, inline: true },
-      { name: `${milestone} Target`, value: `**${target}**`, inline: true },
+      { name: `${effectiveMilestone} Target`, value: `**${target}**`, inline: true },
       { name: 'Current Price', value: `**${current}**`, inline: true },
 
       { name: 'Realized ROI', value: `**${roi}**`, inline: true },
@@ -181,8 +184,8 @@ export function buildStopHitDiscordEmbed(item) {
   const symbol = (p.symbol || '').toUpperCase();
   const dir = (p.direction || 'LONG').toUpperCase();
   const entry = formatPrice(p.entry_price || p.entryPrice);
-  const stop = formatPrice(p.stop_price || p.stop_loss_price);
-  const exit = formatPrice(p.exit_price || p.stop_price || p.stop_loss_price);
+  const stop = formatPrice(p.stop_price || p.stop_loss_price || p.stopLossPrice);
+  const exit = formatPrice(p.exit_price || p.current_price || p.stop_price || p.stop_loss_price);
   const roi = formatPct(p.realized_roi_pct || p.roi || -2.5);
 
   const embed = {

@@ -61,15 +61,19 @@ export class DiscordNotificationService {
     // 3. Build rich message payload based on event type
     let messagePayload = null;
     switch (eventType) {
-      case 'TP1_HIT':
-        messagePayload = buildTpMilestoneDiscordEmbed(item, 'TP1');
+      case 'TP_HIT':
+      case 'TP1_HIT': {
+        const milestone = p.milestone || (eventType === 'TP_HIT' ? (p.target_hit || 'TP1') : 'TP1');
+        messagePayload = buildTpMilestoneDiscordEmbed(item, milestone);
         break;
+      }
       case 'TP2_HIT':
         messagePayload = buildTpMilestoneDiscordEmbed(item, 'TP2');
         break;
       case 'TP3_HIT':
         messagePayload = buildTpMilestoneDiscordEmbed(item, 'TP3');
         break;
+      case 'SL_HIT':
       case 'STOP_HIT':
         messagePayload = buildStopHitDiscordEmbed(item);
         break;
