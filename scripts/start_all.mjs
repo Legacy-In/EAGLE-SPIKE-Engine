@@ -40,16 +40,28 @@ const COLORS = {
   brightCyan: '\x1b[96m',
 };
 
+// CLI Argument Parsing
+const args = process.argv.slice(2);
+const isDryRun = args.includes('--dry-run');
+const isWorkersOnly = args.includes('--workers-only');
+
+const nextBin = path.join(ROOT_DIR, 'apps', 'web', 'node_modules', 'next', 'dist', 'bin', 'next');
+const webDir = path.join(ROOT_DIR, 'apps', 'web');
+const buildDir = path.join(webDir, '.next');
+const hasProductionBuild = fs.existsSync(buildDir);
+const isDevMode = args.includes('--dev') || !hasProductionBuild;
+
 // Worker & Service Definitions
 export const SERVICES = [
   {
     id: 'web',
     name: 'EAGLE-WEB',
     color: COLORS.brightCyan,
-    command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    args: ['--prefix', 'apps/web', 'run', 'start'],
-    cwd: ROOT_DIR,
-    env: { NODE_ENV: 'production', PORT: '3000' },
+    command: process.execPath,
+    args: [nextBin, isDevMode ? 'dev' : 'start', '-p', '3000'],
+    cwd: webDir,
+    env: { NODE_ENV: isDevMode ? 'development' : 'production', PORT: '3000' },
+    scriptPath: 'apps/web/node_modules/next/dist/bin/next',
     isWeb: true,
   },
   {
@@ -143,11 +155,6 @@ export const SERVICES = [
     scriptPath: 'scripts/etherscan_whale_worker.mjs',
   },
 ];
-
-// CLI Argument Parsing
-const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
-const isWorkersOnly = args.includes('--workers-only');
 
 // Filter services based on CLI flags
 export function getActiveServices({ workersOnly = false } = {}) {

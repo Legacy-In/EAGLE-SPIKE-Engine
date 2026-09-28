@@ -52,7 +52,10 @@ describe('Ecosystem Runner & Multi-Worker Orchestrator', () => {
 
     const workersOnly = getActiveServices({ workersOnly: true });
     assert.strictEqual(workersOnly.length, 9, 'Workers-only must be 9');
-    assert.ok(!workersOnly.some((s) => s.isWeb), 'Workers-only must not include web app');
+    const webService = SERVICES.find((s) => s.id === 'web');
+    assert.ok(webService, 'Web service must exist');
+    assert.strictEqual(webService.command, process.execPath, 'Web must use process.execPath to prevent Windows spawn EINVAL');
+    assert.ok(webService.scriptPath && fs.existsSync(path.join(ROOT_DIR, webService.scriptPath)), 'Next CLI binary must exist on disk');
 
     const issues = validateServices();
     assert.deepStrictEqual(issues, [], 'validateServices must return 0 issues');
