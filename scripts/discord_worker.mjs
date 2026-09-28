@@ -6,6 +6,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
+import 'dotenv/config';
 import { fetchPendingOutbox, updateOutboxItemStatus } from '../backend/services/notification-outbox.mjs';
 import { DiscordNotificationService } from '../backend/services/discord/discord-notification-service.mjs';
 
