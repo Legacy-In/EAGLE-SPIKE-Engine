@@ -314,3 +314,25 @@ export async function verifySignal(signalId, eventType = 'SIGNAL_CREATED', expli
     };
   }
 }
+
+/**
+ * Diagnostic Telemetry for Blockchain Proof Engine
+ */
+export function getBlockchainProofDiagnostics() {
+  return {
+    engine_status: 'ACTIVE',
+    smart_contract: 'EagleSignalRegistry',
+    default_network: 'Base',
+    cached_proofs_count: proofCache.size,
+    supported_events: [
+      'SIGNAL_CREATED',
+      'SIGNAL_CONFIRMED',
+      'TP1_HIT',
+      'TP2_HIT',
+      'TP3_HIT',
+      'STOP_HIT',
+      'SIGNAL_CLOSED',
+    ],
+    hash_algorithm: 'SHA-256',
+  };
+}

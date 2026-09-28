@@ -86,5 +86,15 @@ module.exports = {
       autorestart: true,
       restart_delay: 5000,
     },
+    {
+      name: 'eagle-flash-discord-worker',
+      script: 'scripts/discord_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+      },
+      autorestart: true,
+      restart_delay: 5000,
+    },
   ],
 };

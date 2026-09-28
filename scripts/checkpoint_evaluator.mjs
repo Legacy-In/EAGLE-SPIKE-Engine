@@ -9,6 +9,10 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
+import {
+  buildSignalNotificationPayloads,
+  queueNotificationAlerts,
+} from '../backend/services/notification-outbox.mjs';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
@@ -234,6 +238,25 @@ export async function runCheckpointEvaluation() {
         .eq('signal_id', s.signal_id);
       console.log(`🔄 Updated signal ${s.signal_id} status: ${s.status} -> ${newStatus}`);
       statusUpdates++;
+
+      // Automatically queue canonical milestone alert to Telegram & Discord outbox
+      const eventType = newStatus === 'T1_HIT' ? 'TP1_HIT' :
+                        newStatus === 'T2_HIT' ? 'TP2_HIT' :
+                        newStatus === 'T3_HIT' ? 'TP3_HIT' :
+                        newStatus === 'STOP_HIT' ? 'STOP_HIT' : null;
+      if (eventType) {
+        const milestonePayloads = buildSignalNotificationPayloads({
+          ...s,
+          ...updatePayload,
+          signal_id: s.signal_id,
+          current_price: latestPrice,
+          exit_price: latestPrice,
+          current_roi_pct: latestReturnPct,
+        }, {}, eventType);
+        queueNotificationAlerts(milestonePayloads).catch(err => {
+          console.warn('Milestone notification notice:', err?.message);
+        });
+      }
     }
   }
 

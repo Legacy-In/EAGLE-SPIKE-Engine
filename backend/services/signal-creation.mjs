@@ -15,6 +15,10 @@ import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { queueTelegramSignalAlert } from './telegram-outbox.mjs';
 import {
+  buildSignalNotificationPayloads,
+  queueNotificationAlerts,
+} from './notification-outbox.mjs';
+import {
   generateCanonicalPayload,
   hashCanonicalPayload,
   generateCommitmentMetadata,
@@ -467,7 +471,11 @@ export async function createSignal(candidate, options = {}) {
       SignalTelemetry.lastDbInsertAt = new Date().toISOString();
       if (isBigCap) SignalTelemetry.bigCapSignalsCreatedTotal++;
 
-      // Non-blocking outbox registration & telemetry
+      // Non-blocking multi-channel outbox registration (Telegram + Discord) & telemetry
+      const multiNotifications = buildSignalNotificationPayloads(signalPayload, candidate, 'NEW_SIGNAL');
+      queueNotificationAlerts(multiNotifications).catch(err => {
+        console.warn('Notification outbox queue notice:', err?.message);
+      });
       queueTelegramSignalAlert(signalPayload, candidate).catch(err => {
         console.warn('Telegram outbox queue notice:', err?.message);
       });
@@ -584,7 +592,11 @@ export async function createSignal(candidate, options = {}) {
     SignalTelemetry.lastDbInsertAt = new Date().toISOString();
     if (isBigCap) SignalTelemetry.bigCapSignalsCreatedTotal++;
 
-    // Non-blocking outbox registration & telemetry
+    // Non-blocking multi-channel outbox registration (Telegram + Discord) & telemetry
+    const multiNotifications = buildSignalNotificationPayloads(signalPayload, candidate, 'NEW_SIGNAL');
+    queueNotificationAlerts(multiNotifications).catch(err => {
+      console.warn('Notification outbox queue notice:', err?.message);
+    });
     queueTelegramSignalAlert(signalPayload, candidate).catch(err => {
       console.warn('Telegram outbox queue notice:', err?.message);
     });
