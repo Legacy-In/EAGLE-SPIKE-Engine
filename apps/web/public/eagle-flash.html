@@ -553,6 +553,30 @@
       border: 1px solid rgba(62, 207, 142, 0.4);
       letter-spacing: 0.04em;
     }
+    .shield-chase-high {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      background: rgba(255, 71, 87, 0.2);
+      color: #ff4757;
+      border: 1px solid rgba(255, 71, 87, 0.5);
+      letter-spacing: 0.04em;
+    }
+    .shield-chase-med {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      background: rgba(255, 170, 0, 0.15);
+      color: #ffaa00;
+      border: 1px solid rgba(255, 170, 0, 0.4);
+      letter-spacing: 0.04em;
+    }
 
     
     /* =========================================================================
@@ -5812,18 +5836,36 @@ function generateSparklineSvg(ret5m, ret15m, ret24h) {
     '</svg>';
 }
 
-function getSpikePhaseBadge(phase) {
-  const p = phase || 'NORMAL';
-  let cls = 'phase-normal';
-  if (p === 'PRE_SPIKE') cls = 'phase-pre';
-  else if (p === 'EARLY_SPIKE') cls = 'phase-early';
-  else if (p === 'ACCELERATION') cls = 'phase-accel';
-  else if (p === 'EXTREME') cls = 'phase-extreme';
-  else if (p === 'EXHAUSTION') cls = 'phase-exhaust';
-  else if (p === 'COOLING') cls = 'phase-cooling';
-  else if (p === 'REVERSAL') cls = 'phase-reversal';
-  else if (p === 'CONTINUATION') cls = 'phase-cont';
-  return '<span class="phase-badge ' + cls + '">' + p + '</span>';
+function getSpikePhaseBadge(phase, marketStatus, chaseRisk) {
+  const status = marketStatus || phase || 'NORMAL';
+  let badgeHtml = '';
+  if (status === 'CONFIRMED') {
+    badgeHtml = '<span class="phase-badge phase-cont font-bold" style="background:rgba(0,229,153,0.18); color:var(--emerald); border:1px solid rgba(0,229,153,0.4);">CONFIRMED</span>';
+  } else if (status === 'READY') {
+    badgeHtml = '<span class="phase-badge phase-accel font-bold" style="background:rgba(255,130,0,0.18); color:#ff9f43; border:1px solid rgba(255,130,0,0.4);">READY</span>';
+  } else if (status === 'PREP' || status === 'PRE_SPIKE') {
+    badgeHtml = '<span class="phase-badge phase-pre font-bold" style="background:rgba(255,170,0,0.18); color:var(--amber); border:1px solid rgba(255,170,0,0.4);">PREP</span>';
+  } else {
+    const p = phase || 'NORMAL';
+    let cls = 'phase-normal';
+    if (p === 'PRE_SPIKE') cls = 'phase-pre';
+    else if (p === 'EARLY_SPIKE') cls = 'phase-early';
+    else if (p === 'ACCELERATION') cls = 'phase-accel';
+    else if (p === 'EXTREME') cls = 'phase-extreme';
+    else if (p === 'EXHAUSTION') cls = 'phase-exhaust';
+    else if (p === 'COOLING') cls = 'phase-cooling';
+    else if (p === 'REVERSAL') cls = 'phase-reversal';
+    else if (p === 'CONTINUATION') cls = 'phase-cont';
+    badgeHtml = '<span class="phase-badge ' + cls + '">' + p + '</span>';
+  }
+
+  const chase = (chaseRisk && typeof chaseRisk === 'object') ? chaseRisk.level : chaseRisk;
+  if (chase === 'HIGH') {
+    badgeHtml += ' <span class="shield-chase-high" title="Chase Risk HIGH: Price overextended > 2x ATR above consolidation">🛡️ CHASE</span>';
+  } else if (chase === 'MEDIUM') {
+    badgeHtml += ' <span class="shield-chase-med" title="Chase Risk MODERATE">🛡️ MED</span>';
+  }
+  return badgeHtml;
 }
 
 function getSpikeTypeBadge(type) {
@@ -6367,7 +6409,7 @@ function showScoreBreakdown(symbol) {
           s.signalScore +
         '</span>' +
       '</td>' +
-      '<td>' + getSpikePhaseBadge(s.spikePhase) + '</td>' +
+      '<td>' + getSpikePhaseBadge(s.spikePhase, s.marketStatus, s.chaseRiskLevel || s.chaseRisk) + '</td>' +
       '<td>' + getSpikeTypeBadge(s.spikeType) + '</td>' +
       '<td>' + getSpikeQualityBadge(s.spikeQuality) + '</td>' +
       (() => {

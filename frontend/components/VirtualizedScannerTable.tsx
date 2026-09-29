@@ -265,10 +265,37 @@ export const VirtualizedScannerTable: React.FC<VirtualizedScannerTableProps> = (
                       {s.signalScore}
                     </span>
                   </td>
-                  <td className="py-2 px-2.5">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sigma-surface3 text-sigma-cyan border border-sigma-border">
-                      {s.spikePhase}
+                  <td className="py-2 px-2.5 flex items-center gap-1">
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded border font-bold ${
+                        s.marketStatus === 'CONFIRMED'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                          : s.marketStatus === 'READY'
+                          ? 'bg-orange-500/20 text-orange-400 border-orange-500/40'
+                          : s.marketStatus === 'PREP'
+                          ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                          : 'bg-sigma-surface3 text-sigma-cyan border-sigma-border'
+                      }`}
+                      title={`Prep: ${s.prepScore ?? 'N/A'} | Conf: ${s.confirmationScore ?? 'N/A'}`}
+                    >
+                      {s.marketStatus || s.spikePhase}
                     </span>
+                    {s.chaseRiskLevel === 'HIGH' && (
+                      <span
+                        className="text-[9px] px-1 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/50 font-extrabold"
+                        title="Chase Risk HIGH: Price overextended above consolidation base"
+                      >
+                        🛡️ CHASE
+                      </span>
+                    )}
+                    {s.chaseRiskLevel === 'MEDIUM' && (
+                      <span
+                        className="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-medium"
+                        title="Chase Risk MODERATE"
+                      >
+                        🛡️ MED
+                      </span>
+                    )}
                   </td>
                   <td className="py-2 px-2.5 text-[10px] text-sigma-textMuted">{s.spikeType}</td>
                   <td className="py-2 px-2.5 text-[10px] text-sigma-textDark">{s.spikeQuality}</td>

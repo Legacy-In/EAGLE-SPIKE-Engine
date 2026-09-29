@@ -42,6 +42,32 @@ console.log(`📡 Backend Endpoint: ${SERVER_URL}/api/spikes`);
 console.log(`⏱️ Scan Interval: ${SCAN_INTERVAL_MS / 1000}s`);
 
 import { createSignal } from '../backend/services/signal-creation.mjs';
+import {
+  computeKaufmanPriceEfficiency,
+  computeNormalizedOiAcceleration,
+  computeVciAndPercentile,
+  computeFundingZScoreAndPercentile,
+  computeLiquidityQuality,
+  calculateDeterministicBasePrice,
+  calculateAtr,
+} from '../backend/services/feature-calculator.mjs';
+import {
+  evaluateMultiFactorAbsorption,
+  globalWallTracker,
+  evaluateRelativeSpoofRisk,
+} from '../backend/services/orderbook-absorption.mjs';
+import {
+  calculatePrepScore,
+  calculateConfirmationScore,
+  evaluateChaseRisk,
+  classifyMarketStatus,
+} from '../backend/services/dual-score-engine.mjs';
+import {
+  recordPrepAudit,
+  updateAuditExcursions,
+  recordAuditConfirmation,
+  computeAggregateAuditMetrics,
+} from '../backend/services/prep-audit-service.mjs';
 
 // Ingest Bybit Linear Tickers
 async function fetchBybitTickers() {
@@ -124,6 +150,12 @@ async function evaluateSymbol(t) {
     const variance = vols.reduce((a, b) => a + Math.pow(b - meanVol, 2), 0) / vols.length;
     const volZ = parseFloat((Math.sqrt(variance) > 0 ? (curVol - meanVol) / Math.sqrt(variance) : 1.5).toFixed(2));
 
+    // 1. Mandatory Liquidity-Quality Gate Filter
+    const liqQuality = computeLiquidityQuality(t, null, { minTurnoverUsd: 1500000 });
+    if (!liqQuality.passesGate && turnoverM < 2.0) {
+      return null;
+    }
+
     // Calculate Multi-Factor Eagle Score (score_v2.1.0)
     let score = 50;
     if (rvol >= 2.0) score += 15;
@@ -136,6 +168,81 @@ async function evaluateSymbol(t) {
     if (isSqueeze) score += 10;
 
     score = Math.min(96, Math.max(45, score));
+
+    // 2. Pre-Breakout Feature Engineering & Derivatives Normalization
+    const priceEfficiency = computeKaufmanPriceEfficiency(candles, 14);
+    const vciResult = computeVciAndPercentile(candles, candles, 0.6);
+    const basePriceData = calculateDeterministicBasePrice(candles, 12);
+    const atr15m = calculateAtr(candles, 14);
+    const fundingData = computeFundingZScoreAndPercentile(fundingRate / 100);
+    const oiData = computeNormalizedOiAcceleration(ret5m * 10000, ret15m * 10000, turnoverM * 1000000 * 0.4);
+
+    // Multi-factor orderbook absorption model (Shadow Mode)
+    const absorptionData = evaluateMultiFactorAbsorption({
+      aggressiveSellVolumeUsdt: curVol * curClose * 0.45,
+      executedBidLiquidityUsdt: curVol * curClose * 0.5,
+      priceDropPct: Math.min(0, ret5m),
+      atrPct: curClose > 0 ? (atr15m / curClose) * 100 : 0.5,
+      replenishCount: rvol >= 2.0 ? 2 : 0,
+    });
+
+    // 3. Dual-Score Pipeline
+    const prepScore = calculatePrepScore({
+      vci: vciResult.vci,
+      vciPercentile: vciResult.vciPercentile,
+      isCompressed: vciResult.isCompressed,
+      absorptionScore: absorptionData.absorptionScore,
+      rvol5m: rvol,
+      returns5m: ret5m,
+      priceEfficiency,
+      oiAccelerationPct: oiData.oiAccelerationPct,
+      fundingZScore: fundingData.fundingZScore,
+      fundingPercentile: fundingData.fundingPercentile,
+    });
+
+    const confirmationScore = calculateConfirmationScore({
+      breakoutStructure: ret5m >= 1.0 || rvol >= 2.0,
+      priceEfficiency,
+      rvol5m: rvol,
+      volumeZ: volZ,
+      takerImbalancePct: ret5m > 0 ? 35 : -35,
+      shortLiquidationSpike: isSqueeze,
+      returns5m: ret5m,
+      returns15m: ret15m,
+      returns1h: ret1h,
+    });
+
+    // 4. Chase Risk Overlay (Independent Shield)
+    const chaseRisk = evaluateChaseRisk({
+      currentPrice: curClose,
+      basePrice: basePriceData.basePrice,
+      atr15m,
+      fundingZScore: fundingData.fundingZScore,
+      liquidationPercentile: isSqueeze ? 90 : 50,
+    });
+
+    // 5. 4-State Market Status
+    const marketStatus = classifyMarketStatus(prepScore, confirmationScore);
+
+    // 6. Shadow-Mode Audit Telemetry
+    updateAuditExcursions(sym, curClose);
+
+    if (marketStatus === 'PREP' || marketStatus === 'READY') {
+      recordPrepAudit({
+        symbol: sym,
+        exchange: t.exchange || 'BYBIT',
+        price: curClose,
+        basePrice: basePriceData.basePrice,
+        atr15m,
+        prepScore,
+        confirmationScore,
+        marketStatus,
+        chaseRisk,
+        icebergLikelihood: absorptionData.icebergLikelihood,
+      }).catch(() => {});
+    } else if (marketStatus === 'CONFIRMED') {
+      recordAuditConfirmation(sym, confirmationScore);
+    }
 
     // Trigger only if score >= 70 and RVOL >= 1.8
     if (score < 70 || rvol < 1.8) return null;
@@ -173,6 +280,7 @@ async function evaluateSymbol(t) {
     if (volZ >= 2.5) reasons.push(`Volume anomaly z-score: ${volZ}σ`);
     if (phase === 'EXTREME') reasons.push(`Statistical Climax: Volume & momentum surge`);
     if (phase === 'PRE_SPIKE') reasons.push(`Volume accumulation compression without breakout`);
+    if (chaseRisk.level === 'HIGH') reasons.push(`⚠️ Chase Risk: ${chaseRisk.reasons.join(', ')}`);
 
     return {
       symbol: sym,
@@ -193,6 +301,21 @@ async function evaluateSymbol(t) {
       primaryStrategy: type,
       spikeQuality: score >= 85 ? 'HIGH' : 'MEDIUM',
       triggerReasons: reasons,
+      // Dual-Score & Pre-Breakout Shadow Telemetry
+      prepScore,
+      confirmationScore,
+      marketStatus,
+      chaseRisk,
+      priceEfficiency,
+      vci: vciResult.vci,
+      vciPercentile: vciResult.vciPercentile,
+      basePrice: basePriceData.basePrice,
+      basePriceVersion: basePriceData.basePriceVersion,
+      icebergLikelihood: absorptionData.icebergLikelihood,
+      replenishmentBehavior: absorptionData.replenishmentBehavior,
+      absorptionScore: absorptionData.absorptionScore,
+      oiAccelerationPct: oiData.oiAccelerationPct,
+      fundingZScore: fundingData.fundingZScore,
     };
   } catch {
     return null;
@@ -252,9 +375,15 @@ async function runScanCycle() {
       } catch (postErr) {
         console.warn('⚠️ Spikes API forward notice:', postErr?.message);
       }
-    } else {
       console.log(
         `[CLOUD SCANNER] Checked ${all.length} contracts (${Math.round(Date.now() - start)}ms) · Markets normal.`
+      );
+    }
+
+    const stats = computeAggregateAuditMetrics();
+    if (stats.totalAudits > 0) {
+      console.log(
+        `📊 [SHADOW_AUDIT] Audits: ${stats.totalAudits} | BreakoutRate: ${stats.prepToBreakoutRatePct}% | +1RRate: ${stats.prepTo1rRatePct}% | FalseBreakout: ${stats.falseBreakoutRatePct}% | AvgConfirmTime: ${stats.avgTimeToConfirmMin}m`
       );
     }
   } catch (err) {

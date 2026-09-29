@@ -3,7 +3,7 @@
 [![GitHub Pages](https://img.shields.io/badge/Live%20Terminal-GitHub%20Pages-brightgreen?style=for-the-badge&logo=github)](https://fahad0013.github.io/EAGLE-FLASH/)
 [![Next.js 15](https://img.shields.io/badge/Workstation-Next.js%2015-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Telegram Bot](https://img.shields.io/badge/Telegram%20Bot-@eaglespike__bot-2CA5E0?style=for-the-badge&logo=telegram)](https://t.me/eaglespike_bot)
-[![Tests](https://img.shields.io/badge/Tests-157%2F157%20Passing-success?style=for-the-badge)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-165%2F165%20Passing-success?style=for-the-badge)](tests/)
 [![Security Audit](https://img.shields.io/badge/Security-Zero%20Secret%20Exposure-blue?style=for-the-badge)](SECURITY.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 

@@ -44,8 +44,17 @@ export interface NormalizedTicker {
   spikePhase: SpikePhase;
   spikeType: SpikeType;
   spikeQuality: SpikeQuality;
+  marketStatus?: MarketStatus;
+  prepScore?: number;
+  confirmationScore?: number;
+  chaseRiskLevel?: ChaseRiskLevel;
+  priceEfficiency?: number;
+  icebergLikelihood?: 'LOW' | 'MEDIUM' | 'HIGH';
   lastUpdated: number;
 }
+
+export type MarketStatus = 'NEUTRAL' | 'PREP' | 'READY' | 'CONFIRMED';
+export type ChaseRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export type SpikePhase = 'NORMAL' | 'PRE_SPIKE' | 'BREAKOUT' | 'ACCELERATION' | 'BLOW_OFF' | 'COOLING';
 
