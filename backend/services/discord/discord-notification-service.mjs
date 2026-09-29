@@ -15,6 +15,8 @@ import {
   buildWhaleRadarDiscordEmbed,
   buildBlockchainProofDiscordEmbed,
   buildPreBreakoutDiscordEmbed,
+  buildPreBreakoutStatusDiscordEmbed,
+  validateRoiInvariant,
 } from './discord-message-builder.mjs';
 
 const discordClient = new DiscordClient();
@@ -32,12 +34,24 @@ export class DiscordNotificationService {
     const eventType = item.event_type || 'NEW_SIGNAL';
 
     // 1. Guard against corrupt trade signals (Entry <= 0 or Stop <= 0)
-    if (eventType === 'NEW_SIGNAL') {
+    if (eventType === 'NEW_SIGNAL' || eventType === 'CONFIRMED') {
       const entry = parseFloat(p.entry_price || p.entryPrice || 0);
       const stop = parseFloat(p.stop_price || p.stop_loss_price || 0);
-      if (entry <= 0 || stop <= 0) {
+      if (entry <= 0 || (eventType === 'NEW_SIGNAL' && stop <= 0)) {
         console.warn(`⚠️ [DISCORD_GUARD_REJECT] Rejecting signal ${item.signal_id}: invalid entry ($${entry}) or stop ($${stop})`);
         return { success: false, error: 'INVALID_PRICE_GUARD' };
+      }
+    }
+
+    // 2. Guard against ROI Invariant Violations (Section 14)
+    const reportedRoi = p.current_roi_pct ?? p.roi_pct;
+    const entryPrice = p.entry_price ?? p.entryPrice;
+    const currentPrice = p.current_price ?? p.price;
+    if (reportedRoi !== undefined && reportedRoi !== null && entryPrice && currentPrice) {
+      const roiCheck = validateRoiInvariant(entryPrice, currentPrice, p.direction || 'LONG', reportedRoi);
+      if (!roiCheck.valid) {
+        console.warn(`⚠️ [DISCORD_GUARD_REJECT] Rejecting event ${eventType} (${item.signal_id}): ROI invariant violated (Expected ${roiCheck.expectedRoi}%, Reported ${reportedRoi}%)`);
+        return { success: false, error: 'ROI_INVARIANT_VIOLATION' };
       }
     }
 
@@ -49,7 +63,7 @@ export class DiscordNotificationService {
       };
     }
 
-    // 2. Resolve destination Discord channel IDs
+    // 3. Resolve destination Discord channel IDs
     const targetChannels = typeof resolveDiscordChannels === 'function'
       ? resolveDiscordChannels(item)
       : [resolveDiscordChannel(item)].filter(Boolean);
@@ -59,7 +73,7 @@ export class DiscordNotificationService {
       return { success: false, error: 'NO_CHANNEL_CONFIGURED' };
     }
 
-    // 3. Build rich message payload based on event type
+    // 4. Build rich message payload based on event type
     let messagePayload = null;
     switch (eventType) {
       case 'TP_HIT':
@@ -86,13 +100,28 @@ export class DiscordNotificationService {
       case 'BLOCKCHAIN_PROOF':
         messagePayload = buildBlockchainProofDiscordEmbed(item);
         break;
+      case 'PREP_DETECTED':
+      case 'READY_DETECTED':
+      case 'PREP':
+      case 'READY':
+      case 'CONFIRMED':
+      case 'CHASE_RISK_ELEVATED':
+      case 'CHASE_RISK_BLOCKED':
+      case 'FALSE_BREAKOUT':
+      case 'PRE_BREAKOUT_CLOSED':
+      case 'PRE_BREAKOUT_EXPIRED':
       case 'PRE_BREAKOUT':
       case 'ACCUMULATION':
         messagePayload = buildPreBreakoutDiscordEmbed(item);
         break;
+      case 'BOT_STATUS':
+        if (p.isPreBreakout || p.healthType === 'PRE_BREAKOUT') {
+          messagePayload = buildPreBreakoutStatusDiscordEmbed(p);
+        }
+        break;
       case 'NEW_SIGNAL':
       default:
-        if (p.marketStatus === 'PREP' || p.marketStatus === 'READY' || (p.type || '').includes('ACCUMULATION')) {
+        if (p.marketStatus === 'PREP' || p.marketStatus === 'READY' || (p.type || '').includes('ACCUMULATION') || (p.type || '').includes('PRE_BREAKOUT')) {
           messagePayload = buildPreBreakoutDiscordEmbed(item);
         } else {
           messagePayload = buildNewSignalDiscordEmbed(item);

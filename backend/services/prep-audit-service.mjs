@@ -18,15 +18,24 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { supabase } from './whale-detector.mjs';
+import { queueNotificationAlerts, isTestExecution } from './notification-outbox.mjs';
+import { routePreBreakoutEvent } from './discord/discord-router.mjs';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
-const AUDIT_FILE = path.join(DATA_DIR, 'prep_signal_audits.json');
+
+export function getLocalPrepAuditPath() {
+  const fileName = isTestExecution() ? 'test_prep_signal_audits.json' : 'prep_signal_audits.json';
+  return path.join(DATA_DIR, fileName);
+}
 
 // In-Memory cache of active audit records (capped at 500)
 export const AuditMemoryStore = {
   records: new Map(), // id -> auditRecord
   isInitialized: false,
 };
+
+// Cooldown map to prevent duplicate notification spam for same symbol:state
+export const AuditAlertCooldowns = new Map(); // `${symbol}:${state}` -> timestamp
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -37,13 +46,14 @@ function ensureDataDir() {
 /**
  * Initializes the in-memory store from file fallback.
  */
-export function initAuditStore() {
-  if (AuditMemoryStore.isInitialized) return;
+export function initAuditStore(forceReload = false) {
+  if (AuditMemoryStore.isInitialized && !forceReload) return;
   ensureDataDir();
 
-  if (fs.existsSync(AUDIT_FILE)) {
+  const auditPath = getLocalPrepAuditPath();
+  if (fs.existsSync(auditPath)) {
     try {
-      const data = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8'));
+      const data = JSON.parse(fs.readFileSync(auditPath, 'utf-8'));
       if (Array.isArray(data)) {
         for (const item of data) {
           if (item?.id) AuditMemoryStore.records.set(item.id, item);
@@ -105,6 +115,8 @@ export async function recordPrepAudit(candidate) {
     mfe_pct: 0,
     mae_pct: 0,
     status: 'OPEN',
+    discord_message_id: candidate.discord_message_id || null,
+    notification_event_id: candidate.notification_event_id || null,
   };
 
   AuditMemoryStore.records.set(id, record);
@@ -121,7 +133,66 @@ export async function recordPrepAudit(candidate) {
   // 2. Local JSON export/development fallback
   saveAuditsToFile();
 
+  // 3. Queue downstream notification to #pre-breakout if not on cooldown
+  const cooldownKey = `${candidate.symbol}:${record.current_market_status}`;
+  const lastAlert = AuditAlertCooldowns.get(cooldownKey) || 0;
+  if (candidate.emitNotification !== false && now - lastAlert > 15 * 60 * 1000) {
+    AuditAlertCooldowns.set(cooldownKey, now);
+    const eventType = record.current_market_status === 'READY' ? 'READY_DETECTED' : 'PREP_DETECTED';
+    queuePreBreakoutNotification(record, eventType, candidate).catch(() => {});
+  }
+
   return record;
+}
+
+/**
+ * Queue a Pre-Breakout event to the canonical notification_outbox.
+ * Targets #pre-breakout via routePreBreakoutEvent().
+ */
+export async function queuePreBreakoutNotification(auditRecord, eventType, extraPayload = {}) {
+  const signalId = auditRecord.id || `EGL-PRE-${auditRecord.symbol}`;
+  const preBreakoutChannel = routePreBreakoutEvent(eventType);
+
+  const payload = {
+    ...auditRecord,
+    signal_id: signalId,
+    event_type: eventType,
+    marketStatus: auditRecord.current_market_status || auditRecord.entry_market_status,
+    prepScore: auditRecord.prep_score,
+    confirmationScore: auditRecord.confirmation_score,
+    price: auditRecord.entry_price,
+    basePrice: auditRecord.base_price_v1,
+    atr15m: auditRecord.atr_15m,
+    chaseRisk: { level: auditRecord.chase_risk_level },
+    icebergLikelihood: auditRecord.iceberg_likelihood,
+    ...extraPayload,
+  };
+
+  const notification = {
+    signal_id: signalId,
+    event_type: eventType,
+    channel_type: 'DISCORD',
+    channel_id: preBreakoutChannel || null,
+    payload,
+    deduplication_key: `OUTBOX-${signalId}-${eventType}-DISCORD`,
+  };
+
+  return queueNotificationAlerts([notification]);
+}
+
+/**
+ * Stores the delivered Discord message ID on the audit record.
+ */
+export function updateAuditDiscordMessageId(id, discordMessageId) {
+  initAuditStore();
+  const rec = AuditMemoryStore.records.get(id);
+  if (rec) {
+    rec.discord_message_id = discordMessageId;
+    saveAuditsToFile();
+    if (supabase) {
+      supabase.from('prep_signal_audits').update({ discord_message_id: discordMessageId }).eq('id', id).then(() => {}).catch(() => {});
+    }
+  }
 }
 
 /**
@@ -172,6 +243,9 @@ export function updateAuditExcursions(symbol, currentPrice, now = Date.now()) {
       // If it previously triggered as a breakout or READY, but stopped out without reaching +1R
       if ((record.entry_market_status === 'READY' || record.did_breakout) && !record.reached_1r) {
         record.is_false_breakout = true;
+        queuePreBreakoutNotification(record, 'FALSE_BREAKOUT', { failurePrice: currentPrice }).catch(() => {});
+      } else {
+        queuePreBreakoutNotification(record, 'PRE_BREAKOUT_CLOSED', { exit_price: currentPrice }).catch(() => {});
       }
       modified = true;
     }
@@ -181,6 +255,7 @@ export function updateAuditExcursions(symbol, currentPrice, now = Date.now()) {
     if (ageMs > 86400000 && record.status === 'OPEN') {
       record.status = 'EXPIRED';
       record.resolved_at = new Date(now).toISOString();
+      queuePreBreakoutNotification(record, 'PRE_BREAKOUT_EXPIRED', { exit_price: currentPrice }).catch(() => {});
       modified = true;
     }
   }
@@ -208,6 +283,10 @@ export function recordAuditConfirmation(symbol, confScore, now = Date.now()) {
       const elapsedMs = Math.max(0, now - detectedTime);
       record.time_to_confirm_ms = elapsedMs;
       record.time_to_confirm_min = Number((elapsedMs / 60000).toFixed(1));
+
+      const isChaseHigh = record.chase_risk_level === 'HIGH';
+      const eventType = isChaseHigh ? 'CHASE_RISK_BLOCKED' : 'CONFIRMED';
+      queuePreBreakoutNotification(record, eventType).catch(() => {});
 
       matched = true;
     }
@@ -266,7 +345,8 @@ export function computeAggregateAuditMetrics() {
 function saveAuditsToFile() {
   try {
     ensureDataDir();
+    const auditPath = getLocalPrepAuditPath();
     const array = Array.from(AuditMemoryStore.records.values()).slice(-500);
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify(array, null, 2), 'utf-8');
+    fs.writeFileSync(auditPath, JSON.stringify(array, null, 2), 'utf-8');
   } catch {}
 }

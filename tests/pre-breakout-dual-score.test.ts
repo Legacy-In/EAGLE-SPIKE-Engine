@@ -192,6 +192,7 @@ describe('Pre-Breakout & Accumulation Detection Model Test Suite', () => {
   test('8. Quantitative Audit Ledger: tracks time-to-confirm and false breakouts', async () => {
     // Reset audit memory for clean test
     AuditMemoryStore.records.clear();
+    AuditMemoryStore.isInitialized = true;
 
     const candidate = {
       id: 'AUD-TEST-FALSE-BREAKOUT-01',

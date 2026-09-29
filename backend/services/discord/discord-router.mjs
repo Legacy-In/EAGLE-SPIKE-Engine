@@ -56,7 +56,19 @@ export function getSignalsChannel() {
 }
 
 export function getPreBreakoutChannel() {
-  return process.env.DISCORD_CHANNEL_PRE_BREAKOUT || null;
+  return process.env.DISCORD_PREBREAKOUT_CHANNEL_ID || process.env.DISCORD_CHANNEL_PRE_BREAKOUT || null;
+}
+
+/**
+ * Strictly routes Pre-Breakout & Accumulation strategy lifecycle events to #pre-breakout:
+ * PREP_DETECTED, READY_DETECTED, CONFIRMED, CHASE_RISK_ELEVATED, CHASE_RISK_BLOCKED,
+ * FALSE_BREAKOUT, PRE_BREAKOUT_CLOSED, PRE_BREAKOUT_EXPIRED.
+ *
+ * @param {object|string} event - Event object or event_type string
+ * @returns {string|null} - Discord Pre-Breakout Channel ID
+ */
+export function routePreBreakoutEvent(event) {
+  return getPreBreakoutChannel();
 }
 
 /**
@@ -143,28 +155,38 @@ export function resolveDiscordChannel(item) {
     if (pumpChan) return pumpChan;
   }
 
-  // 8. Breakouts (BREAKOUT)
-  const isBreakout = Boolean(type.includes('BREAKOUT'));
-  if (isBreakout) {
-    const breakoutChan = getBreakoutsChannel();
-    if (breakoutChan) return breakoutChan;
-  }
-
-  // 9. Pre-Breakout & Accumulation (PREP, READY, ACCUMULATION, PRE_SPIKE, PRE_BREAKOUT)
+  // 8. Pre-Breakout & Accumulation Strategy Events (PREP_DETECTED, READY_DETECTED, CONFIRMED, CHASE, FALSE_BO, etc.)
   const isPreBreakout = Boolean(
+    eventType === 'PREP_DETECTED' ||
+    eventType === 'READY_DETECTED' ||
+    eventType === 'PREP' ||
+    eventType === 'READY' ||
+    eventType === 'CHASE_RISK_ELEVATED' ||
+    eventType === 'CHASE_RISK_BLOCKED' ||
+    eventType === 'FALSE_BREAKOUT' ||
+    eventType === 'PRE_BREAKOUT_CLOSED' ||
+    eventType === 'PRE_BREAKOUT_EXPIRED' ||
     eventType === 'PRE_BREAKOUT' ||
     eventType === 'ACCUMULATION' ||
     p.marketStatus === 'PREP' ||
     p.marketStatus === 'READY' ||
+    (eventType === 'CONFIRMED' && (type.includes('PRE_BREAKOUT') || type.includes('ACCUMULATION') || p.strategy === 'PRE_BREAKOUT' || p.strategy === 'PRE-BREAKOUT & ACCUMULATION' || p.prep_score !== undefined || p.prepScore !== undefined)) ||
+    type.includes('PRE_BREAKOUT') ||
     type.includes('ACCUMULATION') ||
-    phase === 'PRE_SPIKE' ||
-    type.includes('PRE_BREAKOUT')
+    phase === 'PRE_SPIKE'
   );
   if (isPreBreakout) {
     const preBreakoutChan = getPreBreakoutChannel();
     if (preBreakoutChan) return preBreakoutChan;
     const squeezeChan = getSqueezesChannel();
     if (squeezeChan) return squeezeChan;
+  }
+
+  // 9. Standard Breakouts (BREAKOUT)
+  const isBreakout = Boolean(type.includes('BREAKOUT'));
+  if (isBreakout) {
+    const breakoutChan = getBreakoutsChannel();
+    if (breakoutChan) return breakoutChan;
   }
 
   // 10. Squeezes (LONG_SQUEEZE, SHORT_SQUEEZE)

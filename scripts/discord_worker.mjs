@@ -12,6 +12,7 @@ import { DiscordNotificationService } from '../backend/services/discord/discord-
 import { isBlacklistedSymbol, isValidActiveSymbol, MOCK_OR_TEST_REGEX } from '../backend/services/symbol-validator.mjs';
 import { isSignatureInCooldown, recordSignatureDispatch } from '../backend/services/signal-dedup.mjs';
 import { validateSignalPriceIntegrity } from '../backend/services/live-price-validator.mjs';
+import { updateAuditDiscordMessageId } from '../backend/services/prep-audit-service.mjs';
 
 const POLL_INTERVAL_MS = 2000;
 let isRunning = true;
@@ -108,6 +109,9 @@ async function runDispatchCycle() {
         if (result.success) {
           if (!isWhaleOrOnChain && eventType === 'NEW_SIGNAL') {
             recordSignatureDispatch(symbol, direction, type);
+          }
+          if (item.signal_id?.startsWith('AUD-') || p.id?.startsWith('AUD-')) {
+            updateAuditDiscordMessageId(p.id || item.signal_id, result.messageId);
           }
           console.log(`✅ [DISCORD_SENT] Signal: ${item.signal_id} -> Message ID: ${result.messageId}`);
           await updateOutboxItemStatus(item.id, 'DISCORD', 'SENT', {
