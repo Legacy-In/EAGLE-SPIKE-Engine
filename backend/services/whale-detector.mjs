@@ -15,6 +15,7 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { queueTelegramSignalAlert } from './telegram-outbox.mjs';
+import { isTestExecution } from './notification-outbox.mjs';
 
 // 1. Supabase Initialization with Robust Fallback
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -53,6 +54,9 @@ export const WhaleMemoryStore = {
   activeWalls: new Map(), // key -> phantom wall tracker
   lastEvaluatedAt: null,
 };
+
+let hasWarnedWhaleTradesMissing = false;
+let hasWarnedManipulationAlertsMissing = false;
 
 // Configurable Constants
 export const BIG_CAP_SYMBOLS = new Set(['BTCUSDT', 'ETHUSDT', 'SOLUSDT']);
@@ -327,12 +331,19 @@ export async function recordWhaleTrade(trade) {
     WhaleMemoryStore.trades.pop();
   }
 
-  // Persist to Supabase if configured
-  if (supabase) {
+  // Persist to Supabase if configured and not in test execution
+  if (supabase && !isTestExecution()) {
     try {
       const { error } = await supabase.from('whale_trades').insert(cleanTrade);
       if (error) {
-        console.warn('⚠️ Supabase whale_trades insert warning:', error.message);
+        if (error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
+          if (!hasWarnedWhaleTradesMissing) {
+            hasWarnedWhaleTradesMissing = true;
+            console.warn('[WHALE-DET] ℹ️ Supabase table "whale_trades" not found in schema cache. Caching trades in-memory (1000). Run supabase/migrations/RUN_ALL_PENDING_MIGRATIONS.sql to persist.');
+          }
+        } else {
+          console.warn('⚠️ Supabase whale_trades insert warning:', error.message);
+        }
       }
     } catch (err) {
       console.warn('⚠️ whale_trades insert error:', err.message);
@@ -370,14 +381,21 @@ export async function createManipulationAlert(symbol, alertType, severity, metri
     if (WhaleMemoryStore.alerts.length > 200) WhaleMemoryStore.alerts.pop();
   }
 
-  // Persist to Supabase
-  if (supabase) {
+  // Persist to Supabase if not in test execution
+  if (supabase && !isTestExecution()) {
     try {
       const { error } = await supabase.from('manipulation_alerts').upsert(alertRecord, {
         onConflict: 'alert_id'
       });
       if (error) {
-        console.warn('⚠️ Supabase manipulation_alerts upsert warning:', error.message);
+        if (error.message?.includes('schema cache') || error.message?.includes('does not exist')) {
+          if (!hasWarnedManipulationAlertsMissing) {
+            hasWarnedManipulationAlertsMissing = true;
+            console.warn('[WHALE-DET] ℹ️ Supabase table "manipulation_alerts" not found in schema cache. Caching alerts in-memory (200). Run supabase/migrations/RUN_ALL_PENDING_MIGRATIONS.sql to persist.');
+          }
+        } else {
+          console.warn('⚠️ Supabase manipulation_alerts upsert warning:', error.message);
+        }
       }
     } catch (err) {
       console.warn('⚠️ manipulation_alerts upsert error:', err.message);

@@ -144,7 +144,7 @@ export class LivePriceService {
     // A. BYBIT Linear Perpetual
     if (exchange === 'BYBIT') {
       const res = await fetch(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${symbol}`, {
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) return null;
       const json = await res.json();
@@ -162,7 +162,7 @@ export class LivePriceService {
     // B. BINANCE USDT-M Futures
     if (exchange === 'BINANCE') {
       const res = await fetch(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${symbol}`, {
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) return null;
       const json = await res.json();
@@ -181,7 +181,7 @@ export class LivePriceService {
       // Ensure RENDERUSDT maps strictly to RENDER_USDT and NOT legacy RNDR!
       const mexcSym = symbol.endsWith('USDT') ? symbol.replace(/USDT$/, '_USDT') : symbol;
       const res = await fetch(`https://contract.mexc.com/api/v1/contract/ticker?symbol=${mexcSym}`, {
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) return null;
       const json = await res.json();
@@ -199,7 +199,7 @@ export class LivePriceService {
     if (exchange === 'WEEX') {
       try {
         const res = await fetch(`https://api.weex.com/api/v1/market/ticker?symbol=${symbol}`, {
-          signal: AbortSignal.timeout(4000),
+          signal: AbortSignal.timeout(8000),
         });
         if (res.ok) {
           const json = await res.json();
@@ -217,7 +217,7 @@ export class LivePriceService {
       // Query Bybit or Binance 1000PEPEUSDT and scale by 1/1000
       if (symbol === 'PEPEUSDT') {
         const bRes = await fetch('https://api.bybit.com/v5/market/tickers?category=linear&symbol=1000PEPEUSDT', {
-          signal: AbortSignal.timeout(3000),
+          signal: AbortSignal.timeout(6000),
         });
         if (bRes.ok) {
           const bJson = await bRes.json();
