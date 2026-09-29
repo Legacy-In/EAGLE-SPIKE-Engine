@@ -290,7 +290,15 @@ test('10. Discord Router: Strict Dedicated Channel Separation Matrix', () => {
     payload: { symbol: 'ARUSDT', type: 'MOMENTUM', phase: 'PRE_SPIKE' },
   };
   const preSpikeChannels = resolveDiscordChannels(preSpikeItem);
-  assert.deepEqual(preSpikeChannels, ['CHAN_SQUEEZES'], 'PRE_SPIKE phase must route strictly to #squeezes');
+  assert.deepEqual(preSpikeChannels, ['CHAN_SQUEEZES'], 'PRE_SPIKE phase must route strictly to #squeezes when PRE_BREAKOUT channel is unconfigured');
+
+  // 3b. When DISCORD_CHANNEL_PRE_BREAKOUT is configured, PREP and ACCUMULATION route to it
+  process.env.DISCORD_CHANNEL_PRE_BREAKOUT = 'CHAN_PRE_BREAKOUT';
+  const preBreakoutItem = {
+    event_type: 'PRE_BREAKOUT',
+    payload: { symbol: 'AVAXUSDT', marketStatus: 'PREP', type: 'ACCUMULATION' },
+  };
+  assert.deepEqual(resolveDiscordChannels(preBreakoutItem), ['CHAN_PRE_BREAKOUT'], 'PRE_BREAKOUT must route strictly to #pre-breakout');
 
   // 4. Big Cap (BTC, ETH, SOL) -> Strictly #big-cap (NEVER #signals)
   const btcItem = {

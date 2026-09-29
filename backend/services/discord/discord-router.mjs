@@ -55,6 +55,10 @@ export function getSignalsChannel() {
   return process.env.DISCORD_CHANNEL_SIGNALS || null;
 }
 
+export function getPreBreakoutChannel() {
+  return process.env.DISCORD_CHANNEL_PRE_BREAKOUT || null;
+}
+
 /**
  * Resolves the single authoritative dedicated Discord channel for an event/signal item.
  * NEVER blindly routes specialized alerts or sub-categorized signals to #signals.
@@ -146,18 +150,31 @@ export function resolveDiscordChannel(item) {
     if (breakoutChan) return breakoutChan;
   }
 
-  // 9. Squeezes / Accumulation / Pre-Spike (ACCUMULATION, PRE_SPIKE, LONG_SQUEEZE, SHORT_SQUEEZE)
-  const isSqueeze = Boolean(
+  // 9. Pre-Breakout & Accumulation (PREP, READY, ACCUMULATION, PRE_SPIKE, PRE_BREAKOUT)
+  const isPreBreakout = Boolean(
+    eventType === 'PRE_BREAKOUT' ||
+    eventType === 'ACCUMULATION' ||
+    p.marketStatus === 'PREP' ||
+    p.marketStatus === 'READY' ||
     type.includes('ACCUMULATION') ||
     phase === 'PRE_SPIKE' ||
-    type.includes('SQUEEZE')
+    type.includes('PRE_BREAKOUT')
   );
+  if (isPreBreakout) {
+    const preBreakoutChan = getPreBreakoutChannel();
+    if (preBreakoutChan) return preBreakoutChan;
+    const squeezeChan = getSqueezesChannel();
+    if (squeezeChan) return squeezeChan;
+  }
+
+  // 10. Squeezes (LONG_SQUEEZE, SHORT_SQUEEZE)
+  const isSqueeze = Boolean(type.includes('SQUEEZE'));
   if (isSqueeze) {
     const squeezeChan = getSqueezesChannel();
     if (squeezeChan) return squeezeChan;
   }
 
-  // 10. General Standard Signals (Fallback ONLY if no specific sub-category matches)
+  // 11. General Standard Signals (Fallback ONLY if no specific sub-category matches)
   return getSignalsChannel();
 }
 

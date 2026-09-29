@@ -68,6 +68,7 @@ const REQUIRED_CHANNELS = [
   { key: 'DISCORD_CHANNEL_MARKET_ALERTS', name: '📊-market-alerts', topic: 'Market regime, volatility spikes, and diagnostics' },
   { key: 'DISCORD_CHANNEL_BLOCKCHAIN_PROOF', name: '🔗-blockchain-proof', topic: 'On-chain cryptographic commitment proofs' },
   { key: 'DISCORD_CHANNEL_BOT_STATUS', name: '🛠-bot-status', topic: 'Eagle Flash bot engine diagnostics and heartbeat' },
+  { key: 'DISCORD_CHANNEL_PRE_BREAKOUT', name: '🟡-pre-breakout', topic: 'Pre-breakout coiling, volatility compression, and smart money order-book absorption signals' },
 ];
 
 function updateEnvKey(filePath, key, value) {

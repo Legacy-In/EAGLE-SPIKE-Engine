@@ -14,6 +14,7 @@ import {
   buildStopHitDiscordEmbed,
   buildWhaleRadarDiscordEmbed,
   buildBlockchainProofDiscordEmbed,
+  buildPreBreakoutDiscordEmbed,
 } from './discord-message-builder.mjs';
 
 const discordClient = new DiscordClient();
@@ -85,9 +86,17 @@ export class DiscordNotificationService {
       case 'BLOCKCHAIN_PROOF':
         messagePayload = buildBlockchainProofDiscordEmbed(item);
         break;
+      case 'PRE_BREAKOUT':
+      case 'ACCUMULATION':
+        messagePayload = buildPreBreakoutDiscordEmbed(item);
+        break;
       case 'NEW_SIGNAL':
       default:
-        messagePayload = buildNewSignalDiscordEmbed(item);
+        if (p.marketStatus === 'PREP' || p.marketStatus === 'READY' || (p.type || '').includes('ACCUMULATION')) {
+          messagePayload = buildPreBreakoutDiscordEmbed(item);
+        } else {
+          messagePayload = buildNewSignalDiscordEmbed(item);
+        }
         break;
     }
 

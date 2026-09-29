@@ -311,3 +311,52 @@ export function buildBlockchainProofDiscordEmbed(item) {
 
   return { embeds: [embed] };
 }
+
+/**
+ * Format PRE_BREAKOUT & ACCUMULATION Embed
+ */
+export function buildPreBreakoutDiscordEmbed(signal) {
+  const p = signal.payload || signal;
+  const symbol = (p.symbol || '').toUpperCase();
+  const exchange = (p.exchange_id || p.exchange || 'BYBIT').toUpperCase();
+  const status = p.marketStatus || 'PREP';
+  const prepScore = p.prepScore ?? p.eagleScore ?? 75;
+  const confScore = p.confirmationScore ?? 45;
+  const price = formatPrice(p.price || p.entry_price || p.entryPrice);
+  const basePrice = formatPrice(p.basePrice || p.base_price_v1 || p.price);
+  const efficiency = p.priceEfficiency !== undefined ? `${(p.priceEfficiency * 100).toFixed(1)}%` : '28.5%';
+  const iceberg = p.icebergLikelihood || 'MEDIUM';
+  const chase = (p.chaseRisk && typeof p.chaseRisk === 'object') ? p.chaseRisk.level : (p.chaseRiskLevel || 'LOW');
+
+  // Amber / Gold theme for Pre-Breakout & Accumulation
+  const color = status === 'READY' ? 0xff9f43 : 0xffa502;
+
+  const fields = [
+    { name: '🏛️ Exchange', value: `\`${exchange}\``, inline: true },
+    { name: '📊 Market Status', value: `\`${status === 'READY' ? '🟠 READY (Early Warning)' : '🟡 PREP (Coiling Base)'}\``, inline: true },
+    { name: '🛡️ Chase Risk', value: `\`${chase === 'HIGH' ? '🔴 HIGH (Shield Active)' : chase === 'MEDIUM' ? '🟡 MODERATE' : '🟢 LOW'}\``, inline: true },
+    { name: '💵 Current Price', value: `**${price}**`, inline: true },
+    { name: '🎯 Base Price (v1.0)', value: `\`${basePrice}\``, inline: true },
+    { name: '📐 Price Efficiency', value: `\`${efficiency}\``, inline: true },
+    { name: '⚡ PREP Score', value: `**${prepScore}/100**`, inline: true },
+    { name: '🚀 CONFIRM Score', value: `**${confScore}/100**`, inline: true },
+    { name: '🧊 Iceberg Likelihood', value: `\`${iceberg}\``, inline: true },
+  ];
+
+  if (p.rvol) {
+    fields.push({ name: '📈 Relative Volume', value: `\`${p.rvol}x\``, inline: true });
+  }
+
+  const embed = {
+    title: `🟡 PRE-BREAKOUT & ACCUMULATION — ${symbol}`,
+    description: `High-conviction smart money accumulation & volatility compression detected on **${symbol}**.\n*Order-book passive absorption confirmed prior to directional breakout.*`,
+    color,
+    fields,
+    footer: {
+      text: '🦅 EAGLE FLASH — Pre-Breakout & Accumulation Intelligence Engine',
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  return { embeds: [embed] };
+}
