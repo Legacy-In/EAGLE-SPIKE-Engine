@@ -104,6 +104,7 @@ async function main() {
   let offset = 0;
   console.log('🟢 Polling active. Listening for user commands and channel events...');
 
+  let consecutiveErrors = 0;
   while (true) {
     try {
       const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates?offset=${offset}&timeout=25`);
@@ -112,6 +113,10 @@ async function main() {
         continue;
       }
       const json = await res.json();
+      if (consecutiveErrors > 0) {
+        console.log('🟢 [TG-POLL] Telegram API connection restored.');
+        consecutiveErrors = 0;
+      }
       if (json.ok && Array.isArray(json.result)) {
         for (const update of json.result) {
           offset = update.update_id + 1;
@@ -150,8 +155,12 @@ async function main() {
         }
       }
     } catch (err) {
-      console.error('Polling error:', err.message);
-      await new Promise((r) => setTimeout(r, 5000));
+      consecutiveErrors++;
+      const delay = Math.min(60000, Math.pow(2, Math.min(consecutiveErrors, 5)) * 1000);
+      if (consecutiveErrors === 1 || consecutiveErrors % 10 === 0) {
+        console.warn(`⚠️ [TG-POLL] Telegram API unreachable (${err.message || 'connection timeout'}). Retrying in ${Math.round(delay / 1000)}s...`);
+      }
+      await new Promise((r) => setTimeout(r, delay));
     }
   }
 }

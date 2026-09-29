@@ -44,6 +44,20 @@ export class LivePriceService {
     const cacheKey = `${exchange}:${symbol}`;
     const now = Date.now();
 
+    // 0. Skip test, mock, or synthetic parity test symbols immediately
+    if (symbol.includes('PARITY') || symbol.includes('TEST') || symbol.includes('MOCK') || symbol.includes('CORRUPT')) {
+      return {
+        price: null,
+        exchange,
+        symbol,
+        marketId: `${exchange}:${symbol}`,
+        source: 'UNAVAILABLE',
+        timestamp: new Date().toISOString(),
+        ageMs: 0,
+        dataQuality: 'UNAVAILABLE',
+      };
+    }
+
     // 1. Check fresh cache (< 4000ms old)
     const cached = priceCache.get(cacheKey);
     if (cached && now - cached.timestamp < 4000) {
@@ -84,7 +98,13 @@ export class LivePriceService {
         };
       }
     } catch (err: any) {
-      console.warn(`[LivePriceService] Failed to fetch REST price for ${exchange}:${symbol}:`, err?.message);
+      // Throttle warning log to once per symbol per minute to keep logs clean
+      const warnKey = `WARN_${cacheKey}`;
+      const lastWarn = (global as any)[warnKey] || 0;
+      if (now - lastWarn > 60000) {
+        (global as any)[warnKey] = now;
+        console.warn(`[LivePriceService] Live price unavailable for ${exchange}:${symbol} (${err?.message || 'Network timeout'})`);
+      }
     }
 
     // 3. Fallback: check older cache if still within 5 minutes

@@ -273,11 +273,12 @@ async function launchAll() {
 
   const activeServices = getActiveServices({ workersOnly: isWorkersOnly });
 
+  const STAGGER_INTERVAL_MS = 600;
   console.log('═════════════════════════════════════════════════════════════════');
   console.log(`🦅 ${COLORS.brightCyan}EAGLE FLASH — UNIFIED MULTI-WORKER ORCHESTRATOR${COLORS.reset}`);
   console.log('═════════════════════════════════════════════════════════════════');
   console.log(`🚀 Launching ${activeServices.length} supervised processes...`);
-  console.log(`⏱️  Stagger interval: 300ms (eliminates port/socket/DB stampedes)`);
+  console.log(`⏱️  Stagger interval: ${STAGGER_INTERVAL_MS}ms (eliminates port/socket/DB stampedes)`);
   console.log(`🛑 Press Ctrl+C at any time to shut down the entire ecosystem\n`);
 
   process.on('SIGINT', () => shutdown('SIGINT'));
@@ -312,9 +313,9 @@ async function launchAll() {
 
       console.log(`${formatBadge(service)}${COLORS.brightGreen}Started (PID: ${child.pid})${COLORS.reset}`);
 
-      // Stagger next process launch by 300ms
+      // Stagger next process launch
       if (i < activeServices.length - 1) {
-        await new Promise((res) => setTimeout(res, 300));
+        await new Promise((res) => setTimeout(res, STAGGER_INTERVAL_MS));
       }
     } catch (err) {
       console.error(`${formatBadge(service)}${COLORS.red}Error during launch: ${err.message}${COLORS.reset}`);

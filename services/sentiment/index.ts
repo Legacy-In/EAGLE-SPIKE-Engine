@@ -35,7 +35,7 @@ class SentimentService {
       const startTime = Date.now();
       const res = await fetch('https://api.alternative.me/fng/?limit=2', {
         headers: { 'User-Agent': 'Mozilla/5.0' },
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(7000),
       });
 
       if (res.ok) {
@@ -48,8 +48,9 @@ class SentimentService {
           this.lastFetchTime = Date.now();
         }
       }
-    } catch (err: any) {
-      console.error('Sentiment Fetch Error:', err?.message);
+    } catch {
+      // Gracefully maintain cached sentiment baseline and back off 2 minutes before retry
+      this.lastFetchTime = Date.now();
     } finally {
       this.isFetching = false;
     }

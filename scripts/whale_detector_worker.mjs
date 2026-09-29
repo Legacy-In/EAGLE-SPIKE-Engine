@@ -237,10 +237,13 @@ function initBinanceWebSocket() {
         });
       } catch (e) {}
     };
-    ws.onerror = (err) => console.warn('⚠️ [BINANCE WS] Error:', err.message || err);
+    ws.onerror = (err) => {
+      const msg = err?.error?.message || err?.message || 'Connection failed/timeout';
+      console.warn(`⚠️ [BINANCE WS] Offline (${msg}).`);
+    };
     ws.onclose = () => {
-      console.warn('🔄 [BINANCE WS] Closed. Reconnecting in 5s...');
-      setTimeout(initBinanceWebSocket, 5000);
+      console.warn('🔄 [BINANCE WS] Closed. Reconnecting in 10s...');
+      setTimeout(initBinanceWebSocket, 10000);
     };
   } catch (err) {
     console.warn('⚠️ [BINANCE WS] Init failed:', err.message);
@@ -284,10 +287,13 @@ function initBybitWebSocket() {
       } catch (e) {}
     };
 
-    ws.onerror = (err) => console.warn('⚠️ [BYBIT WS] Error:', err.message || err);
+    ws.onerror = (err) => {
+      const msg = err?.error?.message || err?.message || 'Connection failed/timeout';
+      console.warn(`⚠️ [BYBIT WS] Offline (${msg}).`);
+    };
     ws.onclose = () => {
-      console.warn('🔄 [BYBIT WS] Closed. Reconnecting in 5s...');
-      setTimeout(initBybitWebSocket, 5000);
+      console.warn('🔄 [BYBIT WS] Closed. Reconnecting in 10s...');
+      setTimeout(initBybitWebSocket, 10000);
     };
   } catch (err) {
     console.warn('⚠️ [BYBIT WS] Init failed:', err.message);
