@@ -670,3 +670,54 @@ export function buildPreBreakoutStatusDiscordEmbed(health = {}) {
     }],
   };
 }
+
+/**
+ * Format NEW_COIN_LISTED Embed for #new-listing-alert / #market-alerts
+ */
+export function buildNewListingDiscordEmbed(item) {
+  const p = item.payload || item;
+  const symbol = (p.symbol || 'UNKNOWN').toUpperCase();
+  const exchange = (p.exchange || p.exchange_id || 'EXCHANGE').toUpperCase();
+  const contractType = p.contract_type || p.contractType || 'LINEAR_PERPETUAL';
+  const baseCoin = p.base_coin || p.baseCoin || symbol.replace(/[-_]?USDT$/, '');
+  const quoteCoin = p.quote_coin || p.quoteCoin || 'USDT';
+  const detectedAt = p.detected_at || p.timestamp || new Date().toISOString();
+  const unixSec = Math.floor(new Date(detectedAt).getTime() / 1000);
+
+  // Direct trading link resolution
+  let tradeUrl = p.trade_url || p.tradeUrl;
+  if (!tradeUrl) {
+    if (exchange.includes('BYBIT')) {
+      tradeUrl = `https://www.bybit.com/trade/usdt/${symbol}`;
+    } else if (exchange.includes('BINANCE')) {
+      tradeUrl = `https://www.binance.com/en/futures/${symbol}`;
+    } else if (exchange.includes('MEXC')) {
+      tradeUrl = `https://futures.mexc.com/exchange/${symbol.replace(/USDT$/, '_USDT')}`;
+    } else if (exchange.includes('ASTER')) {
+      tradeUrl = `https://app.asterdex.com/trade/${symbol}`;
+    } else {
+      tradeUrl = `https://www.coingecko.com/en/coins/${baseCoin.toLowerCase()}`;
+    }
+  }
+
+  const launchTimeString = p.launch_time ? new Date(p.launch_time).toUTCString() : 'Active Now';
+
+  return {
+    embeds: [{
+      title: '🚀 NEW COIN LISTED — MARKET ALERT',
+      description: `### 🪙 **${symbol}**\n**Exchange:** \`${exchange}\` | **Status:** \`NEW_COIN_LISTED\` | **Detected:** <t:${unixSec}:R>`,
+      color: 0x00E5FF, // Cyber Cyan
+      fields: [
+        { name: '🪙 Token / Symbol', value: `\`${symbol}\``, inline: true },
+        { name: '🏛️ Exchange Source', value: `\`${exchange}\``, inline: true },
+        { name: '🚀 Listing Status', value: '`NEW_COIN_LISTED`', inline: true },
+        { name: '📦 Contract Type', value: `\`${contractType}\``, inline: true },
+        { name: '💰 Base / Quote', value: `\`${baseCoin} / ${quoteCoin}\``, inline: true },
+        { name: '⏰ Launch / Status', value: `\`${launchTimeString}\``, inline: true },
+        { name: '🔗 Trade & Explore', value: `[Direct Trading Terminal](${tradeUrl}) • [CoinGecko Search](https://www.coingecko.com/en/search_queries?search=${baseCoin})`, inline: false },
+      ],
+      footer: { text: '🦅 EAGLE FLASH — NEW COIN LISTING RADAR • Institutional Intelligence' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}

@@ -59,6 +59,19 @@ export function getPreBreakoutChannel() {
   return process.env.DISCORD_PREBREAKOUT_CHANNEL_ID || process.env.DISCORD_CHANNEL_PRE_BREAKOUT || null;
 }
 
+export function getMarketAlertsChannel() {
+  return process.env.DISCORD_CHANNEL_MARKET_ALERTS || null;
+}
+
+export function getNewListingsChannel() {
+  return (
+    process.env.DISCORD_CHANNEL_NEW_LISTINGS ||
+    process.env.DISCORD_NEW_LISTINGS_CHANNEL_ID ||
+    process.env.DISCORD_CHANNEL_MARKET_ALERTS ||
+    null
+  );
+}
+
 /**
  * Strictly routes Pre-Breakout & Accumulation strategy lifecycle events to #pre-breakout:
  * PREP_DETECTED, READY_DETECTED, CONFIRMED, CHASE_RISK_ELEVATED, CHASE_RISK_BLOCKED,
@@ -88,6 +101,31 @@ export function resolveDiscordChannel(item) {
   const type = (p.type || p.spike_type || p.spikeType || p.primary_strategy || '').toUpperCase();
   const signalId = (p.signal_id || item.signal_id || '').toUpperCase();
   const actionClass = (p.action || p.actionClass || p.whaleAction || '').toUpperCase();
+
+  // 0. New Coin Listings & Market Alerts (#new-listing-alert or #market-alerts)
+  const isNewListing = Boolean(
+    eventType === 'NEW_COIN_LISTED' ||
+    eventType === 'NEW_LISTING' ||
+    eventType === 'LISTING_ALERT' ||
+    eventType === 'NEW_PAIR' ||
+    eventType === 'TOKEN_LISTED' ||
+    signalId.startsWith('LISTING_') ||
+    type.includes('NEW_LISTING') ||
+    type.includes('LISTING')
+  );
+  if (isNewListing) {
+    return getNewListingsChannel() || getMarketAlertsChannel() || getSignalsChannel();
+  }
+
+  const isMarketAlert = Boolean(
+    eventType === 'MARKET_ALERT' ||
+    eventType === 'REGIME_SHIFT' ||
+    eventType === 'VOLATILITY_ALERT' ||
+    type.includes('MARKET_ALERT')
+  );
+  if (isMarketAlert) {
+    return getMarketAlertsChannel() || getSignalsChannel();
+  }
 
   // 1. Whale Alerts / On-Chain Dumps / Etherscan Scans
   // (WHALE_ACCUMULATION, PUMP_AND_DUMP_RISK, WHALE_EXCHANGE_DEPOSIT, WHALE_ALERT, ONCHAIN_WHALE_ALERT)

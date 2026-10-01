@@ -57,8 +57,13 @@ async function runDispatchCycle() {
         const isWhaleOrOnChain = Boolean(
           eventType === 'WHALE_ALERT' ||
           eventType === 'ONCHAIN_WHALE_ALERT' ||
+          eventType === 'NEW_COIN_LISTED' ||
+          eventType === 'NEW_LISTING' ||
+          eventType === 'MARKET_ALERT' ||
+          eventType === 'LISTING_ALERT' ||
           item.signal_id?.startsWith('WHALE_') ||
-          item.signal_id?.startsWith('ONCHAIN_')
+          item.signal_id?.startsWith('ONCHAIN_') ||
+          item.signal_id?.startsWith('LISTING_')
         );
 
         // 1. GATEKEEPER: Discard any test IDs or mock symbols

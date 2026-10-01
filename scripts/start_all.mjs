@@ -154,6 +154,16 @@ export const SERVICES = [
     env: { NODE_ENV: 'production' },
     scriptPath: 'scripts/etherscan_whale_worker.mjs',
   },
+  {
+    id: 'listing_worker',
+    name: 'LISTING-DET',
+    color: COLORS.brightCyan,
+    command: process.execPath,
+    args: ['scripts/new_listing_worker.mjs'],
+    cwd: ROOT_DIR,
+    env: { NODE_ENV: 'production', POLL_INTERVAL_MS: '45000' },
+    scriptPath: 'scripts/new_listing_worker.mjs',
+  },
 ];
 
 // Filter services based on CLI flags
@@ -262,7 +272,7 @@ async function launchAll() {
   }
 
   if (isDryRun) {
-    console.log(`${COLORS.brightGreen}✅ Configuration valid. All 10 services and scripts verified.${COLORS.reset}`);
+    console.log(`${COLORS.brightGreen}✅ Configuration valid. All ${SERVICES.length} services and scripts verified.${COLORS.reset}`);
     const active = getActiveServices({ workersOnly: isWorkersOnly });
     console.log(`Configured to launch ${active.length} processes:`);
     for (const s of active) {

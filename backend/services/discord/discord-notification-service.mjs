@@ -16,6 +16,7 @@ import {
   buildBlockchainProofDiscordEmbed,
   buildPreBreakoutDiscordEmbed,
   buildPreBreakoutStatusDiscordEmbed,
+  buildNewListingDiscordEmbed,
   validateRoiInvariant,
 } from './discord-message-builder.mjs';
 
@@ -99,6 +100,12 @@ export class DiscordNotificationService {
         break;
       case 'BLOCKCHAIN_PROOF':
         messagePayload = buildBlockchainProofDiscordEmbed(item);
+        break;
+      case 'NEW_COIN_LISTED':
+      case 'NEW_LISTING':
+      case 'MARKET_ALERT':
+      case 'LISTING_ALERT':
+        messagePayload = buildNewListingDiscordEmbed(item);
         break;
       case 'PREP_DETECTED':
       case 'READY_DETECTED':

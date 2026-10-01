@@ -145,5 +145,20 @@ module.exports = {
       out_file: './logs/etherscan-out.log',
       time: true,
     },
+    {
+      name: 'eagle-flash-listing-worker',
+      script: 'scripts/new_listing_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+        POLL_INTERVAL_MS: 45000,
+      },
+      autorestart: true,
+      restart_delay: 5000,
+      max_memory_restart: '500M',
+      error_file: './logs/listing-worker-error.log',
+      out_file: './logs/listing-worker-out.log',
+      time: true,
+    },
   ],
 };
