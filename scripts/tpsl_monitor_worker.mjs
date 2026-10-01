@@ -91,11 +91,37 @@ export function evaluateSignalTpSl(signal, currentPrice) {
   if (entry <= 0 || stop <= 0) return null;
 
   const signalId = signal.signal_id || signal.id || 'ANON';
-  const milestonesHit = MilestoneTracker.get(signalId) || new Set();
+  let milestonesHit = MilestoneTracker.get(signalId);
+  if (!milestonesHit) {
+    milestonesHit = new Set();
+    MilestoneTracker.set(signalId, milestonesHit);
+  }
+
+  // Hydrate persistent state from database fields to prevent duplicate alerts upon worker restart
+  if (signal.tp1_hit_at || signal.tp1_hit_price || signal.status === 'T1_HIT' || signal.status === 'TP1_HIT') {
+    milestonesHit.add('TP1');
+  }
+  if (signal.tp2_hit_at || signal.tp2_hit_price || signal.status === 'T2_HIT' || signal.status === 'TP2_HIT') {
+    milestonesHit.add('TP1');
+    milestonesHit.add('TP2');
+  }
+  if (signal.tp3_hit_at || signal.tp3_hit_price || signal.status === 'T3_HIT' || signal.status === 'TP3_HIT' || signal.status === 'TP_HIT') {
+    milestonesHit.add('TP1');
+    milestonesHit.add('TP2');
+    milestonesHit.add('TP3');
+  }
+  if (signal.stop_hit_at || signal.stop_hit_price || signal.status === 'STOP_HIT' || signal.status === 'SL_HIT') {
+    milestonesHit.add('SL');
+  }
+
+  // If already stopped out in DB, do not re-evaluate
+  if (signal.stop_hit_at || signal.status === 'STOP_HIT' || signal.status === 'SL_HIT') {
+    return null;
+  }
 
   // 1. Check Stop-Loss Breach (STOP-FIRST Priority Rule)
   const isStopBreached = isLong ? (currentPrice <= stop) : (currentPrice >= stop);
-  if (isStopBreached) {
+  if (isStopBreached && !milestonesHit.has('SL')) {
     const rawRoi = isLong
       ? ((currentPrice - entry) / entry) * 100
       : ((entry - currentPrice) / entry) * 100;
@@ -234,6 +260,16 @@ export async function updateLivePricesFromExchanges(symbols = []) {
   return updatedCount;
 }
 
+export const MAX_SIGNAL_LIFETIME_MS = 48 * 60 * 60 * 1000; // 48 hours maximum lifetime for active signals
+
+export function isSignalStale(signal, maxLifetimeMs = MAX_SIGNAL_LIFETIME_MS) {
+  if (!signal) return false;
+  const timestamp = signal.detected_at || signal.created_at;
+  if (!timestamp) return false;
+  const ageMs = Date.now() - new Date(timestamp).getTime();
+  return ageMs > maxLifetimeMs;
+}
+
 // 5. Fetch Active Positions from Supabase
 export async function fetchActivePositions() {
   if (!supabase || isTestExecution()) {
@@ -252,6 +288,14 @@ export async function fetchActivePositions() {
     if (sigRes.status === 'fulfilled' && Array.isArray(sigRes.value.data)) {
       for (const row of sigRes.value.data) {
         if (!ResolvedPositions.has(row.signal_id) && !seenIds.has(row.signal_id)) {
+          if (isSignalStale(row)) {
+            ResolvedPositions.add(row.signal_id);
+            Promise.allSettled([
+              supabase.from('signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
+              supabase.from('big_cap_signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
+            ]).catch(() => {});
+            continue;
+          }
           seenIds.add(row.signal_id);
           activeList.push(row);
         }
@@ -261,6 +305,14 @@ export async function fetchActivePositions() {
     if (bigCapRes.status === 'fulfilled' && Array.isArray(bigCapRes.value.data)) {
       for (const row of bigCapRes.value.data) {
         if (!ResolvedPositions.has(row.signal_id) && !seenIds.has(row.signal_id)) {
+          if (isSignalStale(row)) {
+            ResolvedPositions.add(row.signal_id);
+            Promise.allSettled([
+              supabase.from('signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
+              supabase.from('big_cap_signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
+            ]).catch(() => {});
+            continue;
+          }
           seenIds.add(row.signal_id);
           activeList.push(row);
         }
@@ -287,13 +339,14 @@ export async function processSignalEvaluation(signal, currentPrice) {
   const nowIso = new Date().toISOString();
 
   // 1. Record Milestone in Idempotency Tracker
-  if (result.milestone) {
+  if (result.milestone || result.eventType === 'SL_HIT' || result.eventType === 'STOP_HIT') {
     let milestones = MilestoneTracker.get(signalId);
     if (!milestones) {
       milestones = new Set();
       MilestoneTracker.set(signalId, milestones);
     }
-    milestones.add(result.milestone);
+    if (result.milestone) milestones.add(result.milestone);
+    if (result.eventType === 'SL_HIT' || result.eventType === 'STOP_HIT') milestones.add('SL');
   }
 
   // 2. Lock Terminal States
@@ -346,12 +399,39 @@ export async function processSignalEvaluation(signal, currentPrice) {
 
   // 4. Queue Discord Notification with Dynamically Resolved Dedicated Channel
   try {
+    const entry = parseFloat(signal.entry_price || signal.entryPrice || 0);
+    const dir = (signal.direction || 'LONG').toUpperCase();
+    const isLong = dir === 'LONG';
+    let mfe_pct = signal.mfe_pct !== undefined ? parseFloat(signal.mfe_pct) : 0;
+    let mae_pct = signal.mae_pct !== undefined ? parseFloat(signal.mae_pct) : 0;
+    if (entry > 0 && result.exitPrice > 0) {
+      const exitRoi = isLong 
+        ? ((result.exitPrice - entry) / entry) * 100 
+        : ((entry - result.exitPrice) / entry) * 100;
+      if (mfe_pct === 0 && exitRoi > 0) {
+        mfe_pct = parseFloat(exitRoi.toFixed(2));
+      }
+      if (mae_pct === 0 && exitRoi < 0) {
+        mae_pct = parseFloat(exitRoi.toFixed(2));
+      }
+    }
+
     const payload = {
       ...signal,
+      target_1_price: signal.target_1_price || signal.target_price_1,
+      target_2_price: signal.target_2_price || signal.target_price_2,
+      target_3_price: signal.target_3_price || signal.target_price_3,
+      target_price_1: signal.target_price_1 || signal.target_1_price,
+      target_price_2: signal.target_price_2 || signal.target_2_price,
+      target_price_3: signal.target_price_3 || signal.target_3_price,
+      stop_price: signal.stop_price || signal.stop_loss_price,
+      stop_loss_price: signal.stop_loss_price || signal.stop_price,
       current_price: result.exitPrice,
       exit_price: result.exitPrice,
       realized_roi_pct: result.realizedPnlPct,
       roi: result.realizedPnlPct,
+      mfe_pct,
+      mae_pct,
       milestone: result.milestone || result.transition,
       target_hit: result.milestone || result.transition,
       reason: result.reason,

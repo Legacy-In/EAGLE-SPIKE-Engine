@@ -19,9 +19,15 @@ import {
   processSignalEvaluation,
   ResolvedPositions,
   MilestoneTracker,
+  isSignalStale,
+  MAX_SIGNAL_LIFETIME_MS,
 } from '../scripts/tpsl_monitor_worker.mjs';
 import { resolveDiscordChannel, resolveDiscordChannels } from '../backend/services/discord/discord-router.mjs';
 import { getLocalNotificationOutboxPath, isTestExecution } from '../backend/services/notification-outbox.mjs';
+import {
+  buildTpMilestoneDiscordEmbed,
+  buildStopHitDiscordEmbed,
+} from '../backend/services/discord/discord-message-builder.mjs';
 import fs from 'fs';
 import path from 'path';
 
@@ -193,3 +199,122 @@ test('6. Test Outbox Isolation: Tests write to isolated test outbox, never live 
   assert.equal(baseName, 'test_notification_outbox.json', 'Test execution must use test_notification_outbox.json');
   assert.notEqual(baseName, 'notification_outbox.json', 'Must never target production notification_outbox.json');
 });
+
+test('7. Target Price Normalization: Format valid TP targets from both schema variations (no $0.00)', () => {
+  // Test big_cap_signals schema (target_price_1)
+  const bigCapItem = {
+    signal_id: 'EGL-BIGCAP-TEST',
+    payload: {
+      signal_id: 'EGL-BIGCAP-TEST',
+      symbol: 'ETHUSDT',
+      direction: 'LONG',
+      entry_price: 2600.0,
+      target_price_1: 2707.75,
+      target_price_2: 2769.77,
+      stop_loss_price: 2550.0,
+      exit_price: 2710.0,
+      milestone: 'TP1',
+    },
+  };
+  const embedRes1 = buildTpMilestoneDiscordEmbed(bigCapItem, 'TP1');
+  const tpField1 = embedRes1.embeds[0].fields.find(f => f.name.includes('Target'));
+  assert.ok(tpField1, 'Target field must exist');
+  assert.notEqual(tpField1.value, '**$0.00**', 'Target must never format to $0.00 when target_price_1 is provided');
+  assert.equal(tpField1.value, '**$2,707.75**');
+
+  // Test signals schema (target_1_price)
+  const signalsItem = {
+    signal_id: 'EGL-STANDARD-TEST',
+    payload: {
+      signal_id: 'EGL-STANDARD-TEST',
+      symbol: 'BTCUSDT',
+      direction: 'LONG',
+      entry_price: 65000.0,
+      target_1_price: 66500.0,
+      stop_price: 64000.0,
+      exit_price: 66550.0,
+      milestone: 'TP1',
+    },
+  };
+  const embedRes2 = buildTpMilestoneDiscordEmbed(signalsItem, 'TP1');
+  const tpField2 = embedRes2.embeds[0].fields.find(f => f.name.includes('Target'));
+  assert.equal(tpField2.value, '**$66,500.00**');
+});
+
+test('8. Worker Reboot Milestone Hydration: Zero duplicate alerts when database already has tp1_hit_at', () => {
+  const signalId = 'EGL-REBOOT-HYDRATION-TEST';
+  const signalWithPriorTp1 = {
+    signal_id: signalId,
+    symbol: 'ETHUSDT',
+    direction: 'LONG',
+    entry_price: 2600.0,
+    target_1_price: 2700.0,
+    stop_price: 2550.0,
+    tp1_hit_at: '2026-09-25T16:00:00.000Z',
+    tp1_hit_price: 2705.0,
+    status: 'ACTIVE',
+  };
+
+  // Simulate worker reboot: in-memory state is completely blank
+  MilestoneTracker.delete(signalId);
+  ResolvedPositions.delete(signalId);
+
+  // Price is currently above TP1 (e.g. 2708.0)
+  const res = evaluateSignalTpSl(signalWithPriorTp1, 2708.0);
+  // Must NOT trigger TP1 again!
+  assert.equal(res, null, 'Must not re-trigger TP1 if signal already has tp1_hit_at');
+
+  // MilestoneTracker must now be hydrated
+  const tracker = MilestoneTracker.get(signalId);
+  assert.ok(tracker.has('TP1'), 'MilestoneTracker must have hydrated TP1 from DB row');
+});
+
+test('9. Stale Signal Expiration Guard: Identifies positions older than 48 hours', () => {
+  const freshSignal = {
+    signal_id: 'EGL-FRESH',
+    detected_at: new Date(Date.now() - 3600 * 1000).toISOString(), // 1 hour ago
+  };
+  assert.equal(isSignalStale(freshSignal), false, '1-hour old signal must not be stale');
+
+  const staleSignal = {
+    signal_id: 'EGL-STALE-7DAYS',
+    detected_at: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(), // 7 days ago
+  };
+  assert.equal(isSignalStale(staleSignal), true, '7-day old signal must be marked stale');
+});
+
+test('10. MFE & MAE Excursion Computation: Outbox payload contains accurate non-zero excursions', async () => {
+  const signalId = 'EGL-EXCURSION-TEST';
+  const signal = {
+    signal_id: signalId,
+    symbol: 'SOLUSDT',
+    direction: 'LONG',
+    entry_price: 150.0,
+    stop_price: 145.0,
+    target_1_price: 156.0, // +4%
+  };
+
+  MilestoneTracker.delete(signalId);
+  ResolvedPositions.delete(signalId);
+
+  const evalResult = await processSignalEvaluation(signal, 156.5);
+  assert.ok(evalResult !== null);
+  assert.equal(evalResult.milestone, 'TP1');
+
+  // Check embed rendering of MFE
+  const embed = buildTpMilestoneDiscordEmbed({
+    signal_id: signalId,
+    payload: {
+      ...signal,
+      exit_price: 156.5,
+      current_price: 156.5,
+      realized_roi_pct: 4.33,
+      milestone: 'TP1',
+    },
+  });
+  const mfeField = embed.embeds[0].fields.find(f => f.name.includes('MFE'));
+  assert.ok(mfeField, 'MFE field must exist in embed');
+  assert.notEqual(mfeField.value, '`+0.00%`', 'MFE must not be +0.00% on a profitable TP hit');
+  assert.equal(mfeField.value, '`+4.33%`');
+});
+

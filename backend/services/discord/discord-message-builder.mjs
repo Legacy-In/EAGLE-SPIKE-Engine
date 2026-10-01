@@ -76,9 +76,9 @@ export function buildNewSignalDiscordEmbed(signal) {
   const entry = formatPrice(p.entry_price || p.entryPrice);
   const current = formatPrice(p.current_price || p.entry_price || p.entryPrice);
   const stopLoss = formatPrice(p.stop_price || p.stop_loss_price || p.stopLossPrice);
-  const tp1 = formatPrice(p.target_1_price || p.targetPrice1 || p.tp1_price);
-  const tp2 = formatPrice(p.target_2_price || p.targetPrice2 || p.tp2_price);
-  const tp3 = formatPrice(p.target_3_price || p.targetPrice3 || p.tp3_price);
+  const tp1 = formatPrice(p.target_1_price || p.target_price_1 || p.targetPrice1 || p.tp1_price);
+  const tp2 = formatPrice(p.target_2_price || p.target_price_2 || p.targetPrice2 || p.tp2_price);
+  const tp3 = formatPrice(p.target_3_price || p.target_price_3 || p.targetPrice3 || p.tp3_price);
 
   const riskR = p.risk_r ? formatPrice(p.risk_r) : '—';
   const score = Math.round(parseFloat(p.eagle_score || 75));
@@ -137,12 +137,29 @@ export function buildTpMilestoneDiscordEmbed(item, milestone = 'TP1') {
   const current = formatPrice(p.current_price || p.exit_price || p.entry_price);
   const effectiveMilestone = p.target_hit || p.milestone || milestone || 'TP1';
   const target = formatPrice(
-    effectiveMilestone === 'TP3' ? (p.target_3_price || p.targetPrice3 || p.tp3_price) :
-    effectiveMilestone === 'TP2' ? (p.target_2_price || p.targetPrice2 || p.tp2_price) :
-    (p.target_1_price || p.targetPrice1 || p.tp1_price)
+    effectiveMilestone === 'TP3' ? (p.target_3_price || p.target_price_3 || p.targetPrice3 || p.tp3_price) :
+    effectiveMilestone === 'TP2' ? (p.target_2_price || p.target_price_2 || p.targetPrice2 || p.tp2_price) :
+    (p.target_1_price || p.target_price_1 || p.targetPrice1 || p.tp1_price)
   );
-  const roi = formatPct(p.realized_roi_pct || p.current_roi_pct || p.roi || 0);
-  const mfe = formatPct(p.mfe_pct || 0);
+
+  // Compute robust ROI
+  const numericRoi = p.realized_roi_pct ?? p.current_roi_pct ?? p.roi;
+  let computedRoi = numericRoi !== undefined && numericRoi !== null ? parseFloat(numericRoi) : 0;
+  if (!computedRoi && p.entry_price && (p.exit_price || p.current_price)) {
+    const en = parseFloat(p.entry_price);
+    const cur = parseFloat(p.exit_price || p.current_price);
+    if (en > 0 && cur > 0) {
+      computedRoi = dir === 'LONG' ? ((cur - en) / en) * 100 : ((en - cur) / en) * 100;
+    }
+  }
+  const roi = formatPct(computedRoi);
+
+  // MFE & MAE: fallback to computed excursion if not explicitly provided
+  let computedMfe = p.mfe_pct !== undefined && p.mfe_pct !== null ? parseFloat(p.mfe_pct) : 0;
+  if (computedMfe === 0 && computedRoi > 0) {
+    computedMfe = computedRoi;
+  }
+  const mfe = formatPct(computedMfe);
   const mae = formatPct(p.mae_pct || 0);
   const actionText = effectiveMilestone === 'TP1' ? 'STOP MOVED TO ENTRY (BREAKEVEN)' : 
                      effectiveMilestone === 'TP2' ? 'TRAILING STOP MOVED TO TP1' : 
@@ -185,8 +202,19 @@ export function buildStopHitDiscordEmbed(item) {
   const dir = (p.direction || 'LONG').toUpperCase();
   const entry = formatPrice(p.entry_price || p.entryPrice);
   const stop = formatPrice(p.stop_price || p.stop_loss_price || p.stopLossPrice);
-  const exit = formatPrice(p.exit_price || p.current_price || p.stop_price || p.stop_loss_price);
-  const roi = formatPct(p.realized_roi_pct || p.roi || -2.5);
+  const exit = formatPrice(p.exit_price || p.current_price || p.stop_price || p.stop_loss_price || p.stopLossPrice);
+
+  let computedRoi = p.realized_roi_pct ?? p.current_roi_pct ?? p.roi;
+  if (computedRoi === undefined || computedRoi === null) {
+    const en = parseFloat(p.entry_price || p.entryPrice || 0);
+    const ex = parseFloat(p.exit_price || p.current_price || p.stop_price || p.stop_loss_price || p.stopLossPrice || 0);
+    if (en > 0 && ex > 0) {
+      computedRoi = dir === 'LONG' ? ((ex - en) / en) * 100 : ((en - ex) / en) * 100;
+    } else {
+      computedRoi = -2.5;
+    }
+  }
+  const roi = formatPct(computedRoi);
 
   const embed = {
     title: '🦅 EAGLE FLASH — STOP LOSS HIT',

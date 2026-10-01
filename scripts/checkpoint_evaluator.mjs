@@ -245,6 +245,7 @@ export async function runCheckpointEvaluation() {
                         newStatus === 'T3_HIT' ? 'TP3_HIT' :
                         newStatus === 'STOP_HIT' ? 'STOP_HIT' : null;
       if (eventType) {
+        const extremes = Array.isArray(s.signal_extremes) && s.signal_extremes[0] ? s.signal_extremes[0] : {};
         const milestonePayloads = buildSignalNotificationPayloads({
           ...s,
           ...updatePayload,
@@ -252,6 +253,10 @@ export async function runCheckpointEvaluation() {
           current_price: latestPrice,
           exit_price: latestPrice,
           current_roi_pct: latestReturnPct,
+          realized_roi_pct: latestReturnPct,
+          roi: latestReturnPct,
+          mfe_pct: extremes.max_mfe_pct !== undefined ? extremes.max_mfe_pct : Math.max(0, latestReturnPct),
+          mae_pct: extremes.max_mae_pct !== undefined ? extremes.max_mae_pct : Math.min(0, latestReturnPct),
         }, {}, eventType);
         queueNotificationAlerts(milestonePayloads).catch(err => {
           console.warn('Milestone notification notice:', err?.message);
