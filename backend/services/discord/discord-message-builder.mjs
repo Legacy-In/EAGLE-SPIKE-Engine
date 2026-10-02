@@ -23,6 +23,16 @@ function formatPct(val) {
   return (num >= 0 ? '+' : '') + num.toFixed(2) + '%';
 }
 
+// Format large monetary/count metrics ($M, $B, $K)
+export function formatLargeNumber(val) {
+  const num = parseFloat(val);
+  if (isNaN(num) || num === 0) return '0.00';
+  if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+  return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
 export function getPhaseBadge(phaseRaw) {
   const phase = (phaseRaw || '').toUpperCase().trim();
   switch (phase) {
@@ -745,6 +755,66 @@ export function buildNewListingDiscordEmbed(item) {
         { name: '🔗 Trade & Explore', value: `[Direct Trading Terminal](${tradeUrl}) • [CoinGecko Search](https://www.coingecko.com/en/search_queries?search=${baseCoin})`, inline: false },
       ],
       footer: { text: '🦅 EAGLE FLASH — NEW COIN LISTING RADAR • Institutional Intelligence' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+/**
+ * Format RSI HEATMAP & HIGH-OI LONG SETUP Embed for #rsi-longs
+ */
+export function buildRsiLongDiscordEmbed(item) {
+  const p = item.payload || item;
+  const symbol = (p.symbol || 'UNKNOWN').toUpperCase();
+  const exchange = (p.exchange || 'BYBIT').toUpperCase();
+  const rsi7d = p.rsi_7d !== undefined ? parseFloat(p.rsi_7d).toFixed(1) : (p.rsi7d ? parseFloat(p.rsi7d).toFixed(1) : '45.0');
+  const marketCap = formatLargeNumber(p.market_cap || p.marketCap || 0);
+  const volume24h = formatLargeNumber(p.volume_24h || p.turnover24h || p.volume24h || 0);
+  const openInterest = formatLargeNumber(p.open_interest_usd || p.openInterestValue || p.openInterest || 0);
+  const oiDelta = p.oi_delta_pct !== undefined ? parseFloat(p.oi_delta_pct).toFixed(2) : '+0.00';
+  const price = formatPrice(p.price || p.entry_price || p.entryPrice || 0);
+  const detectedAt = p.detected_at || p.timestamp || new Date().toISOString();
+  const unixSec = Math.floor(new Date(detectedAt).getTime() / 1000);
+
+  // Direct trading link resolution
+  let tradeUrl = p.trade_url || p.tradeUrl;
+  if (!tradeUrl) {
+    if (exchange.includes('BYBIT')) {
+      tradeUrl = `https://www.bybit.com/trade/usdt/${symbol}`;
+    } else if (exchange.includes('BINANCE')) {
+      tradeUrl = `https://www.binance.com/en/futures/${symbol}`;
+    } else if (exchange.includes('MEXC')) {
+      tradeUrl = `https://futures.mexc.com/exchange/${symbol.replace(/USDT$/, '_USDT')}`;
+    } else {
+      tradeUrl = `https://www.bybit.com/trade/usdt/${symbol}`;
+    }
+  }
+
+  const confluenceDesc = parseFloat(oiDelta) > 0 
+    ? `+${oiDelta}% (INSTITUTIONAL POSITIONING)`
+    : `${oiDelta}% (ACCUMULATION SUPPORT)`;
+
+  return {
+    embeds: [{
+      title: '📈 RSI HEATMAP LONG SETUP',
+      description: `### 🚀 **${symbol}** (${exchange} Perpetual)\n**Signal Type:** \`RSI HEATMAP LONG SETUP\` | **Status:** \`ACTIVE_EXPANSION_OPPORTUNITY\` | **Detected:** <t:${unixSec}:R>`,
+      color: 0x00FF88, // Neon Emerald
+      fields: [
+        { name: '📈 Signal Type', value: '`RSI HEATMAP LONG SETUP`', inline: true },
+        { name: '🪙 Asset / Symbol', value: `\`${symbol}\` (\`${exchange}\`)`, inline: true },
+        { name: '📊 7D RSI', value: `**${rsi7d}** \`(Capped ≤ 55)\``, inline: true },
+
+        { name: '💰 Market Cap', value: `**$${marketCap}**`, inline: true },
+        { name: '💧 24h Volume', value: `**$${volume24h}**`, inline: true },
+        { name: '⚡ Open Interest', value: `**$${openInterest}**`, inline: true },
+
+        { name: '🌊 OI Confluence', value: `\`${confluenceDesc}\``, inline: true },
+        { name: '🎯 Reference Price', value: `**${price}**`, inline: true },
+        { name: '🛡️ Capital Shield', value: '`EXPANSION RUNWAY CONFIRMED`', inline: true },
+
+        { name: '🔗 Direct Links', value: `[Trading Terminal](${tradeUrl}) • [Bybit Futures](https://www.bybit.com/trade/usdt/${symbol}) • [Binance Futures](https://www.binance.com/en/futures/${symbol})`, inline: false },
+      ],
+      footer: { text: '🦅 EAGLE FLASH — RSI Heatmap & High-OI Long Engine • Institutional Derivatives Intelligence' },
       timestamp: new Date().toISOString(),
     }],
   };

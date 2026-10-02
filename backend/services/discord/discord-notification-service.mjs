@@ -17,6 +17,7 @@ import {
   buildPreBreakoutDiscordEmbed,
   buildPreBreakoutStatusDiscordEmbed,
   buildNewListingDiscordEmbed,
+  buildRsiLongDiscordEmbed,
   validateRoiInvariant,
 } from './discord-message-builder.mjs';
 
@@ -106,6 +107,11 @@ export class DiscordNotificationService {
       case 'MARKET_ALERT':
       case 'LISTING_ALERT':
         messagePayload = buildNewListingDiscordEmbed(item);
+        break;
+      case 'RSI_LONG_SETUP':
+      case 'RSI_HEATMAP_LONG':
+      case 'RSI_LONG':
+        messagePayload = buildRsiLongDiscordEmbed(item);
         break;
       case 'PREP_DETECTED':
       case 'READY_DETECTED':

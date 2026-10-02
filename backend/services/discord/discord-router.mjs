@@ -72,6 +72,15 @@ export function getNewListingsChannel() {
   );
 }
 
+export function getRsiLongsChannel() {
+  return (
+    process.env.DISCORD_CHANNEL_RSI_LONGS ||
+    process.env.DISCORD_RSI_LONGS_CHANNEL_ID ||
+    process.env.DISCORD_CHANNEL_MOMENTUM_LONGS ||
+    null
+  );
+}
+
 /**
  * Strictly routes Pre-Breakout & Accumulation strategy lifecycle events to #pre-breakout:
  * PREP_DETECTED, READY_DETECTED, CONFIRMED, CHASE_RISK_ELEVATED, CHASE_RISK_BLOCKED,
@@ -125,6 +134,20 @@ export function resolveDiscordChannel(item) {
   );
   if (isMarketAlert) {
     return getMarketAlertsChannel() || getSignalsChannel();
+  }
+
+  // 0c. RSI Heatmap & High-OI Long Setups (#rsi-longs)
+  const isRsiLong = Boolean(
+    eventType === 'RSI_LONG_SETUP' ||
+    eventType === 'RSI_HEATMAP_LONG' ||
+    eventType === 'RSI_LONG' ||
+    type.includes('RSI_LONG') ||
+    type.includes('RSI_HEATMAP') ||
+    signalId.startsWith('RSI-LONG-') ||
+    signalId.startsWith('RSI_LONG_')
+  );
+  if (isRsiLong) {
+    return getRsiLongsChannel() || null;
   }
 
   // 1. Whale Alerts / On-Chain Dumps / Etherscan Scans

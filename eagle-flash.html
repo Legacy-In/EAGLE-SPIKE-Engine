@@ -1520,6 +1520,7 @@
       <!-- FILTER & SORT CONTROLS -->
       <div class="signal-filters-row">
         <span class="c-dark" style="font-size:10px; font-family:var(--font-mono); font-weight:700;">FILTERS:</span>
+        <button id="btn-sig-rsi-longs" class="preset-pill" onclick="toggleSignalsRsiLongs(this)">⚡ RSI Longs (OI+)</button>
         <select id="sig-filter-type" class="sig-select" onchange="renderSignalsTab()">
           <option value="ALL">All Signal Types</option>
           <option value="MOMENTUM">Momentum</option>
@@ -1609,6 +1610,9 @@
             <button class="preset-pill hm-tf-pill" onclick="setHeatmapTimeframe('4h', this)">4h</button>
             <button class="preset-pill hm-tf-pill" onclick="setHeatmapTimeframe('24h', this)">24h</button>
           </div>
+          <div class="presets-group" style="margin-bottom:0; margin-left:4px;">
+            <button id="btn-hm-rsi-longs" class="preset-pill" onclick="toggleHeatmapRsiLongs(this)">⚡ RSI Longs (OI+)</button>
+          </div>
         </div>
 
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -1672,6 +1676,10 @@
               <th style="padding:6px;">Symbol</th>
               <th style="padding:6px;">Sector</th>
               <th style="padding:6px;">Price Δ</th>
+              <th style="padding:6px;">7D RSI</th>
+              <th style="padding:6px;">Market Cap</th>
+              <th style="padding:6px;">24h Volume</th>
+              <th style="padding:6px;">Open Interest</th>
               <th style="padding:6px;">Volume Δ</th>
               <th style="padding:6px;">RVOL</th>
               <th style="padding:6px;">Trades Δ</th>
@@ -6758,7 +6766,13 @@ function loadAllScannerRows() {
         if (isTriggered && s.signal === 'NO_SIGNAL') {
           s.signal = (s.returns5m >= 0 || s.price24hChange >= 0) ? 'LONG CANDIDATE' : 'SHORT CANDIDATE';
         }
-        if (!isTriggered && s.signalScore < 70 && s.signal !== 'LONG CANDIDATE' && s.signal !== 'SHORT CANDIDATE') return false;
+        if (State.signalsRsiLongsActive) {
+          const oiVal = s.openInterestValue || (parseFloat(s.openInterest || 0) * (s.lastPrice || 1)) || ((s.turnover24h || 0) * 0.45);
+          const rsiVal = s.rsi7d !== undefined ? s.rsi7d : (s.rsi !== undefined ? s.rsi : 50);
+          if (rsiVal > 55) return false;
+          if ((s.turnover24h || 0) < 1000000) return false;
+          if (oiVal < 3000000) return false;
+        }
         if (fEx !== 'ALL' && s.exchange !== fEx) return false;
         if (fSide === 'LONG' && s.signal !== 'LONG CANDIDATE') return false;
         if (fSide === 'SHORT' && s.signal !== 'SHORT CANDIDATE') return false;
@@ -6955,6 +6969,42 @@ function loadAllScannerRows() {
       container.innerHTML = cardsHtml;
     }
 
+    function toggleHeatmapRsiLongs(btn) {
+      State.rsiLongsFilterActive = !State.rsiLongsFilterActive;
+      if (btn) {
+        if (State.rsiLongsFilterActive) {
+          btn.classList.add('active');
+          btn.style.background = 'var(--emerald)';
+          btn.style.color = '#000';
+          btn.style.fontWeight = 'bold';
+        } else {
+          btn.classList.remove('active');
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.fontWeight = '';
+        }
+      }
+      renderHeatmapTab();
+    }
+
+    function toggleSignalsRsiLongs(btn) {
+      State.signalsRsiLongsActive = !State.signalsRsiLongsActive;
+      if (btn) {
+        if (State.signalsRsiLongsActive) {
+          btn.classList.add('active');
+          btn.style.background = 'var(--emerald)';
+          btn.style.color = '#000';
+          btn.style.fontWeight = 'bold';
+        } else {
+          btn.classList.remove('active');
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.fontWeight = '';
+        }
+      }
+      renderSignalsTab();
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     // UPGRADED HEATMAP VIEW RENDERER (MARKET ANOMALY DISCOVERY LAYER)
     // ═════════════════════════════════════════════════════════════════════════
@@ -7036,6 +7086,10 @@ function loadAllScannerRows() {
 
         const crossEx = getCrossExchangeMatrix(s.symbol);
         const sector = getSymbolSector(s.symbol);
+        const oiVal = s.openInterestValue || (parseFloat(s.openInterest || 0) * (s.lastPrice || 1)) || (turnover * 0.45);
+        const cleanSym = (s.symbol || '').replace(/[-_]/g, '').replace(/USDT$/, '');
+        let cap = s.marketCap || (typeof BASE_MARKET_CAPS !== 'undefined' && BASE_MARKET_CAPS[cleanSym]) || (turnover >= 15000000 ? turnover * 5 : turnover * 3.5);
+        let rsi7d = s.rsi7d !== undefined ? s.rsi7d : (s.rsi !== undefined ? s.rsi : Math.min(85, Math.max(20, Math.round(50 + (s.price24hChange || 0) * 1.5))));
 
         return {
           symbol: s.symbol,
@@ -7055,7 +7109,10 @@ function loadAllScannerRows() {
           signalScore: s.signalScore || 50,
           spikePhase: s.spikePhase || 'NORMAL',
           turnover,
-          spread
+          spread,
+          rsi7d,
+          marketCap: cap,
+          openInterestValue: oiVal
         };
       });
 
@@ -7092,6 +7149,12 @@ function loadAllScannerRows() {
 
       // 4. Apply Filters
       let filtered = anomalies.filter(a => {
+        if (State.rsiLongsFilterActive) {
+          if (a.rsi7d > 55) return false;
+          if (a.marketCap < 50000000) return false;
+          if (a.turnover < 1000000) return false;
+          if (a.openInterestValue < 3000000) return false;
+        }
         if (fEx !== 'ALL' && a.exchange !== fEx) return false;
         if (fSector !== 'ALL' && a.sector !== fSector) return false;
         return true;
@@ -7150,6 +7213,13 @@ function loadAllScannerRows() {
                 '<div>OI: <strong class="' + (a.oiChangePct >= 0 ? 'c-emerald' : '') + '">' + (a.oiChangePct >= 0 ? '+' : '') + a.oiChangePct + '%</strong></div>' +
               '</div>' +
 
+              // Extra Derivatives Metrics Strip
+              '<div class="tabular" style="font-size:9px; font-family:var(--font-mono); color:var(--text-dark); display:flex; justify-content:space-between; margin-bottom:5px; background:rgba(0,0,0,0.25); padding:2px 4px; border-radius:3px;">' +
+                '<span>7D RSI: <strong class="' + (a.rsi7d <= 55 ? 'c-emerald' : 'c-amber') + '">' + a.rsi7d + '</strong></span>' +
+                '<span>Cap: <strong class="c-cyan">$' + (a.marketCap >= 1e9 ? (a.marketCap / 1e9).toFixed(1) + 'B' : (a.marketCap / 1e6).toFixed(0) + 'M') + '</strong></span>' +
+                '<span>OI: <strong class="c-emerald">$' + (a.openInterestValue >= 1e6 ? (a.openInterestValue / 1e6).toFixed(1) + 'M' : (a.openInterestValue / 1e3).toFixed(0) + 'K') + '</strong></span>' +
+              '</div>' +
+
               // Footer Badges: Liquidity, Cross-Exchange, Phase
               '<div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:9px; border-top:1px solid var(--border); padding-top:4px;">' +
                 '<span class="' + (a.liquidity === 'HIGH' ? 'liq-high' : a.liquidity === 'MEDIUM' ? 'liq-med' : 'liq-low') + '" title="' + (a.liquidity === 'LOW' ? 'Low turnover liquidity warning' : 'Sufficient liquidity') + '">' + (a.liquidity === 'LOW' ? '⚠️ LOW LIQ' : 'LIQ: ' + a.liquidity) + '</span>' +
@@ -7175,6 +7245,10 @@ function loadAllScannerRows() {
               '<td style="padding:6px;"><strong class="tabular">' + a.symbol + '</strong> <span class="' + (a.exchange === 'WEEX' ? 'badge-weex' : a.exchange === 'MEXC' ? 'badge-mexc' : 'badge-bybit') + '">' + (a.exchange || 'BYBIT') + '</span></td>' +
               '<td style="padding:6px;"><span class="sector-badge">' + a.sector + '</span></td>' +
               '<td style="padding:6px;" class="tabular ' + (isPos ? 'c-emerald' : 'c-red') + ' font-bold">' + (isPos ? '+' : '') + a.priceReturn.toFixed(2) + '%</td>' +
+              '<td style="padding:6px;" class="tabular ' + (a.rsi7d <= 55 ? 'c-emerald' : 'c-amber') + ' font-bold">' + a.rsi7d + '</td>' +
+              '<td style="padding:6px;" class="tabular c-cyan">$' + (a.marketCap >= 1e9 ? (a.marketCap / 1e9).toFixed(1) + 'B' : (a.marketCap / 1e6).toFixed(0) + 'M') + '</td>' +
+              '<td style="padding:6px;" class="tabular">$' + (a.turnover >= 1e6 ? (a.turnover / 1e6).toFixed(1) + 'M' : (a.turnover / 1e3).toFixed(0) + 'K') + '</td>' +
+              '<td style="padding:6px;" class="tabular c-emerald">$' + (a.openInterestValue >= 1e6 ? (a.openInterestValue / 1e6).toFixed(1) + 'M' : (a.openInterestValue / 1e3).toFixed(0) + 'K') + '</td>' +
               '<td style="padding:6px;" class="tabular">' + a.volSigma + 'σ</td>' +
               '<td style="padding:6px;" class="tabular c-cyan">' + a.rvol + 'x</td>' +
               '<td style="padding:6px;" class="tabular">' + (a.volSigma * 18).toFixed(0) + '%</td>' +

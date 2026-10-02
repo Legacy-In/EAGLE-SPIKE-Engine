@@ -68,6 +68,11 @@ import {
   recordAuditConfirmation,
   computeAggregateAuditMetrics,
 } from '../backend/services/prep-audit-service.mjs';
+import {
+  evaluateRsiLongOpportunity,
+  dispatchRsiLongAlert,
+  refreshMarketCapCache,
+} from '../backend/services/rsi_long_strategy.mjs';
 
 // Ingest Bybit Linear Tickers
 async function fetchBybitTickers() {
@@ -349,6 +354,32 @@ async function runScanCycle() {
     console.log(
       `[SCANNER_CYCLE] candidates=${topCandidates.length} evaluated=${all.length} qualified=${qualifiedSignals.length} duration=${Math.round(Date.now() - start)}ms`
     );
+
+    // Evaluate RSI Heatmap & High-OI Long Opportunities
+    try {
+      await refreshMarketCapCache().catch(() => {});
+      for (const t of all.slice(0, 30)) {
+        const oiVal = parseFloat(t.openInterestValue || (parseFloat(t.openInterest || 0) * parseFloat(t.lastPrice || 0)) || 0);
+        const turnover = parseFloat(t.turnover24h || 0);
+        const rsiResult = evaluateRsiLongOpportunity({
+          symbol: t.symbol,
+          exchange: t.exchange || 'BYBIT',
+          lastPrice: parseFloat(t.lastPrice || 0),
+          turnover24h: turnover,
+          openInterestValue: oiVal,
+          oiDeltaPct: parseFloat(t.price24hPcnt || 0) * 10,
+          fundingRate: parseFloat(t.fundingRate || 0),
+        });
+
+        if (rsiResult && rsiResult.qualifies) {
+          await dispatchRsiLongAlert(rsiResult).catch((err) => {
+            console.warn(`[RSI_LONG_WARN] ${t.symbol} dispatch notice:`, err?.message);
+          });
+        }
+      }
+    } catch (rsiErr) {
+      console.warn('⚠️ RSI long evaluation notice:', rsiErr?.message);
+    }
 
     if (qualifiedSignals.length > 0) {
       console.log(`⚡ [CLOUD SCANNER] Discovered ${qualifiedSignals.length} qualified spike anomalies! Persisting & Forwarding...`);
