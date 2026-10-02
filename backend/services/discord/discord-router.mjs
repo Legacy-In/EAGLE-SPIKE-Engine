@@ -75,6 +75,7 @@ export function getNewListingsChannel() {
 export function getRsiLongsChannel() {
   return (
     process.env.DISCORD_CHANNEL_RSI_LONGS ||
+    process.env.DISCORD_CHANNEL_RSI_HEATMAP_SETUP ||
     process.env.DISCORD_RSI_LONGS_CHANNEL_ID ||
     process.env.DISCORD_CHANNEL_MOMENTUM_LONGS ||
     null

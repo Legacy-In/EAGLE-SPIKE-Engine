@@ -61,9 +61,12 @@ async function runDispatchCycle() {
           eventType === 'NEW_LISTING' ||
           eventType === 'MARKET_ALERT' ||
           eventType === 'LISTING_ALERT' ||
+          eventType === 'RSI_LONG_SETUP' ||
+          eventType === 'RSI_HEATMAP_LONG' ||
           item.signal_id?.startsWith('WHALE_') ||
           item.signal_id?.startsWith('ONCHAIN_') ||
-          item.signal_id?.startsWith('LISTING_')
+          item.signal_id?.startsWith('LISTING_') ||
+          item.signal_id?.startsWith('RSI-LONG-')
         );
 
         // 1. GATEKEEPER: Discard any test IDs or mock symbols

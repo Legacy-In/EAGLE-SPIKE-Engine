@@ -15,6 +15,7 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
+import 'dotenv/config';
 import { queueNotificationAlerts } from './notification-outbox.mjs';
 import { resolveDiscordChannel } from './discord/discord-router.mjs';
 
@@ -173,6 +174,43 @@ export function calculateRsi(closes = [], period = 7) {
   return parseFloat(rsi.toFixed(2));
 }
 
+// Historical Daily Closes Cache (symbol -> { closes: number[], fetchedAt: number })
+export const DailyClosesCache = new Map();
+const DAILY_CLOSES_TTL_MS = 30 * 60 * 1000; // 30 minutes TTL
+
+/**
+ * Fetch previous daily closes for Wilder's 7D RSI calculation
+ * Returns array of previous 13 closed daily prices
+ */
+export async function getHistoricalDailyCloses(symbol, exchange = 'BYBIT') {
+  const cleanSym = (symbol || '').toUpperCase().replace(/[-_]/g, '');
+  const now = Date.now();
+  const cached = DailyClosesCache.get(cleanSym);
+  if (cached && now - cached.fetchedAt < DAILY_CLOSES_TTL_MS && Array.isArray(cached.closes) && cached.closes.length >= 7) {
+    return cached.closes;
+  }
+
+  try {
+    const res = await fetch(
+      `https://api.bybit.com/v5/market/kline?category=linear&symbol=${cleanSym}&interval=D&limit=14`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+    if (res.ok) {
+      const json = await res.json();
+      const list = json?.result?.list || [];
+      if (Array.isArray(list) && list.length >= 8) {
+        const prevCloses = list.slice(1).map((k) => parseFloat(k[4])).reverse();
+        DailyClosesCache.set(cleanSym, { closes: prevCloses, fetchedAt: now });
+        return prevCloses;
+      }
+    }
+  } catch (err) {
+    // Non-blocking fallback
+  }
+
+  return cached?.closes || [];
+}
+
 /**
  * Checks whether a symbol is currently on the 4-hour cooldown
  */
@@ -208,14 +246,19 @@ export function evaluateRsiLongOpportunity(candidate = {}) {
   }
 
   // 2. Resolve 7-Day RSI
-  let rsi7d = candidate.rsi7d !== undefined ? parseFloat(candidate.rsi7d) : null;
+  let rsi7d = candidate.rsi7d !== undefined && candidate.rsi7d !== null ? parseFloat(candidate.rsi7d) : null;
   if (rsi7d === null) {
     if (Array.isArray(candidate.dailyCloses) && candidate.dailyCloses.length >= 8) {
       rsi7d = calculateRsi(candidate.dailyCloses, 7);
     } else if (Array.isArray(candidate.klineCloses) && candidate.klineCloses.length >= 8) {
       rsi7d = calculateRsi(candidate.klineCloses, 7);
     } else {
-      rsi7d = parseFloat(candidate.rsi || 50);
+      const cached = DailyClosesCache.get(symbol);
+      if (cached && Array.isArray(cached.closes) && cached.closes.length >= 7) {
+        rsi7d = calculateRsi([...cached.closes, lastPrice], 7);
+      } else {
+        rsi7d = parseFloat(candidate.rsi || 50);
+      }
     }
   }
 
@@ -355,3 +398,133 @@ export async function dispatchRsiLongAlert(opportunity) {
   console.log(`📡 [RSI_LONG_ALERT_QUEUED] Symbol: ${m.symbol} | 7D RSI: ${m.rsi7d} | OI: $${(m.openInterestValue / 1e6).toFixed(1)}M | Cap: $${(m.marketCap / 1e6).toFixed(1)}M`);
   return { success: true, signalId, outboxItem };
 }
+
+/**
+ * Fast multi-asset screener that scans raw market tickers, computes real-time 7D RSI,
+ * and identifies qualified institutional long setups.
+ * 
+ * @param {Array<object>} tickers - Live tickers from exchange(s)
+ * @returns {Promise<Array<object>>} Qualified long setups
+ */
+export async function scanAndEvaluateRsiLongs(tickers = []) {
+  if (!Array.isArray(tickers) || tickers.length === 0) return [];
+
+  await refreshMarketCapCache().catch(() => {});
+
+  // 1. Fast pre-filter against volume, OI, and market cap baseline
+  const candidates = [];
+  for (const t of tickers) {
+    const sym = (t.symbol || '').toUpperCase().replace(/[-_]/g, '');
+    if (!sym.endsWith('USDT')) continue;
+
+    const lastPrice = parseFloat(t.lastPrice || t.price || t.close || 0);
+    if (lastPrice <= 0) continue;
+
+    const turnover = parseFloat(t.turnover24h || t.volume24h || t.quoteVolume || 0);
+    if (turnover < RSI_LONG_CONFIG.MIN_24H_VOLUME_USD) continue;
+
+    const oiVal = parseFloat(
+      t.openInterestValue ||
+      t.oiValue ||
+      (parseFloat(t.openInterest || t.oi || 0) * lastPrice) ||
+      0
+    );
+    if (oiVal < RSI_LONG_CONFIG.MIN_OPEN_INTEREST_USD) continue;
+
+    const mcap = parseFloat(t.marketCap || t.market_cap || 0) || getEstimatedMarketCap(sym, lastPrice, turnover);
+    if (mcap < RSI_LONG_CONFIG.MIN_MARKET_CAP_USD) continue;
+
+    candidates.push({
+      ...t,
+      cleanSym: sym,
+      lastPrice,
+      turnover,
+      oiVal,
+      mcap,
+    });
+  }
+
+  // 2. Sort by Open Interest descending to prioritize deepest institutional capital
+  candidates.sort((a, b) => b.oiVal - a.oiVal);
+
+  const qualifiedSetups = [];
+
+  // 3. Deep-evaluate top candidates (up to 40 assets per cycle)
+  for (const c of candidates.slice(0, 40)) {
+    let rsi7d = c.rsi7d !== undefined && c.rsi7d !== null ? parseFloat(c.rsi7d) : null;
+    if (rsi7d === null) {
+      const prevDaily = await getHistoricalDailyCloses(c.cleanSym, c.exchange || 'BYBIT');
+      if (prevDaily.length >= 7) {
+        rsi7d = calculateRsi([...prevDaily, c.lastPrice], 7);
+      } else {
+        rsi7d = parseFloat(c.rsi || 50);
+      }
+    }
+
+    const evalResult = evaluateRsiLongOpportunity({
+      symbol: c.cleanSym,
+      exchange: c.exchange || 'BYBIT',
+      lastPrice: c.lastPrice,
+      turnover24h: c.turnover,
+      openInterestValue: c.oiVal,
+      oiDeltaPct: parseFloat(c.price24hPcnt || c.oiDeltaPct || 0) * 10,
+      fundingRate: parseFloat(c.fundingRate || 0),
+      marketCap: c.mcap,
+      rsi7d,
+    });
+
+    if (evalResult.qualifies) {
+      qualifiedSetups.push(evalResult);
+    }
+  }
+
+  return qualifiedSetups;
+}
+
+/**
+ * Scan and dispatch live RSI long setups to the outbox for Discord routing
+ * 
+ * @param {Array<object>} tickers - Raw exchange tickers
+ * @returns {Promise<object>} Execution stats
+ */
+export async function scanAndDispatchLiveRsiLongs(tickers = []) {
+  try {
+    const qualified = await scanAndEvaluateRsiLongs(tickers);
+    let dispatchedCount = 0;
+
+    for (const opp of qualified) {
+      if (!isRsiLongOnCooldown(opp.symbol)) {
+        const res = await dispatchRsiLongAlert(opp);
+        if (res && res.success) {
+          dispatchedCount++;
+        }
+      }
+    }
+
+    return { qualifiedCount: qualified.length, dispatchedCount, qualified };
+  } catch (err) {
+    console.warn('⚠️ [RSI_LONG_SCANNER_WARN]:', err?.message);
+    return { qualifiedCount: 0, dispatchedCount: 0, qualified: [] };
+  }
+}
+
+// Standalone CLI runner: node backend/services/rsi_long_strategy.mjs
+if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('backend/services/rsi_long_strategy.mjs')) {
+  (async () => {
+    console.log('🦅 Running Autonomous RSI Heatmap & High-OI Long Strategy Scanner...');
+    try {
+      const res = await fetch('https://api.bybit.com/v5/market/tickers?category=linear');
+      const json = await res.json();
+      const tickers = json?.result?.list || [];
+      console.log(`📡 Ingested ${tickers.length} tickers from Bybit.`);
+      const result = await scanAndDispatchLiveRsiLongs(tickers);
+      console.log(`✅ Scan complete: ${result.qualifiedCount} qualified, ${result.dispatchedCount} dispatched to outbox.`);
+      for (const q of result.qualified) {
+        console.log(`  🪙 ${q.symbol} | 7D RSI: ${q.metrics.rsi7d} | OI: $${(q.metrics.openInterestValue/1e6).toFixed(1)}M | Cap: $${(q.metrics.marketCap/1e6).toFixed(1)}M | Vol: $${(q.metrics.volume24h/1e6).toFixed(1)}M`);
+      }
+    } catch (e) {
+      console.error('Scan error:', e);
+    }
+  })();
+}
+

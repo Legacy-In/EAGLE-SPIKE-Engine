@@ -183,7 +183,9 @@ describe('RSI Heatmap & High-OI Long Strategy Engine', () => {
 
     // Ensure zero leakage: if channel is not configured, strict null prevents falling back into #signals
     delete process.env.DISCORD_CHANNEL_RSI_LONGS;
+    delete process.env.DISCORD_CHANNEL_RSI_HEATMAP_SETUP;
     delete process.env.DISCORD_RSI_LONGS_CHANNEL_ID;
+    delete process.env.DISCORD_CHANNEL_MOMENTUM_LONGS;
     const unconfiguredRoute = resolveDiscordChannel(rsiItem);
     assert.equal(unconfiguredRoute, null, 'Must return null instead of leaking into #signals when #rsi-longs is not set');
   });

@@ -72,6 +72,7 @@ import {
   evaluateRsiLongOpportunity,
   dispatchRsiLongAlert,
   refreshMarketCapCache,
+  scanAndDispatchLiveRsiLongs,
 } from '../backend/services/rsi_long_strategy.mjs';
 
 // Ingest Bybit Linear Tickers
@@ -357,25 +358,9 @@ async function runScanCycle() {
 
     // Evaluate RSI Heatmap & High-OI Long Opportunities
     try {
-      await refreshMarketCapCache().catch(() => {});
-      for (const t of all.slice(0, 30)) {
-        const oiVal = parseFloat(t.openInterestValue || (parseFloat(t.openInterest || 0) * parseFloat(t.lastPrice || 0)) || 0);
-        const turnover = parseFloat(t.turnover24h || 0);
-        const rsiResult = evaluateRsiLongOpportunity({
-          symbol: t.symbol,
-          exchange: t.exchange || 'BYBIT',
-          lastPrice: parseFloat(t.lastPrice || 0),
-          turnover24h: turnover,
-          openInterestValue: oiVal,
-          oiDeltaPct: parseFloat(t.price24hPcnt || 0) * 10,
-          fundingRate: parseFloat(t.fundingRate || 0),
-        });
-
-        if (rsiResult && rsiResult.qualifies) {
-          await dispatchRsiLongAlert(rsiResult).catch((err) => {
-            console.warn(`[RSI_LONG_WARN] ${t.symbol} dispatch notice:`, err?.message);
-          });
-        }
+      const rsiScan = await scanAndDispatchLiveRsiLongs(all);
+      if (rsiScan && rsiScan.dispatchedCount > 0) {
+        console.log(`⚡ [RSI_LONG_SCANNER] Dispatched ${rsiScan.dispatchedCount} qualified setup(s) to Discord #⚡-rsi-heatmap-setup`);
       }
     } catch (rsiErr) {
       console.warn('⚠️ RSI long evaluation notice:', rsiErr?.message);

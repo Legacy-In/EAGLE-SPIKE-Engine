@@ -69,6 +69,8 @@ const REQUIRED_CHANNELS = [
   { key: 'DISCORD_CHANNEL_BLOCKCHAIN_PROOF', name: '🔗-blockchain-proof', topic: 'On-chain cryptographic commitment proofs' },
   { key: 'DISCORD_CHANNEL_BOT_STATUS', name: '🛠-bot-status', topic: 'Eagle Flash bot engine diagnostics and heartbeat' },
   { key: 'DISCORD_CHANNEL_PRE_BREAKOUT', name: '🟡-pre-breakout', topic: 'Pre-breakout coiling, volatility compression, and smart money order-book absorption signals' },
+  { key: 'DISCORD_CHANNEL_NEW_LISTINGS', name: '✨-new-listing-alert', topic: 'New cryptocurrency token and perpetual pair listings' },
+  { key: 'DISCORD_CHANNEL_RSI_LONGS', name: '⚡-rsi-heatmap-setup', topic: 'RSI Heatmap & High-OI Long Opportunities (Mid-cap, deep liquidity, non-overbought momentum)' },
 ];
 
 function updateEnvKey(filePath, key, value) {
