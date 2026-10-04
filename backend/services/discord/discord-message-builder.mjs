@@ -819,3 +819,143 @@ export function buildRsiLongDiscordEmbed(item) {
     }],
   };
 }
+
+/**
+ * Format LIVE WIN-RATE Pinned Embed for #winning-rate
+ */
+export function buildLiveWinRateEmbed(stats) {
+  const winRateStr = stats.winRate !== null ? `${stats.winRate}%` : 'N/A';
+  const netSign = stats.netR >= 0 ? '+' : '';
+  const netRStr = `${netSign}${parseFloat(stats.netR || 0).toFixed(2)}R`;
+  const expectancyStr = stats.expectancy !== null ? `${stats.expectancy > 0 ? '+' : ''}${stats.expectancy}R` : 'N/A';
+  const pfStr = stats.profitFactor !== null ? stats.profitFactor : 'N/A';
+
+  const tp1Str = stats.tp1Rate !== null ? `${stats.tp1Rate}%` : 'N/A';
+  const tp2Str = stats.tp2Rate !== null ? `${stats.tp2Rate}%` : 'N/A';
+  const tp3Str = stats.tp3Rate !== null ? `${stats.tp3Rate}%` : 'N/A';
+  const stopStr = stats.stopRate !== null ? `${stats.stopRate}%` : 'N/A';
+
+  let strategyText = 'No resolved trades yet';
+  if (stats.strategyBreakdown && Object.keys(stats.strategyBreakdown).length > 0) {
+    strategyText = Object.entries(stats.strategyBreakdown)
+      .map(([st, data]) => {
+        const wr = data.winRate !== null ? `${data.winRate}%` : 'N/A';
+        const sSign = data.netR >= 0 ? '+' : '';
+        return `• **${st}**: ${wr} (${data.wins}W / ${data.losses}L, ${sSign}${data.netR}R)`;
+      })
+      .slice(0, 5)
+      .join('\n');
+  }
+
+  const sampleWarning = stats.sampleSizeWarning ? `\n⚠️ *${stats.sampleSizeWarning}*` : '';
+
+  return {
+    embeds: [{
+      title: '🏆 EAGLE FLASH — INSTITUTIONAL WIN-RATE & PERFORMANCE LEDGER',
+      description: `### 🎯 **Primary Win Rate: ${winRateStr}**\n**Record:** \`${stats.wins} WINS / ${stats.losses} LOSSES\` (${stats.resolved} Resolved Signals)\n*Unresolved & active signals (${stats.unresolved}) are strictly excluded from win rate denominator.*${sampleWarning}`,
+      color: 0x00FF88,
+      fields: [
+        { name: '⚡ Net Realized R', value: `**${netRStr}**`, inline: true },
+        { name: '📈 Expectancy', value: `**${expectancyStr}** / trade`, inline: true },
+        { name: '💎 Profit Factor', value: `**${pfStr}**`, inline: true },
+
+        { name: '🎯 TP1 Hit Rate', value: `**${tp1Str}**`, inline: true },
+        { name: '🎯 TP2 Hit Rate', value: `**${tp2Str}**`, inline: true },
+        { name: '🎯 TP3 Hit Rate', value: `**${tp3Str}**`, inline: true },
+
+        { name: '🛑 Stop Loss Rate', value: `**${stopStr}**`, inline: true },
+        { name: '💰 Gross Win R', value: `**+${stats.grossWinR || 0}R**`, inline: true },
+        { name: '🛑 Gross Loss R', value: `**-${stats.grossLossR || 0}R**`, inline: true },
+
+        { name: '📊 Strategy Breakdown (Top)', value: strategyText, inline: false },
+        { name: '🏛️ Source of Truth', value: '`PostgreSQL / Supabase signal_outcomes` • 100% Reproducible Ledger', inline: false },
+      ],
+      footer: { text: `🦅 EAGLE FLASH — Deterministic Performance Engine • Timezone: Asia/Dhaka` },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+/**
+ * Format DAILY PERFORMANCE Embed for #daily-performance
+ */
+export function buildDailyPerformanceEmbed(stats, topWinners = [], topLosers = []) {
+  const winRateStr = stats.winRate !== null ? `${stats.winRate}%` : 'N/A';
+  const netSign = stats.netR >= 0 ? '+' : '';
+  const netRStr = `${netSign}${parseFloat(stats.netR || 0).toFixed(2)}R`;
+  const expectancyStr = stats.expectancy !== null ? `${stats.expectancy > 0 ? '+' : ''}${stats.expectancy}R` : 'N/A';
+  const pfStr = stats.profitFactor !== null ? stats.profitFactor : 'N/A';
+
+  let winnersText = 'None';
+  if (topWinners.length > 0) {
+    winnersText = topWinners.slice(0, 3).map(w => `• **${w.symbol}** (${w.direction}): +${parseFloat(w.realized_r || 0).toFixed(2)}R`).join('\n');
+  }
+
+  let losersText = 'None';
+  if (topLosers.length > 0) {
+    losersText = topLosers.slice(0, 3).map(l => `• **${l.symbol}** (${l.direction}): ${parseFloat(l.realized_r || 0).toFixed(2)}R`).join('\n');
+  }
+
+  return {
+    embeds: [{
+      title: `📅 DAILY PERFORMANCE RECAP — ${stats.date || 'TODAY'}`,
+      description: `### 🎯 **Daily Win Rate: ${winRateStr}**\n**Record:** \`${stats.wins} WINS / ${stats.losses} LOSSES\` (${stats.resolved} Resolved) | **Net R:** \`${netRStr}\`\n*Reporting Period: 00:00 - 23:59 Asia/Dhaka (UTC+6)*`,
+      color: stats.netR >= 0 ? 0x00FF88 : 0xFF3366,
+      fields: [
+        { name: '⚡ Net Realized R', value: `**${netRStr}**`, inline: true },
+        { name: '📈 Expectancy', value: `**${expectancyStr}**`, inline: true },
+        { name: '💎 Profit Factor', value: `**${pfStr}**`, inline: true },
+
+        { name: '📊 Resolved / Total', value: `**${stats.resolved} / ${stats.totalSignals}**`, inline: true },
+        { name: '🎯 TP1 Hit Rate', value: `**${stats.tp1Rate !== null ? stats.tp1Rate + '%' : 'N/A'}**`, inline: true },
+        { name: '🛑 Stop Rate', value: `**${stats.stopRate !== null ? stats.stopRate + '%' : 'N/A'}**`, inline: true },
+
+        { name: '🏆 Top Winning Signals', value: winnersText, inline: false },
+        { name: '🛑 Stop Losses & Exits', value: losersText, inline: false },
+      ],
+      footer: { text: `🦅 EAGLE FLASH — Daily Institutional Performance Summary • Asia/Dhaka` },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+/**
+ * Format WEEKLY PERFORMANCE Embed for #weekly-performance
+ */
+export function buildWeeklyPerformanceEmbed(stats, topWinners = [], topLosers = []) {
+  const winRateStr = stats.winRate !== null ? `${stats.winRate}%` : 'N/A';
+  const netSign = stats.netR >= 0 ? '+' : '';
+  const netRStr = `${netSign}${parseFloat(stats.netR || 0).toFixed(2)}R`;
+  const expectancyStr = stats.expectancy !== null ? `${stats.expectancy > 0 ? '+' : ''}${stats.expectancy}R` : 'N/A';
+  const pfStr = stats.profitFactor !== null ? stats.profitFactor : 'N/A';
+
+  let strategyLines = 'None';
+  if (stats.strategyBreakdown && Object.keys(stats.strategyBreakdown).length > 0) {
+    strategyLines = Object.entries(stats.strategyBreakdown)
+      .map(([st, d]) => `• **${st}**: ${d.winRate !== null ? d.winRate + '%' : 'N/A'} (${d.wins}W / ${d.losses}L, ${d.netR >= 0 ? '+' : ''}${d.netR}R)`)
+      .join('\n');
+  }
+
+  let exchangeLines = 'None';
+  if (stats.exchangeBreakdown && Object.keys(stats.exchangeBreakdown).length > 0) {
+    exchangeLines = Object.entries(stats.exchangeBreakdown)
+      .map(([ex, d]) => `• **${ex}**: ${d.winRate !== null ? d.winRate + '%' : 'N/A'} (${d.wins}W / ${d.losses}L, ${d.netR >= 0 ? '+' : ''}${d.netR}R)`)
+      .join('\n');
+  }
+
+  return {
+    embeds: [{
+      title: `📊 WEEKLY INSTITUTIONAL PERFORMANCE AUDIT (${stats.weekStart || 'Mon'} - ${stats.weekEnd || 'Sun'})`,
+      description: `### 🏆 **Weekly Win Rate: ${winRateStr}**\n**Record:** \`${stats.wins} WINS / ${stats.losses} LOSSES\` (${stats.resolved} Resolved / ${stats.totalSignals} Total Signals)\n**Net Realized Growth:** \`${netRStr}\` | **Expectancy:** \`${expectancyStr}\` | **Profit Factor:** \`${pfStr}\``,
+      color: 0x00D2FF,
+      fields: [
+        { name: '🎯 Milestone Hits', value: `TP1: **${stats.tp1Rate || 0}%** | TP2: **${stats.tp2Rate || 0}%** | TP3: **${stats.tp3Rate || 0}%**`, inline: false },
+        { name: '📈 Performance by Strategy', value: strategyLines, inline: false },
+        { name: '🏛️ Performance by Exchange', value: exchangeLines, inline: false },
+      ],
+      footer: { text: `🦅 EAGLE FLASH — Weekly Institutional Performance Audit • Asia/Dhaka` },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+

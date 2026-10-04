@@ -164,6 +164,16 @@ export const SERVICES = [
     env: { NODE_ENV: 'production', POLL_INTERVAL_MS: '45000' },
     scriptPath: 'scripts/new_listing_worker.mjs',
   },
+  {
+    id: 'performance_worker',
+    name: 'PERF-WORKER',
+    color: COLORS.brightGreen,
+    command: process.execPath,
+    args: ['scripts/performance_worker.mjs'],
+    cwd: ROOT_DIR,
+    env: { NODE_ENV: 'production' },
+    scriptPath: 'scripts/performance_worker.mjs',
+  },
 ];
 
 // Filter services based on CLI flags

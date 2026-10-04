@@ -71,6 +71,9 @@ const REQUIRED_CHANNELS = [
   { key: 'DISCORD_CHANNEL_PRE_BREAKOUT', name: '🟡-pre-breakout', topic: 'Pre-breakout coiling, volatility compression, and smart money order-book absorption signals' },
   { key: 'DISCORD_CHANNEL_NEW_LISTINGS', name: '✨-new-listing-alert', topic: 'New cryptocurrency token and perpetual pair listings' },
   { key: 'DISCORD_CHANNEL_RSI_LONGS', name: '⚡-rsi-heatmap-setup', topic: 'RSI Heatmap & High-OI Long Opportunities (Mid-cap, deep liquidity, non-overbought momentum)' },
+  { key: 'DISCORD_CHANNEL_WINNING_RATE', name: '🏆-winning-rate', topic: 'Live authoritative win rate and realized R ledger' },
+  { key: 'DISCORD_CHANNEL_DAILY_PERFORMANCE', name: '📅-daily-performance', topic: 'Daily quantitative performance and R-multiple recap (00:05 Asia/Dhaka)' },
+  { key: 'DISCORD_CHANNEL_WEEKLY_PERFORMANCE', name: '📊-weekly-performance', topic: 'Weekly institutional performance and expectancy report (Monday 00:05 Asia/Dhaka)' },
 ];
 
 function updateEnvKey(filePath, key, value) {
@@ -133,7 +136,7 @@ export async function checkAndSetupServer() {
     channelMap[c.name.toLowerCase()] = c.id;
   });
 
-  // Find or create category
+  // Find or create main category
   let categoryId = null;
   const cat = existingChannels.find(c => c.type === 4 && c.name.toLowerCase().includes('eagle flash'));
   if (cat) {
@@ -151,6 +154,24 @@ export async function checkAndSetupServer() {
     }
   }
 
+  // Find or create Performance category
+  let perfCategoryId = null;
+  const perfCat = existingChannels.find(c => c.type === 4 && (c.name.toLowerCase().includes('performance') || c.name.toLowerCase().includes('win-rate')));
+  if (perfCat) {
+    perfCategoryId = perfCat.id;
+  } else {
+    try {
+      const newCat = await apiRequest(`/guilds/${targetGuild.id}/channels`, 'POST', {
+        name: '🏆 PERFORMANCE',
+        type: 4, // GUILD_CATEGORY
+      });
+      perfCategoryId = newCat.id;
+      console.log(`📁 Created Category: "🏆 PERFORMANCE" (ID: ${perfCategoryId})`);
+    } catch (e) {
+      console.warn('Could not create performance category:', e.message);
+    }
+  }
+
   // Provision each required channel
   for (const rc of REQUIRED_CHANNELS) {
     let chanId = channelMap[rc.name.toLowerCase()] || channelMap[rc.name.replace(/^[^\w]+/, '').toLowerCase()];
@@ -163,7 +184,9 @@ export async function checkAndSetupServer() {
           type: 0, // GUILD_TEXT
           topic: rc.topic,
         };
-        if (categoryId) payload.parent_id = categoryId;
+        const isPerfChannel = rc.key.includes('PERFORMANCE') || rc.key.includes('WINNING_RATE');
+        const parentId = isPerfChannel ? (perfCategoryId || categoryId) : categoryId;
+        if (parentId) payload.parent_id = parentId;
 
         const newChan = await apiRequest(`/guilds/${targetGuild.id}/channels`, 'POST', payload);
         chanId = newChan.id;

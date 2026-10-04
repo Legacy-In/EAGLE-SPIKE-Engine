@@ -82,6 +82,19 @@ export function getRsiLongsChannel() {
   );
 }
 
+export function getWinningRateChannel() {
+  return process.env.DISCORD_CHANNEL_WINNING_RATE || null;
+}
+
+export function getDailyPerformanceChannel() {
+  return process.env.DISCORD_CHANNEL_DAILY_PERFORMANCE || null;
+}
+
+export function getWeeklyPerformanceChannel() {
+  return process.env.DISCORD_CHANNEL_WEEKLY_PERFORMANCE || null;
+}
+
+
 /**
  * Strictly routes Pre-Breakout & Accumulation strategy lifecycle events to #pre-breakout:
  * PREP_DETECTED, READY_DETECTED, CONFIRMED, CHASE_RISK_ELEVATED, CHASE_RISK_BLOCKED,
@@ -199,25 +212,7 @@ export function resolveDiscordChannel(item) {
     return getBotStatusChannel() || getSignalsChannel();
   }
 
-  // 6. Big-Cap Desks (BTCUSDT, ETHUSDT, SOLUSDT)
-  const isBigCap = Boolean(p.isBigCap || ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(symbol));
-  if (isBigCap) {
-    const bigCapChan = getBigCapChannel();
-    if (bigCapChan) return bigCapChan;
-  }
-
-  // 7. Quick Pumps / Volume Explosions / Extreme Phase Signals (VOLUME_EXPLOSION, EXTREME)
-  const isQuickPump = Boolean(
-    type.includes('VOLUME_EXPLOSION') ||
-    phase === 'EXTREME' ||
-    type.includes('PUMP')
-  );
-  if (isQuickPump) {
-    const pumpChan = getQuickPumpChannel();
-    if (pumpChan) return pumpChan;
-  }
-
-  // 8. Pre-Breakout & Accumulation Strategy Events (PREP_DETECTED, READY_DETECTED, CONFIRMED, CHASE, FALSE_BO, etc.)
+  // 6. Pre-Breakout & Accumulation Strategy Events (PREP_DETECTED, READY_DETECTED, CONFIRMED, CHASE, FALSE_BO, etc.)
   const isPreBreakout = Boolean(
     eventType === 'PREP_DETECTED' ||
     eventType === 'READY_DETECTED' ||
@@ -242,6 +237,24 @@ export function resolveDiscordChannel(item) {
     if (preBreakoutChan) return preBreakoutChan;
     const squeezeChan = getSqueezesChannel();
     if (squeezeChan) return squeezeChan;
+  }
+
+  // 7. Big-Cap Desks (BTCUSDT, ETHUSDT, SOLUSDT)
+  const isBigCap = Boolean(p.isBigCap || ['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].includes(symbol));
+  if (isBigCap) {
+    const bigCapChan = getBigCapChannel();
+    if (bigCapChan) return bigCapChan;
+  }
+
+  // 8. Quick Pumps / Volume Explosions / Extreme Phase Signals (VOLUME_EXPLOSION, EXTREME)
+  const isQuickPump = Boolean(
+    type.includes('VOLUME_EXPLOSION') ||
+    phase === 'EXTREME' ||
+    type.includes('PUMP')
+  );
+  if (isQuickPump) {
+    const pumpChan = getQuickPumpChannel();
+    if (pumpChan) return pumpChan;
   }
 
   // 9. Standard Breakouts (BREAKOUT)

@@ -26,6 +26,7 @@ import {
 } from './blockchain-proof.mjs';
 import { isValidActiveSymbol, isBlacklistedSymbol } from './symbol-validator.mjs';
 import { isSignatureInCooldown, recordSignatureDispatch, getRemainingCooldownMs } from './signal-dedup.mjs';
+import { evaluateSignalOutcome, upsertSignalOutcome } from './performance/performance-service.mjs';
 
 // 1. Environment & Supabase Configuration
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -502,6 +503,17 @@ export async function createSignal(candidate, options = {}) {
         console.warn('Blockchain commitment notice:', err?.message);
       });
 
+      // Initialize Canonical Signal Outcome in Performance Engine
+      try {
+        const initOutcome = evaluateSignalOutcome(
+          { ...signalPayload, risk_r: dynamicTpSl.riskR, status: 'PENDING' },
+          entryPrice,
+          extremesPayload,
+          []
+        );
+        if (initOutcome) upsertSignalOutcome(initOutcome).catch(() => {});
+      } catch {}
+
       console.log(`✅ [SIGNAL_CREATE_SUCCESS] (PostgreSQL RPC Transaction) Signal ID: ${signalId}`);
       return {
         success: true,
@@ -623,6 +635,17 @@ export async function createSignal(candidate, options = {}) {
     commitSignalToBlockchain(signalPayload, 'SIGNAL_CREATED').catch(err => {
       console.warn('Blockchain commitment notice:', err?.message);
     });
+
+    // Initialize Canonical Signal Outcome in Performance Engine
+    try {
+      const initOutcome = evaluateSignalOutcome(
+        { ...signalPayload, risk_r: dynamicTpSl.riskR, status: 'PENDING' },
+        entryPrice,
+        extremesPayload,
+        []
+      );
+      if (initOutcome) upsertSignalOutcome(initOutcome).catch(() => {});
+    } catch {}
 
     console.log(`✅ [SIGNAL_CREATE_SUCCESS] (Compensating Transaction) Signal ID: ${signalId}`);
     return {

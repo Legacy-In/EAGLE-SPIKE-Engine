@@ -160,5 +160,20 @@ module.exports = {
       out_file: './logs/listing-worker-out.log',
       time: true,
     },
+    {
+      name: 'eagle-flash-performance-worker',
+      script: 'scripts/performance_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+      },
+      autorestart: true,
+      restart_delay: 5000,
+      max_memory_restart: '500M',
+      error_file: './logs/performance-worker-error.log',
+      out_file: './logs/performance-worker-out.log',
+      time: true,
+    },
   ],
 };
+

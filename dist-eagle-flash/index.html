@@ -1322,6 +1322,7 @@
       <button class="nav-btn" onclick="switchTab('BIGCAP')">🏛️ Big Cap Desk <span class="badge-count" id="nav-bigcap-count" style="background:#00f5d4; color:#000;">1</span></button>
       <button class="nav-btn" onclick="switchTab('WHALE')">🐋 Whale Radar <span class="badge-count" id="nav-whale-count" style="background:#00d2ff; color:#000;">4</span></button>
       <button class="nav-btn" onclick="switchTab('HISTORY')">History</button>
+      <button class="nav-btn" onclick="switchTab('PERFORMANCE')">🏆 Performance <span class="badge-count" id="nav-perf-winrate" style="background:#3ecf8e; color:#000;">--%</span></button>
       <button class="nav-btn" onclick="switchTab('DIAGNOSTICS')">Diagnostics</button>
     </nav>
 
@@ -1338,6 +1339,16 @@
 
   <!-- TOP KPI STRIP -->
   <div class="kpi-strip">
+    <div class="kpi-card" onclick="switchTab('PERFORMANCE')" style="cursor:pointer;" title="Click to view detailed Institutional Performance Engine">
+      <div class="kpi-lbl">🏆 Primary Win Rate</div>
+      <div class="kpi-val tabular c-emerald" id="kpi-perf-winrate">--%</div>
+      <div class="kpi-sub" id="kpi-perf-sub">WTD: --W / --L</div>
+    </div>
+    <div class="kpi-card" onclick="switchTab('PERFORMANCE')" style="cursor:pointer;" title="Click to view detailed Institutional Performance Engine">
+      <div class="kpi-lbl">⚡ Net Realized R</div>
+      <div class="kpi-val tabular c-cyan" id="kpi-perf-netr">+--R</div>
+      <div class="kpi-sub" id="kpi-perf-exp">Exp: --R | PF: --</div>
+    </div>
     <div class="kpi-card">
       <div class="kpi-lbl">USDT Perpetuals</div>
       <div class="kpi-val tabular" id="kpi-total-symbols">--</div>
@@ -2337,6 +2348,255 @@
         <div>• <strong>WebSocket Endpoint:</strong> wss://stream.bybit.com/v5/public/linear</div>
         <div>• <strong>Data Policy:</strong> ZERO mock data. Real volume change derived from historical 1h klines.</div>
         <div>• <strong>Local Storage Schema:</strong> eagleFlash:v1:settings, eagleFlash:v1:watchlist</div>
+      </div>
+    </div>
+
+    <!-- 7. PERFORMANCE VIEW -->
+    <div id="view-PERFORMANCE" class="view-container">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <h2 style="font-size:16px; font-weight:800; font-family:var(--font-mono); margin:0;">🏆 INSTITUTIONAL PERFORMANCE & WIN-RATE ENGINE</h2>
+            <span class="badge-supabase" id="perf-source-badge">POSTGRESQL / CANONICAL LEDGER</span>
+            <span class="badge-status" id="perf-timezone-badge" style="background:rgba(0,210,255,0.12); color:#00d2ff; border-color:rgba(0,210,255,0.3);">ASIA/DHAKA (UTC+6)</span>
+          </div>
+          <p class="c-dark" style="font-size:11px; margin-top:4px;">
+            Deterministic Canonical Outcomes · 1R Risk Normalization · Excludes Unresolved Signals From Denominator · Zero Fabrication
+          </p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-sm btn-emerald" onclick="PerformanceEngineUI.fetchMetrics()">⟳ Refresh Ledger</button>
+        </div>
+      </div>
+
+      <!-- PERFORMANCE PERIOD & FILTERS BAR -->
+      <div class="filter-bar" style="margin-bottom:14px; padding:8px 12px; background:var(--bg-surface2); border:1px solid var(--border); border-radius:6px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px;">
+        <div class="presets-group" id="perf-period-buttons">
+          <span class="c-dark" style="font-size:11px; font-family:var(--font-mono); margin-right:4px;">PERIOD:</span>
+          <button class="preset-pill" onclick="PerformanceEngineUI.setPeriod('today', this)">Today</button>
+          <button class="preset-pill active" onclick="PerformanceEngineUI.setPeriod('current-week', this)">This Week (WTD)</button>
+          <button class="preset-pill" onclick="PerformanceEngineUI.setPeriod('previous-week', this)">Last Week</button>
+          <button class="preset-pill" onclick="PerformanceEngineUI.setPeriod('month', this)">This Month (MTD)</button>
+          <button class="preset-pill" onclick="PerformanceEngineUI.setPeriod('all-time', this)">All-Time</button>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center; font-family:var(--font-mono); font-size:11px;">
+          <div>
+            <span class="c-dark" style="margin-right:4px;">STRATEGY:</span>
+            <select id="perf-filter-strategy" onchange="PerformanceEngineUI.onFilterChange()" style="background:var(--bg-surface); color:var(--text); border:1px solid var(--border); padding:3px 6px; border-radius:4px; font-family:var(--font-mono); font-size:11px;">
+              <option value="ALL">All Strategies</option>
+              <option value="BREAKOUT">Breakout</option>
+              <option value="MOMENTUM">Momentum</option>
+              <option value="PRE_BREAKOUT">Pre-Breakout</option>
+              <option value="BIG_CAP">Big Cap</option>
+              <option value="RSI_LONG">RSI Long Setup</option>
+              <option value="ACCUMULATION">Accumulation</option>
+            </select>
+          </div>
+          <div>
+            <span class="c-dark" style="margin-right:4px;">EXCHANGE:</span>
+            <select id="perf-filter-exchange" onchange="PerformanceEngineUI.onFilterChange()" style="background:var(--bg-surface); color:var(--text); border:1px solid var(--border); padding:3px 6px; border-radius:4px; font-family:var(--font-mono); font-size:11px;">
+              <option value="ALL">All Exchanges</option>
+              <option value="BYBIT">Bybit</option>
+              <option value="BINANCE">Binance</option>
+              <option value="MEXC">MEXC</option>
+              <option value="WEEX">WEEX</option>
+            </select>
+          </div>
+          <div>
+            <span class="c-dark" style="margin-right:4px;">DIRECTION:</span>
+            <select id="perf-filter-direction" onchange="PerformanceEngineUI.onFilterChange()" style="background:var(--bg-surface); color:var(--text); border:1px solid var(--border); padding:3px 6px; border-radius:4px; font-family:var(--font-mono); font-size:11px;">
+              <option value="ALL">All Directions</option>
+              <option value="LONG">Long</option>
+              <option value="SHORT">Short</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- CORE INSTITUTIONAL METRICS STRIP -->
+      <div class="kpi-strip" style="padding:0; margin-bottom:16px;">
+        <div class="kpi-card" style="border-top:2px solid var(--emerald);">
+          <div class="kpi-lbl">PRIMARY WIN RATE</div>
+          <div class="kpi-val tabular c-emerald" id="perf-primary-winrate" style="font-size:24px;">--%</div>
+          <div class="kpi-sub" id="perf-primary-record">Wins: -- | Losses: --</div>
+          <div class="kpi-sub" id="perf-sample-warning" style="color:#f59e0b; font-size:10px; margin-top:2px;"></div>
+        </div>
+        <div class="kpi-card" style="border-top:2px solid #00d2ff;">
+          <div class="kpi-lbl">NET REALIZED R</div>
+          <div class="kpi-val tabular c-cyan" id="perf-net-r" style="font-size:24px;">+--R</div>
+          <div class="kpi-sub" id="perf-gross-r">Gross Win: +--R | Loss: ---R</div>
+        </div>
+        <div class="kpi-card" style="border-top:2px solid #a855f7;">
+          <div class="kpi-lbl">EXPECTANCY (PER TRADE)</div>
+          <div class="kpi-val tabular" id="perf-expectancy" style="font-size:24px; color:#c084fc;">--R</div>
+          <div class="kpi-sub" id="perf-avg-win-loss">Avg Win: +--R | Avg Loss: ---R</div>
+        </div>
+        <div class="kpi-card" style="border-top:2px solid #eab308;">
+          <div class="kpi-lbl">PROFIT FACTOR</div>
+          <div class="kpi-val tabular" id="perf-profit-factor" style="font-size:24px; color:#facc15;">--</div>
+          <div class="kpi-sub" id="perf-pf-sub">Gross Positive / Absolute Loss</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">CANONICAL SIGNAL UNIVERSE</div>
+          <div class="kpi-val tabular" id="perf-total-signals" style="font-size:20px;">--</div>
+          <div class="kpi-sub" id="perf-status-breakdown">Resolved: -- | Unresolved: --</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-lbl">MILESTONE HIT RATES</div>
+          <div class="tabular" style="font-family:var(--font-mono); font-size:12px; margin-top:4px;">
+            <div>TP1 Hit: <strong class="c-emerald" id="perf-tp1-rate">--%</strong></div>
+            <div>TP2 Hit: <strong class="c-emerald" id="perf-tp2-rate">--%</strong></div>
+            <div>TP3 Hit: <strong class="c-emerald" id="perf-tp3-rate">--%</strong></div>
+            <div>Stop Loss: <strong class="c-red" id="perf-stop-rate">--%</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PERFORMANCE BREAKDOWN TABS & TABLES -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px; margin-bottom:16px;">
+        <!-- Strategy Breakdown Table -->
+        <div class="table-wrap" style="padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface);">
+          <div style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:var(--emerald); margin-bottom:8px; display:flex; justify-content:space-between;">
+            <span>📈 PERFORMANCE BY STRATEGY</span>
+            <span class="c-dark" style="font-size:10px;">CANONICAL</span>
+          </div>
+          <table class="table" style="font-size:11px; width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">STRATEGY</th>
+                <th>TOTAL</th>
+                <th>WINS</th>
+                <th>LOSSES</th>
+                <th>WIN %</th>
+                <th>NET R</th>
+              </tr>
+            </thead>
+            <tbody id="perf-strategy-tbody">
+              <tr><td colspan="6" style="text-align:center; padding:12px;" class="c-dark">Loading strategy analytics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Exchange Breakdown Table -->
+        <div class="table-wrap" style="padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface);">
+          <div style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:#00d2ff; margin-bottom:8px; display:flex; justify-content:space-between;">
+            <span>🏛️ PERFORMANCE BY EXCHANGE</span>
+            <span class="c-dark" style="font-size:10px;">MULTI-EXCHANGE</span>
+          </div>
+          <table class="table" style="font-size:11px; width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">EXCHANGE</th>
+                <th>TOTAL</th>
+                <th>WINS</th>
+                <th>LOSSES</th>
+                <th>WIN %</th>
+                <th>NET R</th>
+              </tr>
+            </thead>
+            <tbody id="perf-exchange-tbody">
+              <tr><td colspan="6" style="text-align:center; padding:12px;" class="c-dark">Loading exchange analytics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Direction & Quality Breakdown -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px; margin-bottom:16px;">
+        <!-- Direction Breakdown -->
+        <div class="table-wrap" style="padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface);">
+          <div style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:#f59e0b; margin-bottom:8px; display:flex; justify-content:space-between;">
+            <span>⚖️ DIRECTION BREAKDOWN (LONG vs SHORT)</span>
+          </div>
+          <table class="table" style="font-size:11px; width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">DIRECTION</th>
+                <th>TOTAL</th>
+                <th>WINS</th>
+                <th>LOSSES</th>
+                <th>WIN %</th>
+                <th>NET R</th>
+              </tr>
+            </thead>
+            <tbody id="perf-direction-tbody">
+              <tr><td colspan="6" style="text-align:center; padding:12px;" class="c-dark">Loading direction analytics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Score Quality Breakdown -->
+        <div class="table-wrap" style="padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface);">
+          <div style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:#a855f7; margin-bottom:8px; display:flex; justify-content:space-between;">
+            <span>🎯 PERFORMANCE BY EAGLE SCORE BUCKET</span>
+          </div>
+          <table class="table" style="font-size:11px; width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">SCORE BUCKET</th>
+                <th>WINS</th>
+                <th>LOSSES</th>
+                <th>WIN %</th>
+                <th>EVALUATION</th>
+              </tr>
+            </thead>
+            <tbody id="perf-score-tbody">
+              <tr><td colspan="5" style="text-align:center; padding:12px;" class="c-dark">Loading score analytics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- WINNING & LOSING SIGNALS AUDIT TRAIL -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(460px, 1fr)); gap:16px; margin-bottom:16px;">
+        <!-- Winning Signals -->
+        <div class="table-wrap" style="padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface);">
+          <div style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:var(--emerald); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span>🏆 TOP WINNING SIGNALS (BY REALIZED R)</span>
+            <span class="badge-status" style="background:rgba(62,207,142,0.12); color:#3ecf8e; border-color:rgba(62,207,142,0.3);">VERIFIED</span>
+          </div>
+          <table class="table" style="font-size:11px; width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">SYMBOL</th>
+                <th>EXCHANGE</th>
+                <th>DIR</th>
+                <th>ENTRY</th>
+                <th>EXIT</th>
+                <th>R-MULTIPLE</th>
+                <th>RESOLVED AT</th>
+              </tr>
+            </thead>
+            <tbody id="perf-winners-tbody">
+              <tr><td colspan="7" style="text-align:center; padding:12px;" class="c-dark">Loading winning signals...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Losing Signals -->
+        <div class="table-wrap" style="padding:12px; border:1px solid var(--border); border-radius:6px; background:var(--bg-surface);">
+          <div style="font-size:12px; font-weight:700; font-family:var(--font-mono); color:var(--red); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span>🛑 RECENT LOSSES & STOP OUTS</span>
+            <span class="badge-status" style="background:rgba(255,107,129,0.12); color:#ff6b81; border-color:rgba(255,107,129,0.3);">AUDITED</span>
+          </div>
+          <table class="table" style="font-size:11px; width:100%;">
+            <thead>
+              <tr>
+                <th style="text-align:left;">SYMBOL</th>
+                <th>EXCHANGE</th>
+                <th>DIR</th>
+                <th>ENTRY</th>
+                <th>STOP</th>
+                <th>R-MULTIPLE</th>
+                <th>RESOLVED AT</th>
+              </tr>
+            </thead>
+            <tbody id="perf-losers-tbody">
+              <tr><td colspan="7" style="text-align:center; padding:12px;" class="c-dark">Loading losing signals...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -4419,6 +4679,9 @@ const LifecycleEngine = {
         }
         if (typeof WhaleTerminal !== 'undefined') {
           WhaleTerminal.init().catch(e => console.warn('Whale terminal startup notice:', e));
+        }
+        if (typeof PerformanceEngineUI !== 'undefined') {
+          PerformanceEngineUI.init().catch(e => console.warn('Performance engine startup notice:', e));
         }
 
         document.getElementById('splash-btn').style.display = 'block';
@@ -7634,6 +7897,293 @@ function loadAllScannerRows() {
   openModal('symbol-modal');
 }
 
+    const PerformanceEngineUI = {
+      period: 'current-week',
+      data: null,
+      winners: [],
+      losers: [],
+      isLoading: false,
+
+      async init() {
+        await this.fetchMetrics();
+        setInterval(() => {
+          this.fetchMetrics(true);
+        }, 30000);
+      },
+
+      setPeriod(p, btn) {
+        this.period = p;
+        if (btn) {
+          const group = document.getElementById('perf-period-buttons');
+          if (group) {
+            group.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          }
+        }
+        this.fetchMetrics();
+      },
+
+      onFilterChange() {
+        this.fetchMetrics();
+      },
+
+      async fetchMetrics(isSilent = false) {
+        if (this.isLoading && !isSilent) return;
+        this.isLoading = true;
+
+        const stratEl = document.getElementById('perf-filter-strategy');
+        const exEl = document.getElementById('perf-filter-exchange');
+        const dirEl = document.getElementById('perf-filter-direction');
+        const strategy = stratEl ? stratEl.value : 'ALL';
+        const exchange = exEl ? exEl.value : 'ALL';
+        const direction = dirEl ? dirEl.value : 'ALL';
+
+        try {
+          const res = await fetch(`/api/performance?period=${this.period}&strategy=${strategy}&exchange=${exchange}&direction=${direction}`);
+          const json = await res.json();
+          if (json.success && json.data) {
+            this.data = json.data;
+            this.updateHeaderKPIs(this.data);
+            if (document.getElementById('view-PERFORMANCE')?.classList.contains('active')) {
+              this.render();
+            }
+          }
+        } catch (e) {
+          console.warn('[PERFORMANCE_UI] Error fetching performance data:', e);
+        } finally {
+          this.isLoading = false;
+        }
+
+        if (document.getElementById('view-PERFORMANCE')?.classList.contains('active')) {
+          this.fetchWinnersAndLosers();
+        }
+      },
+
+      async fetchWinnersAndLosers() {
+        try {
+          const [wRes, lRes] = await Promise.all([
+            fetch('/api/performance/signals/winners?limit=10'),
+            fetch('/api/performance/signals/losers?limit=10')
+          ]);
+          const wJson = await wRes.json();
+          const lJson = await lRes.json();
+          if (wJson.success) this.winners = wJson.data || [];
+          if (lJson.success) this.losers = lJson.data || [];
+          this.renderWinnersAndLosers();
+        } catch (e) {
+          console.warn('[PERFORMANCE_UI] Error fetching winners/losers:', e);
+        }
+      },
+
+      updateHeaderKPIs(d) {
+        const winrateEl = document.getElementById('kpi-perf-winrate');
+        const winrateSub = document.getElementById('kpi-perf-sub');
+        const netrEl = document.getElementById('kpi-perf-netr');
+        const expEl = document.getElementById('kpi-perf-exp');
+        const navBadge = document.getElementById('nav-perf-winrate');
+
+        const winRateDisplay = d.winRate !== null ? `${d.winRate}%` : 'N/A';
+        if (winrateEl) winrateEl.innerText = winRateDisplay;
+        if (navBadge) navBadge.innerText = winRateDisplay;
+        if (winrateSub) winrateSub.innerText = `${d.period || 'WTD'}: ${d.wins}W / ${d.losses}L (${d.resolved} res)`;
+
+        const sign = d.netR >= 0 ? '+' : '';
+        if (netrEl) {
+          netrEl.innerText = `${sign}${d.netR}R`;
+          netrEl.className = d.netR >= 0 ? 'kpi-val tabular c-emerald' : 'kpi-val tabular c-red';
+        }
+        const expDisplay = d.expectancy !== null ? `${d.expectancy > 0 ? '+' : ''}${d.expectancy}R` : 'N/A';
+        const pfDisplay = d.profitFactor !== null ? d.profitFactor : 'N/A';
+        if (expEl) expEl.innerText = `Exp: ${expDisplay} | PF: ${pfDisplay}`;
+      },
+
+      render() {
+        const d = this.data;
+        if (!d) return;
+
+        const pWin = document.getElementById('perf-primary-winrate');
+        const pRec = document.getElementById('perf-primary-record');
+        const pWarn = document.getElementById('perf-sample-warning');
+        if (pWin) {
+          pWin.innerText = d.winRate !== null ? `${d.winRate}%` : 'N/A';
+          pWin.className = (d.winRate !== null && d.winRate >= 50) ? 'kpi-val tabular c-emerald' : 'kpi-val tabular c-red';
+        }
+        if (pRec) pRec.innerText = `Wins: ${d.wins} | Losses: ${d.losses} | Resolved: ${d.resolved}`;
+        if (pWarn) {
+          pWarn.innerText = d.sampleSizeWarning ? `⚠️ ${d.sampleSizeWarning}` : (d.resolved >= 30 ? '✓ HIGH STATISTICAL CONFIDENCE' : '');
+          pWarn.style.color = d.sampleSizeWarning ? '#f59e0b' : '#3ecf8e';
+        }
+
+        const pNet = document.getElementById('perf-net-r');
+        const pGross = document.getElementById('perf-gross-r');
+        if (pNet) {
+          pNet.innerText = `${d.netR >= 0 ? '+' : ''}${d.netR}R`;
+          pNet.className = d.netR >= 0 ? 'kpi-val tabular c-cyan' : 'kpi-val tabular c-red';
+        }
+        if (pGross) pGross.innerText = `Gross Win: +${d.grossWinR}R | Gross Loss: -${d.grossLossR}R`;
+
+        const pExp = document.getElementById('perf-expectancy');
+        const pAvgWL = document.getElementById('perf-avg-win-loss');
+        if (pExp) {
+          pExp.innerText = d.expectancy !== null ? `${d.expectancy > 0 ? '+' : ''}${d.expectancy}R` : 'N/A';
+        }
+        const avgWin = d.wins > 0 ? (d.grossWinR / d.wins).toFixed(2) : '0.00';
+        const avgLoss = d.losses > 0 ? (d.grossLossR / d.losses).toFixed(2) : '0.00';
+        if (pAvgWL) pAvgWL.innerText = `Avg Win: +${avgWin}R | Avg Loss: -${avgLoss}R`;
+
+        const pPF = document.getElementById('perf-profit-factor');
+        if (pPF) pPF.innerText = d.profitFactor !== null ? d.profitFactor : 'N/A';
+
+        const pTot = document.getElementById('perf-total-signals');
+        const pStat = document.getElementById('perf-status-breakdown');
+        if (pTot) pTot.innerText = d.totalSignals || 0;
+        if (pStat) pStat.innerText = `Resolved: ${d.resolved} | Unresolved: ${d.unresolved} | Expired: ${d.expired || 0}`;
+
+        const pTp1 = document.getElementById('perf-tp1-rate');
+        const pTp2 = document.getElementById('perf-tp2-rate');
+        const pTp3 = document.getElementById('perf-tp3-rate');
+        const pStop = document.getElementById('perf-stop-rate');
+        if (pTp1) pTp1.innerText = d.tp1Rate !== null ? `${d.tp1Rate}%` : 'N/A';
+        if (pTp2) pTp2.innerText = d.tp2Rate !== null ? `${d.tp2Rate}%` : 'N/A';
+        if (pTp3) pTp3.innerText = d.tp3Rate !== null ? `${d.tp3Rate}%` : 'N/A';
+        if (pStop) pStop.innerText = d.stopRate !== null ? `${d.stopRate}%` : 'N/A';
+
+        this.renderStrategyTable(d.strategyBreakdown);
+        this.renderExchangeTable(d.exchangeBreakdown);
+        this.renderDirectionTable(d.directionBreakdown);
+        this.renderScoreTable(d.scoreBreakdown);
+        this.renderWinnersAndLosers();
+      },
+
+      renderStrategyTable(sMap) {
+        const tbody = document.getElementById('perf-strategy-tbody');
+        if (!tbody) return;
+        if (!sMap || Object.keys(sMap).length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;" class="c-dark">No strategy data found for selected period</td></tr>';
+          return;
+        }
+        const rows = Object.entries(sMap).map(([strat, stats]) => {
+          const wrStr = stats.winRate !== null ? `${stats.winRate}%` : 'N/A';
+          const netSign = stats.netR >= 0 ? '+' : '';
+          const netClass = stats.netR >= 0 ? 'c-emerald' : 'c-red';
+          return `<tr>
+            <td style="font-weight:700;">${strat}</td>
+            <td class="tabular">${stats.total}</td>
+            <td class="tabular c-emerald">${stats.wins}</td>
+            <td class="tabular c-red">${stats.losses}</td>
+            <td class="tabular font-bold">${wrStr}</td>
+            <td class="tabular ${netClass}">${netSign}${stats.netR}R</td>
+          </tr>`;
+        });
+        tbody.innerHTML = rows.join('');
+      },
+
+      renderExchangeTable(eMap) {
+        const tbody = document.getElementById('perf-exchange-tbody');
+        if (!tbody) return;
+        if (!eMap || Object.keys(eMap).length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;" class="c-dark">No exchange data found for selected period</td></tr>';
+          return;
+        }
+        const rows = Object.entries(eMap).map(([ex, stats]) => {
+          const wrStr = stats.winRate !== null ? `${stats.winRate}%` : 'N/A';
+          const netSign = stats.netR >= 0 ? '+' : '';
+          const netClass = stats.netR >= 0 ? 'c-emerald' : 'c-red';
+          return `<tr>
+            <td style="font-weight:700;">${ex}</td>
+            <td class="tabular">${stats.total}</td>
+            <td class="tabular c-emerald">${stats.wins}</td>
+            <td class="tabular c-red">${stats.losses}</td>
+            <td class="tabular font-bold">${wrStr}</td>
+            <td class="tabular ${netClass}">${netSign}${stats.netR}R</td>
+          </tr>`;
+        });
+        tbody.innerHTML = rows.join('');
+      },
+
+      renderDirectionTable(dMap) {
+        const tbody = document.getElementById('perf-direction-tbody');
+        if (!tbody) return;
+        if (!dMap || Object.keys(dMap).length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:12px;" class="c-dark">No direction data found</td></tr>';
+          return;
+        }
+        const rows = Object.entries(dMap).map(([dir, stats]) => {
+          const wrStr = stats.winRate !== null ? `${stats.winRate}%` : 'N/A';
+          const netSign = stats.netR >= 0 ? '+' : '';
+          const netClass = stats.netR >= 0 ? 'c-emerald' : 'c-red';
+          const dirColor = dir === 'LONG' ? 'c-emerald' : 'c-red';
+          return `<tr>
+            <td style="font-weight:700;" class="${dirColor}">${dir}</td>
+            <td class="tabular">${stats.total}</td>
+            <td class="tabular c-emerald">${stats.wins}</td>
+            <td class="tabular c-red">${stats.losses}</td>
+            <td class="tabular font-bold">${wrStr}</td>
+            <td class="tabular ${netClass}">${netSign}${stats.netR}R</td>
+          </tr>`;
+        });
+        tbody.innerHTML = rows.join('');
+      },
+
+      renderScoreTable(scMap) {
+        const tbody = document.getElementById('perf-score-tbody');
+        if (!tbody) return;
+        if (!scMap || Object.keys(scMap).length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px;" class="c-dark">No score data found</td></tr>';
+          return;
+        }
+        const rows = Object.entries(scMap).map(([bucket, stats]) => {
+          const wrStr = stats.winRate !== null ? `${stats.winRate}%` : 'N/A';
+          const evalBadge = stats.winRate !== null && stats.winRate >= 70
+            ? '<span class="badge-status" style="background:rgba(62,207,142,0.15); color:#3ecf8e;">EDGE CONFIRMED</span>'
+            : '<span class="badge-status" style="background:rgba(255,255,255,0.05); color:#888;">STANDARD</span>';
+          return `<tr>
+            <td style="font-weight:700;">${bucket}</td>
+            <td class="tabular c-emerald">${stats.wins}</td>
+            <td class="tabular c-red">${stats.losses}</td>
+            <td class="tabular font-bold">${wrStr}</td>
+            <td>${evalBadge}</td>
+          </tr>`;
+        });
+        tbody.innerHTML = rows.join('');
+      },
+
+      renderWinnersAndLosers() {
+        const wTbody = document.getElementById('perf-winners-tbody');
+        const lTbody = document.getElementById('perf-losers-tbody');
+
+        if (wTbody && this.winners.length > 0) {
+          wTbody.innerHTML = this.winners.map(w => {
+            const timeStr = w.detected_at ? new Date(w.detected_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            return `<tr>
+              <td style="font-weight:700;" class="c-cyan">${w.symbol}</td>
+              <td>${w.exchange || 'BYBIT'}</td>
+              <td class="${w.direction === 'LONG' ? 'c-emerald' : 'c-red'} font-bold">${w.direction}</td>
+              <td class="tabular">$${parseFloat(w.entry_price || 0).toFixed(4)}</td>
+              <td class="tabular c-emerald">$${parseFloat(w.exit_price || 0).toFixed(4)}</td>
+              <td class="tabular c-emerald font-bold">+${parseFloat(w.realized_r || 0).toFixed(2)}R</td>
+              <td class="tabular c-dark">${timeStr}</td>
+            </tr>`;
+          }).join('');
+        }
+
+        if (lTbody && this.losers.length > 0) {
+          lTbody.innerHTML = this.losers.map(l => {
+            const timeStr = l.detected_at ? new Date(l.detected_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+            return `<tr>
+              <td style="font-weight:700;" class="c-cyan">${l.symbol}</td>
+              <td>${l.exchange || 'BYBIT'}</td>
+              <td class="${l.direction === 'LONG' ? 'c-emerald' : 'c-red'} font-bold">${l.direction}</td>
+              <td class="tabular">$${parseFloat(l.entry_price || 0).toFixed(4)}</td>
+              <td class="tabular c-red">$${parseFloat(l.exit_price || 0).toFixed(4)}</td>
+              <td class="tabular c-red font-bold">${parseFloat(l.realized_r || 0).toFixed(2)}R</td>
+              <td class="tabular c-dark">${timeStr}</td>
+            </tr>`;
+          }).join('');
+        }
+      }
+    };
+
     function switchTab(tabId) {
       State.activeTab = tabId;
       document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -7658,6 +8208,9 @@ function loadAllScannerRows() {
       if (tabId === 'HISTORY') {
         renderHistory();
         if (typeof EagleSupabase !== 'undefined') EagleSupabase.fetchLatestSignals();
+      }
+      if (tabId === 'PERFORMANCE') {
+        if (typeof PerformanceEngineUI !== 'undefined') PerformanceEngineUI.render();
       }
       if (tabId === 'DIAGNOSTICS') renderDiagnostics();
       window.scrollTo({ top: 0, behavior: 'smooth' });

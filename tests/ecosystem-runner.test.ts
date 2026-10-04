@@ -18,7 +18,7 @@ describe('Ecosystem Runner & Multi-Worker Orchestrator', () => {
     // Dynamic import of CommonJS config
     const ecosystem = (await import(`file://${configPath}`)).default;
     assert.ok(Array.isArray(ecosystem.apps), 'ecosystem.apps must be an array');
-    assert.strictEqual(ecosystem.apps.length, 11, 'Must contain 11 supervised apps');
+    assert.strictEqual(ecosystem.apps.length, 12, 'Must contain 12 supervised apps');
 
     const appNames = new Set();
     const ports = new Set();
@@ -45,13 +45,13 @@ describe('Ecosystem Runner & Multi-Worker Orchestrator', () => {
   });
 
   test('start_all.mjs service definitions and validation', () => {
-    assert.strictEqual(SERVICES.length, 11, 'Must define 11 services');
+    assert.strictEqual(SERVICES.length, 12, 'Must define 12 services');
 
     const allActive = getActiveServices();
-    assert.strictEqual(allActive.length, 11, 'Default active services must be 11');
+    assert.strictEqual(allActive.length, 12, 'Default active services must be 12');
 
     const workersOnly = getActiveServices({ workersOnly: true });
-    assert.strictEqual(workersOnly.length, 10, 'Workers-only must be 10');
+    assert.strictEqual(workersOnly.length, 11, 'Workers-only must be 11');
     const webService = SERVICES.find((s) => s.id === 'web');
     assert.ok(webService, 'Web service must exist');
     assert.strictEqual(webService.command, process.execPath, 'Web must use process.execPath to prevent Windows spawn EINVAL');
@@ -69,12 +69,12 @@ describe('Ecosystem Runner & Multi-Worker Orchestrator', () => {
     });
 
     assert.ok(
-      stdout.includes('All 11 services and scripts verified'),
-      'Dry-run must verify all 11 services'
+      stdout.includes('All 12 services and scripts verified'),
+      'Dry-run must verify all 12 services'
     );
     assert.ok(
-      stdout.includes('Configured to launch 11 processes'),
-      'Dry-run must indicate 11 processes'
+      stdout.includes('Configured to launch 12 processes'),
+      'Dry-run must indicate 12 processes'
     );
   });
 
@@ -90,8 +90,8 @@ describe('Ecosystem Runner & Multi-Worker Orchestrator', () => {
     );
 
     assert.ok(
-      stdout.includes('Configured to launch 10 processes'),
-      'Workers-only dry-run must indicate 10 processes'
+      stdout.includes('Configured to launch 11 processes'),
+      'Workers-only dry-run must indicate 11 processes'
     );
     assert.ok(
       !stdout.includes('[EAGLE-WEB]'),

@@ -154,4 +154,59 @@ export class DiscordClient {
       };
     }
   }
+
+  /**
+   * Edit an existing message in a Discord channel
+   */
+  async editMessage(channelId, messageId, messagePayload) {
+    if (!this.isConfigured() || !channelId || !messageId) {
+      return { success: false, error: 'INVALID_PARAMETERS' };
+    }
+
+    try {
+      const res = await fetch(`${DISCORD_API_BASE}/channels/${channelId}/messages/${messageId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bot ${this.botToken}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'EagleFlashDiscordBot (v1.0.0, https://eagleflash.io)',
+        },
+        body: JSON.stringify(messagePayload),
+      });
+
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => ({}));
+        return { success: false, error: errorJson.message || `HTTP ${res.status}` };
+      }
+
+      const responseJson = await res.json();
+      return { success: true, messageId: responseJson.id };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Pin a message in a Discord channel
+   */
+  async pinMessage(channelId, messageId) {
+    if (!this.isConfigured() || !channelId || !messageId) {
+      return { success: false, error: 'INVALID_PARAMETERS' };
+    }
+
+    try {
+      const res = await fetch(`${DISCORD_API_BASE}/channels/${channelId}/pins/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bot ${this.botToken}`,
+          'User-Agent': 'EagleFlashDiscordBot (v1.0.0, https://eagleflash.io)',
+        },
+      });
+
+      return { success: res.ok };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }
 }
+

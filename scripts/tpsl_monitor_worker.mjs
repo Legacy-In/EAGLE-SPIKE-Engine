@@ -14,6 +14,7 @@ import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { queueNotificationAlerts, isTestExecution } from '../backend/services/notification-outbox.mjs';
 import { resolveDiscordChannel } from '../backend/services/discord/discord-router.mjs';
+import { evaluateSignalOutcome, upsertSignalOutcome } from '../backend/services/performance/performance-service.mjs';
 
 // 1. Supabase Initialization
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -290,6 +291,13 @@ export async function fetchActivePositions() {
         if (!ResolvedPositions.has(row.signal_id) && !seenIds.has(row.signal_id)) {
           if (isSignalStale(row)) {
             ResolvedPositions.add(row.signal_id);
+            const expiredOutcome = evaluateSignalOutcome(
+              { ...row, status: 'EXPIRED', resolved_at: new Date().toISOString() },
+              0,
+              {},
+              []
+            );
+            if (expiredOutcome) upsertSignalOutcome(expiredOutcome).catch(() => {});
             Promise.allSettled([
               supabase.from('signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
               supabase.from('big_cap_signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
@@ -307,6 +315,13 @@ export async function fetchActivePositions() {
         if (!ResolvedPositions.has(row.signal_id) && !seenIds.has(row.signal_id)) {
           if (isSignalStale(row)) {
             ResolvedPositions.add(row.signal_id);
+            const expiredOutcome = evaluateSignalOutcome(
+              { ...row, status: 'EXPIRED', resolved_at: new Date().toISOString() },
+              0,
+              {},
+              []
+            );
+            if (expiredOutcome) upsertSignalOutcome(expiredOutcome).catch(() => {});
             Promise.allSettled([
               supabase.from('signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
               supabase.from('big_cap_signals').update({ status: 'EXPIRED', updated_at: new Date().toISOString() }).eq('signal_id', row.signal_id),
@@ -395,6 +410,31 @@ export async function processSignalEvaluation(signal, currentPrice) {
     } catch (dbErr) {
       console.error(`❌ [TPSL_MONITOR_DB_ERROR] Failed to update signal ${signalId}:`, dbErr.message);
     }
+  }
+
+  // 3b. Update Canonical Performance Engine Outcome Projection
+  try {
+    const outcomeProjection = evaluateSignalOutcome(
+      {
+        ...signal,
+        exit_price: result.exitPrice,
+        resolved_at: result.isTerminal ? nowIso : (signal.resolved_at || null),
+        status: result.status || signal.status,
+        stop_price: result.trailingStop || signal.stop_price,
+        tp1_hit_at: result.milestone === 'TP1' ? nowIso : signal.tp1_hit_at,
+        tp2_hit_at: result.milestone === 'TP2' ? nowIso : signal.tp2_hit_at,
+        tp3_hit_at: (result.milestone === 'TP3' || result.transition === 'TP3_HIT') ? nowIso : signal.tp3_hit_at,
+        stop_hit_at: (result.transition === 'SL_HIT') ? nowIso : signal.stop_hit_at,
+      },
+      result.exitPrice,
+      { mfe_pct: signal.mfe_pct, mae_pct: signal.mae_pct },
+      MilestoneTracker.get(signalId)
+    );
+    if (outcomeProjection) {
+      upsertSignalOutcome(outcomeProjection).catch(() => {});
+    }
+  } catch (outcomeErr) {
+    console.warn('Outcome update notice:', outcomeErr?.message);
   }
 
   // 4. Queue Discord Notification with Dynamically Resolved Dedicated Channel
