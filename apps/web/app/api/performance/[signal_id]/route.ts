@@ -5,14 +5,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { signal_id: string } }
+  { params }: { params: Promise<{ signal_id: string }> }
 ) {
   try {
-    const signalId = params.signal_id;
-    const outcome = await getSignalOutcomeById(signalId);
+    const { signal_id } = await params;
+    const outcome = await getSignalOutcomeById(signal_id);
     if (!outcome) {
       return NextResponse.json(
-        { success: false, error: `Outcome not found for signal ${signalId}` },
+        { success: false, error: `Outcome not found for signal ${signal_id}` },
         { status: 404 }
       );
     }

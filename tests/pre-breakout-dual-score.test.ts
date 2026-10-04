@@ -213,8 +213,9 @@ describe('Pre-Breakout & Accumulation Detection Model Test Suite', () => {
     assert.strictEqual(initialRecord.entry_market_status, 'PREP');
     assert.strictEqual(initialRecord.did_breakout, false);
 
-    // 2. Trigger Confirmation 5 minutes later
-    const confirmTime = Date.now() + 300000;
+    // 2. Trigger Confirmation exactly 5 minutes later relative to recorded detection time
+    const baseTime = new Date(initialRecord.detected_at).getTime();
+    const confirmTime = baseTime + 300000;
     recordAuditConfirmation('SOLUSDT', 82, confirmTime);
     const confirmedRecord = AuditMemoryStore.records.get(candidate.id);
     assert.strictEqual(confirmedRecord.did_breakout, true);

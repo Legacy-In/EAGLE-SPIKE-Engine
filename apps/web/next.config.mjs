@@ -13,8 +13,15 @@ const nextConfig = {
     externalDir: true,
   },
   webpack: (config) => {
+    config.resolve.modules = [
+      'node_modules',
+      path.resolve(__dirname, 'node_modules'),
+    ];
     config.resolve.alias = {
       ...config.resolve.alias,
+      '@supabase/supabase-js': path.resolve(__dirname, 'node_modules/@supabase/supabase-js'),
+      'dotenv': path.resolve(__dirname, 'node_modules/dotenv'),
+      'dotenv/config': path.resolve(__dirname, 'node_modules/dotenv/config.js'),
       '@react-native-async-storage/async-storage': false,
     };
     config.resolve.fallback = {
