@@ -8,6 +8,7 @@ import {
   Power,
   RefreshCw,
   Search,
+  Shield,
 } from 'lucide-react';
 import { Web3WalletButton } from '../web3/Web3WalletButton';
 
@@ -138,6 +139,17 @@ export const TopBar: React.FC = () => {
             <span className="text-amber-300 font-extrabold tracking-wider">EAGLE FLASH TERMINAL</span>
             <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/30 text-amber-200 rounded font-mono font-bold uppercase tracking-wider">PRO LIVE</span>
           </div>
+
+          {/* BTC Hedge Desk Quick Navigation */}
+          <a
+            href="/hedge"
+            className="flex items-center bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 px-2.5 py-1.5 rounded text-xs font-bold gap-1.5 shadow-sm text-cyan-300 font-mono transition-all"
+            title="Open BTC Perpetual Hedge & Derivatives Dashboard"
+          >
+            <Shield className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">BTC HEDGE</span>
+            <span className="text-[9px] px-1.5 py-0.2 bg-cyan-950 text-cyan-200 rounded border border-cyan-800">5X DELTA</span>
+          </a>
 
           {/* Right Actions: Search, Mode, Safe Mode, Kill Switch */}
           <div className="flex items-center gap-2">
