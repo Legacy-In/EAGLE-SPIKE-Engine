@@ -33,6 +33,20 @@ const nextConfig = {
     config.externals.push('pino-pretty', 'lokijs', 'encoding');
     return config;
   },
+  async redirects() {
+    return [
+      {
+        source: '/hadge',
+        destination: '/hedge',
+        permanent: true,
+      },
+      {
+        source: '/hadge/:path*',
+        destination: '/hedge/:path*',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
