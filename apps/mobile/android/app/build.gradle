@@ -117,3 +117,38 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+afterEvaluate {
+    tasks.matching { it.name.contains("generateAutolinkingNewArchitectureFiles") }.configureEach {
+        doLast {
+            fixCMakeAutolinking(project)
+        }
+    }
+    tasks.matching { it.name.contains("configureCMake") }.configureEach {
+        doFirst {
+            fixCMakeAutolinking(project)
+        }
+    }
+}
+
+def fixCMakeAutolinking(Project proj) {
+    def cmakeFile = proj.file("${proj.buildDir}/generated/autolinking/src/main/jni/Android-autolinking.cmake")
+    if (cmakeFile.exists()) {
+        def lines = cmakeFile.readLines().collect { line ->
+            def trimmed = line.trim()
+            if (trimmed.startsWith("add_subdirectory(") && !trimmed.contains("\"")) {
+                def prefix = "add_subdirectory("
+                def inner = trimmed.substring(prefix.length(), trimmed.length() - 1).trim()
+                def lastSpace = inner.lastIndexOf(" ")
+                if (lastSpace != -1) {
+                    def p = inner.substring(0, lastSpace).trim()
+                    def target = inner.substring(lastSpace + 1).trim()
+                    return "add_subdirectory(\"${p}\" ${target})"
+                }
+            }
+            return line
+        }
+        cmakeFile.text = lines.join("\n")
+    }
+}
+

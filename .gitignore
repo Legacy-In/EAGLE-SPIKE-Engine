@@ -38,4 +38,5 @@ apps/web/android/.gradle/
 apps/web/android/app/build/
 apps/mobile/android/.gradle/
 apps/mobile/android/app/build/
+apps/mobile/android/app/.cxx/
 **/local.properties
