@@ -5,7 +5,43 @@
 :root {
   --background: #05070B;
   --foreground: #F8FAFC;
+
+  /* Eagle Flash Institutional Trading Tokens */
+  --bg-0: #0A0D12;
+  --bg-1: #11151C;
+  --bg-2: #181D26;
+  --line: #232A35;
+  --text-1: #E8ECF2;
+  --text-2: #9AA6B5;
+  --text-3: #6B7686;
+  --up: #1FD18A;
+  --down: #F2495C;
+  --warn: #F5A524;
+  --info: #38BDF8;
+  --brand: #F5A524;
+  --paper: rgba(245, 165, 36, 0.15);
+  --paper-border: #F5A524;
 }
+
+/* Tick flash animations */
+@keyframes flash-up {
+  0% { background-color: rgba(31, 209, 138, 0.28); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flash-down {
+  0% { background-color: rgba(242, 73, 92, 0.28); }
+  100% { background-color: transparent; }
+}
+
+.flash-tick-up {
+  animation: flash-up 350ms ease-out;
+}
+
+.flash-tick-down {
+  animation: flash-down 350ms ease-out;
+}
+
 
 body {
   background-color: #05070B;
