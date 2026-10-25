@@ -36,3 +36,6 @@ data/
 android/.gradle/
 apps/web/android/.gradle/
 apps/web/android/app/build/
+apps/mobile/android/.gradle/
+apps/mobile/android/app/build/
+**/local.properties
