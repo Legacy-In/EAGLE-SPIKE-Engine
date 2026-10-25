@@ -1,8 +1,10 @@
 <resources>
 
-    <!-- Base application theme. -->
+    <!-- Base application theme with Pitch Black Native Launch Splash -->
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">#0B0E11</item>
+        <item name="android:navigationBarColor">#0B0E11</item>
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 

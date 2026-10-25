@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Colors } from '../theme/colors';
 
 interface SplashScreenProps {
@@ -42,7 +42,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onEnter }) => {
     <View style={styles.container}>
       {/* Mascot & Brand Header */}
       <View style={styles.brandContainer}>
-        <Text style={styles.mascot}>🦅</Text>
+        <Image source={{ uri: 'splash_logo' }} style={styles.brandLogo} resizeMode="contain" />
         <Text style={styles.title}>EAGLE FLASH</Text>
         <Text style={styles.subtitle}>
           VOL SPIKE CANDIDATE • MULTI-EXCHANGE PERPETUAL INTELLIGENCE
@@ -122,8 +122,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 32,
   },
-  mascot: {
-    fontSize: 64,
+  brandLogo: {
+    width: 96,
+    height: 96,
     marginBottom: 16,
   },
   title: {
