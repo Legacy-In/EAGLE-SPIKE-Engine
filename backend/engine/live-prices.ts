@@ -185,17 +185,19 @@ export class LivePriceService {
       return null;
     }
 
-    // D. WEEX Futures
+    // D. WEEX Futures (V3 Contract API)
     if (exchange === 'WEEX') {
       try {
-        const res = await fetch(`https://api.weex.com/api/v1/market/ticker?symbol=${symbol}`, {
-          signal: AbortSignal.timeout(4000),
+        const res = await fetch(`https://api-contract.weex.com/capi/v3/market/ticker/24hr?symbol=${symbol}`, {
+          headers: { 'User-Agent': 'EAGLE-FLASH/2.0' },
+          signal: AbortSignal.timeout(6000),
         });
         if (res.ok) {
           const json = await res.json();
-          if (json?.data?.last) {
+          const item = Array.isArray(json) ? json[0] : json;
+          if (item?.lastPrice) {
             return {
-              price: parseFloat(json.data.last),
+              price: parseFloat(item.lastPrice),
               timestamp: now,
               marketId: `WEEX:${symbol}`,
             };

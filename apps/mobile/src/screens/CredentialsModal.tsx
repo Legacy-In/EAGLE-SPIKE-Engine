@@ -26,10 +26,11 @@ interface CredentialsModalProps {
 export const CredentialsModal: React.FC<CredentialsModalProps> = ({ visible, onClose }) => {
   const { credentials, saveCredentials } = useEngineStore();
 
-  const [exchange, setExchange] = useState<'binance' | 'bybit'>(credentials.exchange);
+  const [exchange, setExchange] = useState<'binance' | 'bybit' | 'weex'>(credentials.exchange);
   const [testnet, setTestnet] = useState<boolean>(credentials.testnet);
   const [apiKey, setApiKey] = useState<string>(credentials.apiKey);
   const [apiSecret, setApiSecret] = useState<string>(credentials.apiSecret);
+  const [passphrase, setPassphrase] = useState<string>(credentials.passphrase || '');
   const [discordWebhook, setDiscordWebhook] = useState<string>(credentials.discordWebhook);
   const [telegramToken, setTelegramToken] = useState<string>(credentials.telegramToken);
   const [showSecret, setShowSecret] = useState<boolean>(false);
@@ -41,6 +42,7 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({ visible, onC
       testnet,
       apiKey: apiKey.trim(),
       apiSecret: apiSecret.trim(),
+      passphrase: passphrase.trim(),
       discordWebhook: discordWebhook.trim(),
       telegramToken: telegramToken.trim(),
     });
@@ -75,7 +77,7 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({ visible, onC
                 onPress={() => setExchange('binance')}
               >
                 <Text style={[styles.choiceText, exchange === 'binance' && styles.choiceActiveText]}>
-                  Binance Futures
+                  Binance
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -83,7 +85,15 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({ visible, onC
                 onPress={() => setExchange('bybit')}
               >
                 <Text style={[styles.choiceText, exchange === 'bybit' && styles.choiceActiveText]}>
-                  Bybit Linear
+                  Bybit
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleChoice, exchange === 'weex' && styles.toggleActive]}
+                onPress={() => setExchange('weex')}
+              >
+                <Text style={[styles.choiceText, exchange === 'weex' && styles.choiceActiveText]}>
+                  WEEX
                 </Text>
               </TouchableOpacity>
             </View>
@@ -136,6 +146,22 @@ export const CredentialsModal: React.FC<CredentialsModalProps> = ({ visible, onC
               secureTextEntry={!showSecret}
               autoCapitalize="none"
             />
+
+            {/* WEEX API Passphrase (Optional for scan, required for private orders) */}
+            {exchange === 'weex' && (
+              <>
+                <Text style={styles.fieldLabel}>WEEX PASSPHRASE (OPTIONAL)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter API passphrase (set during key creation)"
+                  placeholderTextColor={Colors.textTertiary}
+                  value={passphrase}
+                  onChangeText={setPassphrase}
+                  secureTextEntry={!showSecret}
+                  autoCapitalize="none"
+                />
+              </>
+            )}
 
             {/* Discord Webhook */}
             <Text style={styles.fieldLabel}>DISCORD WEBHOOK URL (#paper-trades)</Text>

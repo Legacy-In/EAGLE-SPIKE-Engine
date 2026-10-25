@@ -144,6 +144,118 @@ class MarketWebSocketService {
         console.warn('⚠️ Error loading Bybit tickers snapshot:', bybitErr);
       }
 
+      // Ingest WEEX Contract V3 Perpetuals
+      try {
+        const weexHeaders: Record<string, string> = { 'User-Agent': 'EAGLE-FLASH/2.0' };
+        if (ENV.WEEX_API_KEY) {
+          weexHeaders['ACCESS-KEY'] = ENV.WEEX_API_KEY;
+        }
+        const weexRes = await fetch(ENV.WEEX_FUTURES_TICKERS, {
+          headers: weexHeaders,
+        });
+        if (weexRes.ok) {
+          const weexList = await weexRes.json();
+          if (Array.isArray(weexList)) {
+            for (const item of weexList) {
+              const sym = item.symbol || '';
+              if (!sym.endsWith('USDT')) continue;
+              const price = parseFloat(item.lastPrice) || 0;
+              if (price <= 0) continue;
+
+              const change24h = parseFloat(item.priceChangePercent)
+                ? parseFloat((parseFloat(item.priceChangePercent) * 100).toFixed(2))
+                : 0;
+              const turnover = parseFloat(item.quoteVolume) || 0;
+              const rvol = Math.max(0.5, Math.min(8.0, 1.0 + turnover / 30_000_000));
+              const volZ = Math.max(-2.0, Math.min(5.0, change24h * 0.4));
+              const eagleScore = Math.min(
+                99,
+                Math.max(40, Math.round(50 + change24h * 1.5 + (rvol > 2 ? 15 : 5)))
+              );
+
+              const ticker: MarketTicker = {
+                id: `${sym}_WEEX`,
+                symbol: sym,
+                exchange: 'WEEX',
+                price,
+                prevPrice: price,
+                change5m: parseFloat((change24h * 0.08).toFixed(2)),
+                change15m: parseFloat((change24h * 0.18).toFixed(2)),
+                change1h: parseFloat((change24h * 0.42).toFixed(2)),
+                change24h,
+                rvol: parseFloat(rvol.toFixed(2)),
+                volZ: parseFloat(volZ.toFixed(2)),
+                oiDelta: parseFloat((change24h * 0.5).toFixed(1)),
+                takerRatio: Math.min(85, Math.max(25, Math.round(50 + change24h))),
+                eagleScore,
+                volume24hUsd: turnover,
+                sparkline: [price * 0.985, price * 0.995, price],
+                updatedAt: Date.now(),
+              };
+              this.cache.set(ticker.id, ticker);
+              parsed.push(ticker);
+            }
+          }
+        }
+      } catch (weexErr) {
+        console.warn('⚠️ Error loading WEEX tickers snapshot:', weexErr);
+      }
+
+      // Ingest MEXC Contract Perpetuals
+      try {
+        const mexcRes = await fetch(ENV.MEXC_FUTURES_TICKERS, {
+          headers: { 'User-Agent': 'EAGLE-FLASH/2.0' },
+        });
+        if (mexcRes.ok) {
+          const mexcJson = await mexcRes.json();
+          const mexcList = mexcJson?.data || [];
+          if (Array.isArray(mexcList)) {
+            for (const item of mexcList) {
+              const rawSym = item.symbol || '';
+              const sym = rawSym.replace('_', '');
+              if (!sym.endsWith('USDT')) continue;
+              const price = parseFloat(item.lastPrice) || 0;
+              if (price <= 0) continue;
+
+              const change24h = parseFloat(item.riseFallRate)
+                ? parseFloat((parseFloat(item.riseFallRate) * 100).toFixed(2))
+                : 0;
+              const turnover = parseFloat(item.amount24) || 0;
+              const rvol = Math.max(0.5, Math.min(8.0, 1.0 + turnover / 30_000_000));
+              const volZ = Math.max(-2.0, Math.min(5.0, change24h * 0.4));
+              const eagleScore = Math.min(
+                99,
+                Math.max(40, Math.round(50 + change24h * 1.5 + (rvol > 2 ? 15 : 5)))
+              );
+
+              const ticker: MarketTicker = {
+                id: `${sym}_MEXC`,
+                symbol: sym,
+                exchange: 'MEXC',
+                price,
+                prevPrice: price,
+                change5m: parseFloat((change24h * 0.08).toFixed(2)),
+                change15m: parseFloat((change24h * 0.18).toFixed(2)),
+                change1h: parseFloat((change24h * 0.42).toFixed(2)),
+                change24h,
+                rvol: parseFloat(rvol.toFixed(2)),
+                volZ: parseFloat(volZ.toFixed(2)),
+                oiDelta: parseFloat((change24h * 0.5).toFixed(1)),
+                takerRatio: Math.min(85, Math.max(25, Math.round(50 + change24h))),
+                eagleScore,
+                volume24hUsd: turnover,
+                sparkline: [price * 0.985, price * 0.995, price],
+                updatedAt: Date.now(),
+              };
+              this.cache.set(ticker.id, ticker);
+              parsed.push(ticker);
+            }
+          }
+        }
+      } catch (mexcErr) {
+        console.warn('⚠️ Error loading MEXC tickers snapshot:', mexcErr);
+      }
+
       this.notifyListeners(parsed);
       return parsed;
     } catch (e) {

@@ -87,7 +87,7 @@ async function testBinanceWebSocket() {
     try {
       const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@trade');
       timeout = setTimeout(() => {
-        ws.terminate();
+        try { ws.close(); } catch {}
         resolve({
           exchange: 'Binance WebSocket Trade Stream',
           status: 'TIMEOUT',
@@ -97,16 +97,12 @@ async function testBinanceWebSocket() {
         });
       }, 5000);
 
-      ws.on('open', () => {
-        // Connected
-      });
-
-      ws.on('message', (msg) => {
+      ws.onmessage = (event) => {
         const latency = Date.now() - start;
         clearTimeout(timeout);
-        ws.close();
+        try { ws.close(); } catch {}
         try {
-          const parsed = JSON.parse(msg.toString());
+          const parsed = JSON.parse(event.data);
           resolve({
             exchange: 'Binance WebSocket Trade Stream',
             status: 'OK',
@@ -121,16 +117,16 @@ async function testBinanceWebSocket() {
             error: e.message
           });
         }
-      });
+      };
 
-      ws.on('error', (err) => {
+      ws.onerror = (err) => {
         clearTimeout(timeout);
         resolve({
           exchange: 'Binance WebSocket Trade Stream',
           status: 'FAILED',
-          error: err.message
+          error: err.message || 'WebSocket connection error'
         });
-      });
+      };
     } catch (err) {
       clearTimeout(timeout);
       resolve({
@@ -156,7 +152,7 @@ async function testMexc() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     const list = json?.data || [];
-    const btc = list.find(t => t.symbol && t.symbol.includes('BTC'));
+    const btc = list.find(t => t.symbol === 'BTCUSDT') || list.find(t => t.symbol && t.symbol.includes('BTC'));
     return {
       exchange: 'MEXC Contract V1',
       status: 'OK',
@@ -190,7 +186,7 @@ async function testWeex() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const list = await res.json();
     if (!Array.isArray(list)) throw new Error('Response is not an array');
-    const btc = list.find(t => t.symbol && t.symbol.includes('BTC'));
+    const btc = list.find(t => t.symbol === 'BTCUSDT') || list.find(t => t.symbol && t.symbol.includes('BTC'));
     return {
       exchange: 'WEEX Contract V3',
       status: 'OK',

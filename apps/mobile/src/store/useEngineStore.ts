@@ -25,10 +25,11 @@ export interface EngineLog {
 }
 
 export interface ApiCredentials {
-  exchange: 'binance' | 'bybit';
+  exchange: 'binance' | 'bybit' | 'weex';
   testnet: boolean;
   apiKey: string;
   apiSecret: string;
+  passphrase?: string;
   discordWebhook: string;
   telegramToken: string;
 }

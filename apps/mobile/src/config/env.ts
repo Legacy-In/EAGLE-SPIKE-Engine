@@ -19,11 +19,16 @@ export const ENV = {
   BINANCE_FUTURES_TICKERS: 'https://fapi.binance.com/fapi/v1/ticker/24hr',
   BYBIT_FUTURES_TICKERS: 'https://api.bybit.com/v5/market/tickers?category=linear',
   MEXC_FUTURES_TICKERS: 'https://contract.mexc.com/api/v1/contract/ticker',
+  WEEX_FUTURES_TICKERS: 'https://api-contract.weex.com/capi/v3/market/ticker/24hr',
 
   // Exchange API Credentials
   BYBIT_API_KEY: 'z9xb0gv2ZGxCZ8XXCT',
   BYBIT_API_SECRET: 'XQcPVialb3d7WSxuPhvcIS0uTB7rmeAaby36',
   BYBIT_TESTNET: false,
+
+  WEEX_API_KEY: 'weex_48ca99a066414970ce63820f55970691',
+  WEEX_API_SECRET: 'f07cbfd61d1535bd5c19f225d91723a24933ebf2a099aac1d6c4109ec6e49f3f',
+  WEEX_PASSPHRASE: '',
 
   // Default virtual sandbox balance
   DEFAULT_PAPER_BALANCE: 10000.0,
