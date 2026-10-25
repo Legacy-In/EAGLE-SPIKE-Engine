@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Search,
   Shield,
+  Smartphone,
 } from 'lucide-react';
 import { Web3WalletButton } from '../web3/Web3WalletButton';
 
@@ -161,6 +162,17 @@ export const TopBar: React.FC = () => {
             <FlaskConical className="w-3.5 h-3.5 text-emerald-400" />
             <span className="hidden sm:inline">PAPER SANDBOX</span>
             <span className="text-[9px] px-1.5 py-0.2 bg-emerald-950 text-emerald-200 rounded border border-emerald-800">$100</span>
+          </a>
+
+          {/* Binance-Grade Mobile App Dashboard */}
+          <a
+            href="/mobile"
+            className="flex items-center bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 px-2.5 py-1.5 rounded text-xs font-bold gap-1.5 shadow-sm text-amber-300 font-mono transition-all"
+            title="Open Binance-Grade Mobile Control Dashboard"
+          >
+            <Smartphone className="w-3.5 h-3.5 text-[#F0B90B]" />
+            <span className="hidden sm:inline">MOBILE APP</span>
+            <span className="text-[9px] px-1.5 py-0.2 bg-amber-950 text-amber-200 rounded border border-amber-800">11W</span>
           </a>
 
           {/* Right Actions: Search, Mode, Safe Mode, Kill Switch */}

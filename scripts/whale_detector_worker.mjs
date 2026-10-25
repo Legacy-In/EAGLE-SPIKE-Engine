@@ -503,7 +503,12 @@ async function startDaemon() {
   console.log('✅ Whale Tracking Daemon is fully operational and streaming.');
 }
 
-startDaemon().catch(err => {
-  console.error('❌ Fatal daemon startup error:', err);
-  process.exit(1);
-});
+export { startDaemon, evaluateSymbolManipulation, TARGET_SYMBOLS, WhaleMemoryStore };
+
+// Execute if run directly
+if (process.argv[1] && process.argv[1].endsWith('whale_detector_worker.mjs')) {
+  startDaemon().catch(err => {
+    console.error('❌ Fatal daemon startup error:', err);
+    process.exit(1);
+  });
+}

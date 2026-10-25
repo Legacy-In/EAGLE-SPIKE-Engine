@@ -162,16 +162,20 @@ async function runDispatchCycle() {
   }
 }
 
-// Start continuous polling loop
-const interval = setInterval(runDispatchCycle, POLL_INTERVAL_MS);
+export { runDispatchCycle };
 
-// Graceful termination
-const shutdown = () => {
-  console.log('\n🛑 Shutting down Discord Outbox Worker...');
-  isRunning = false;
-  clearInterval(interval);
-  process.exit(0);
-};
+// Start continuous polling loop if invoked directly
+if (process.argv[1] && process.argv[1].endsWith('discord_worker.mjs')) {
+  const interval = setInterval(runDispatchCycle, POLL_INTERVAL_MS);
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+  // Graceful termination
+  const shutdown = () => {
+    console.log('\n🛑 Shutting down Discord Outbox Worker...');
+    isRunning = false;
+    clearInterval(interval);
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}

@@ -144,7 +144,12 @@ async function startWorker() {
   console.log('✅ Etherscan Whale Worker is active and monitoring.');
 }
 
-startWorker().catch(err => {
-  console.error('❌ Fatal Etherscan worker error:', err);
-  process.exit(1);
-});
+export { startWorker, scanAllWhales, TRACKED_WALLETS };
+
+// Execute if run directly
+if (process.argv[1] && process.argv[1].endsWith('etherscan_whale_worker.mjs')) {
+  startWorker().catch(err => {
+    console.error('❌ Fatal Etherscan worker error:', err);
+    process.exit(1);
+  });
+}

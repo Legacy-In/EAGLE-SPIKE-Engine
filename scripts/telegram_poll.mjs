@@ -33,16 +33,19 @@ for (const ep of envPaths) {
   }
 }
 
-if (!token) {
-  console.log('ℹ️  TELEGRAM_BOT_TOKEN not configured in environment or .env.');
-  console.log('   To start the Telegram polling agent:');
-  console.log('   1. Get your bot token from @BotFather for @eaglespike_bot');
-  console.log('   2. Set TELEGRAM_BOT_TOKEN=<YOUR_TOKEN> in .env or apps/web/.env.local');
-  console.log('   3. Run: node scripts/telegram_poll.mjs\n');
-  process.exit(0);
-}
+export { main, token, chatId };
 
-console.log('🦅 Starting Eagle Flash Telegram Bot Service (@eaglespike_bot)...');
+if (process.argv[1] && process.argv[1].endsWith('telegram_poll.mjs')) {
+  if (!token) {
+    console.log('ℹ️  TELEGRAM_BOT_TOKEN not configured in environment or .env.');
+    console.log('   To start the Telegram polling agent:');
+    console.log('   1. Get your bot token from @BotFather for @eaglespike_bot');
+    console.log('   2. Set TELEGRAM_BOT_TOKEN=<YOUR_TOKEN> in .env or apps/web/.env.local');
+    console.log('   3. Run: node scripts/telegram_poll.mjs\n');
+    process.exit(0);
+  }
+  main().catch(console.error);
+}
 
 async function autoSaveChannelId(detectedChatId, title) {
   try {
@@ -164,5 +167,3 @@ async function main() {
     }
   }
 }
-
-main().catch(console.error);
