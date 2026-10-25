@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Eagle Flash</string>
+    <string name="title_activity_main">Eagle Flash</string>
+    <string name="package_name">com.eagleflash.terminal</string>
+    <string name="custom_url_scheme">com.eagleflash.terminal</string>
+</resources>

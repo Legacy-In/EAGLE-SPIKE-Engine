@@ -1,0 +1,13 @@
+{
+  "appId": "com.eagleflash.terminal",
+  "appName": "Eagle Flash",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": true
+  }
+}

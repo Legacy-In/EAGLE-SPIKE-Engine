@@ -30,3 +30,9 @@ Thumbs.db
 *.tsbuildinfo
 scratch/
 data/
+*.apk
+.gradle/
+**/build/
+android/.gradle/
+apps/web/android/.gradle/
+apps/web/android/app/build/
