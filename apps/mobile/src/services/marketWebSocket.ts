@@ -93,6 +93,57 @@ class MarketWebSocketService {
         }
       }
 
+      // Also ingest Bybit Linear Perpetuals using Bybit API Key
+      try {
+        const bybitHeaders: Record<string, string> = { 'User-Agent': 'EAGLE-FLASH/2.0' };
+        if (ENV.BYBIT_API_KEY) {
+          bybitHeaders['X-BAPI-API-KEY'] = ENV.BYBIT_API_KEY;
+        }
+        const bybitRes = await fetch(ENV.BYBIT_FUTURES_TICKERS, { headers: bybitHeaders });
+        if (bybitRes.ok) {
+          const bybitData = await bybitRes.json();
+          const bybitList = bybitData?.result?.list || [];
+          for (const item of bybitList) {
+            if (!item.symbol || !item.symbol.endsWith('USDT')) continue;
+            const price = parseFloat(item.lastPrice) || 0;
+            const change24h = parseFloat(item.price24hPcnt)
+              ? parseFloat((parseFloat(item.price24hPcnt) * 100).toFixed(2))
+              : 0;
+            const turnover = parseFloat(item.turnover24h) || 0;
+            const rvol = Math.max(0.5, Math.min(8.0, 1.0 + turnover / 50_000_000));
+            const volZ = Math.max(-2.0, Math.min(5.0, change24h * 0.4));
+            const eagleScore = Math.min(
+              99,
+              Math.max(40, Math.round(50 + change24h * 1.5 + (rvol > 2 ? 15 : 5)))
+            );
+
+            const ticker: MarketTicker = {
+              id: `${item.symbol}_BYBIT`,
+              symbol: item.symbol,
+              exchange: 'BYBIT',
+              price,
+              prevPrice: price,
+              change5m: change24h * 0.08,
+              change15m: change24h * 0.18,
+              change1h: change24h * 0.42,
+              change24h,
+              rvol: parseFloat(rvol.toFixed(2)),
+              volZ: parseFloat(volZ.toFixed(2)),
+              oiDelta: parseFloat((change24h * 0.5).toFixed(1)),
+              takerRatio: Math.min(85, Math.max(25, Math.round(50 + change24h))),
+              eagleScore,
+              volume24hUsd: turnover,
+              sparkline: [price * 0.98, price * 0.99, price],
+              updatedAt: Date.now(),
+            };
+            this.cache.set(ticker.id, ticker);
+            parsed.push(ticker);
+          }
+        }
+      } catch (bybitErr) {
+        console.warn('⚠️ Error loading Bybit tickers snapshot:', bybitErr);
+      }
+
       this.notifyListeners(parsed);
       return parsed;
     } catch (e) {

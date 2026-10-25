@@ -78,8 +78,12 @@ export class BybitAdapter {
     activeContracts?: Map<string, MarketContract>
   ): Promise<NormalizedTicker[]> {
     const contracts = activeContracts || (await this.fetchActiveContracts());
+    const headers: Record<string, string> = { 'User-Agent': 'EAGLE-FLASH/2.0' };
+    if (process.env.BYBIT_API_KEY) {
+      headers['X-BAPI-API-KEY'] = process.env.BYBIT_API_KEY;
+    }
     const res = await fetch(`${this.baseUrl}/v5/market/tickers?category=linear`, {
-      headers: { 'User-Agent': 'EAGLE-FLASH/2.0' },
+      headers,
       signal: AbortSignal.timeout(6000),
     });
 

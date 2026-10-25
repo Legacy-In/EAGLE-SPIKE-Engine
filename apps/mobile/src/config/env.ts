@@ -20,6 +20,11 @@ export const ENV = {
   BYBIT_FUTURES_TICKERS: 'https://api.bybit.com/v5/market/tickers?category=linear',
   MEXC_FUTURES_TICKERS: 'https://contract.mexc.com/api/v1/contract/ticker',
 
+  // Exchange API Credentials
+  BYBIT_API_KEY: 'z9xb0gv2ZGxCZ8XXCT',
+  BYBIT_API_SECRET: 'XQcPVialb3d7WSxuPhvcIS0uTB7rmeAaby36',
+  BYBIT_TESTNET: false,
+
   // Default virtual sandbox balance
   DEFAULT_PAPER_BALANCE: 10000.0,
 };

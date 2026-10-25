@@ -47,8 +47,12 @@ export class BybitMarketDataProvider implements MarketDataProvider {
   async getAllTickers(): Promise<UnifiedTicker[]> {
     const start = Date.now();
     try {
+      const headers: Record<string, string> = { 'User-Agent': 'EagleFlash-Bot/2.0' };
+      if (process.env.BYBIT_API_KEY) {
+        headers['X-BAPI-API-KEY'] = process.env.BYBIT_API_KEY;
+      }
       const res = await fetch('https://api.bybit.com/v5/market/tickers?category=linear', {
-        headers: { 'User-Agent': 'EagleFlash-Bot/2.0' },
+        headers,
         signal: AbortSignal.timeout(6000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
