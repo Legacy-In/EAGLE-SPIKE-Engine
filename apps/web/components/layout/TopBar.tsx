@@ -5,6 +5,7 @@ import { useSigmaStore } from '../../store/useSigmaStore';
 import {
   AlertTriangle,
   Flame,
+  FlaskConical,
   Power,
   RefreshCw,
   Search,
@@ -149,6 +150,17 @@ export const TopBar: React.FC = () => {
             <Shield className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden sm:inline">BTC HEDGE</span>
             <span className="text-[9px] px-1.5 py-0.2 bg-cyan-950 text-cyan-200 rounded border border-cyan-800">5X DELTA</span>
+          </a>
+
+          {/* Paper Trading Sandbox Quick Navigation */}
+          <a
+            href="/paper"
+            className="flex items-center bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 px-2.5 py-1.5 rounded text-xs font-bold gap-1.5 shadow-sm text-emerald-300 font-mono transition-all"
+            title="Open Paper Trading Sandbox ($100 Virtual Execution)"
+          >
+            <FlaskConical className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">PAPER SANDBOX</span>
+            <span className="text-[9px] px-1.5 py-0.2 bg-emerald-950 text-emerald-200 rounded border border-emerald-800">$100</span>
           </a>
 
           {/* Right Actions: Search, Mode, Safe Mode, Kill Switch */}

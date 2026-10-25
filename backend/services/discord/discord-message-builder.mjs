@@ -959,3 +959,139 @@ export function buildWeeklyPerformanceEmbed(stats, topWinners = [], topLosers = 
   };
 }
 
+/**
+ * Format PAPER_ORDER_OPENED Embed for #paper-trades
+ */
+export function buildPaperOrderOpenedDiscordEmbed(item) {
+  const p = item.payload || item;
+  const isLong = (p.direction || 'LONG').toUpperCase() === 'LONG';
+  const symbol = (p.symbol || '').toUpperCase();
+  const exchange = (p.exchange_id || p.exchange || 'BYBIT').toUpperCase();
+  const dirIcon = isLong ? '🚀 🟢 LONG' : '🔴 SHORT';
+  const entry = formatPrice(p.entry_price || p.entryPrice);
+  const stopLoss = formatPrice(p.stop_loss || p.stop_price || p.stopPrice);
+  const tp1 = formatPrice(p.take_profit_1 || p.target_1_price || p.tp1_price);
+  const tp2 = p.take_profit_2 ? formatPrice(p.take_profit_2) : '—';
+  const tp3 = p.take_profit_3 ? formatPrice(p.take_profit_3) : '—';
+  const margin = p.margin_usd ? `$${parseFloat(p.margin_usd).toFixed(2)}` : '$100.00';
+  const notional = p.position_size_usd ? `$${parseFloat(p.position_size_usd).toFixed(2)}` : '$500.00';
+  const leverage = p.leverage ? `${p.leverage}x Isolated` : '5x Isolated';
+  const riskR = p.risk_r ? formatPrice(p.risk_r) : '—';
+  const balance = p.virtual_balance ? `$${parseFloat(p.virtual_balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$10,000.00';
+  const tradeId = p.paper_trade_id || item.signal_id || 'PPT-CANONICAL';
+
+  return {
+    embeds: [{
+      title: '🧪 PAPER TRADING SANDBOX — ORDER OPENED',
+      description: `### ${dirIcon} — ${symbol} (${exchange})\n**ID:** \`${tradeId}\` | **Mode:** \`VIRTUAL_EXECUTION\` | **Allocation:** \`${margin} (${leverage})\``,
+      color: 0x00D2FF, // Cyber Neon Cyan
+      fields: [
+        { name: '🪙 Asset / Pair', value: `\`${symbol}\` (\`${exchange}\`)`, inline: true },
+        { name: '⚡ Direction', value: `**${dirIcon}**`, inline: true },
+        { name: '🛡️ Leverage & Sizing', value: `\`${leverage}\` (\`${notional}\`)`, inline: true },
+
+        { name: '💵 Entry Price', value: `**${entry}**`, inline: true },
+        { name: '🛑 Stop Loss', value: `**${stopLoss}**`, inline: true },
+        { name: '📐 1R Risk Unit', value: `**${riskR}**`, inline: true },
+
+        { name: '🎯 TP1 Target', value: `**${tp1}**`, inline: true },
+        { name: '🎯 TP2 Target', value: `**${tp2}**`, inline: true },
+        { name: '🎯 TP3 Target', value: `**${tp3}**`, inline: true },
+
+        { name: '💰 Virtual Margin Allocated', value: `**${margin}**`, inline: true },
+        { name: '🏦 Sandbox Balance', value: `**${balance}**`, inline: true },
+        { name: '⚠️ Capital Risk', value: '`$0.00 (SIMULATED_FUNDS)`', inline: true },
+      ],
+      footer: { text: '🦅 EAGLE FLASH — Paper Trading & Virtual Execution Engine • #paper-trades' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+/**
+ * Format PAPER_TRADE_WON (TP Hit) Embed for #paper-trades
+ */
+export function buildPaperTradeWonDiscordEmbed(item) {
+  const p = item.payload || item;
+  const isLong = (p.direction || 'LONG').toUpperCase() === 'LONG';
+  const symbol = (p.symbol || '').toUpperCase();
+  const exchange = (p.exchange || 'BYBIT').toUpperCase();
+  const dirIcon = isLong ? '🟢 LONG' : '🔴 SHORT';
+  const entry = formatPrice(p.entry_price);
+  const exit = formatPrice(p.exit_price || p.current_price);
+  const pnlUsd = parseFloat(p.realized_pnl_usd || 0);
+  const pnlPct = parseFloat(p.realized_pnl_pct || 0);
+  const pnlSign = pnlUsd >= 0 ? '+' : '';
+  const pnlStr = `**${pnlSign}$${pnlUsd.toFixed(2)} (${pnlSign}${pnlPct.toFixed(2)}%)**`;
+  const realizedR = parseFloat(p.realized_r || 1.5).toFixed(2);
+  const balance = p.virtual_balance ? `$${parseFloat(p.virtual_balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$10,000.00';
+  const tradeId = p.paper_trade_id || item.signal_id || 'PPT-CANONICAL';
+  const reason = p.exit_reason || 'Target Take-Profit Reached';
+
+  return {
+    embeds: [{
+      title: '🎯 PAPER TRADE TAKE-PROFIT ACHIEVED — WIN',
+      description: `### ✅ **${symbol}** ${dirIcon} — **Target TP1 Achieved!**\n**ID:** \`${tradeId}\` | **Exchange:** \`${exchange}\` | **Result:** \`WIN_RESOLVED\``,
+      color: 0x00FF88, // Neon Emerald
+      fields: [
+        { name: 'Entry Price', value: `\`${entry}\``, inline: true },
+        { name: 'Exit Price (TP1)', value: `**${exit}**`, inline: true },
+        { name: 'Direction', value: `\`${dirIcon}\``, inline: true },
+
+        { name: '💰 Realized PnL', value: pnlStr, inline: true },
+        { name: '⚡ Realized R-Multiple', value: `**+${realizedR}R**`, inline: true },
+        { name: '🛡️ Margin Released', value: `\`$${p.margin_usd || 100} USDT\``, inline: true },
+
+        { name: '🏦 Updated Virtual Balance', value: `**${balance}**`, inline: true },
+        { name: '📋 Invalidation Reason', value: `\`${reason}\``, inline: true },
+        { name: '🏛️ Execution Venue', value: `\`${exchange} Futures\``, inline: true },
+      ],
+      footer: { text: '🦅 EAGLE FLASH — Paper Trading & Virtual Execution Engine • #paper-trades' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+
+/**
+ * Format PAPER_TRADE_LOST (SL Hit) Embed for #paper-trades
+ */
+export function buildPaperTradeLostDiscordEmbed(item) {
+  const p = item.payload || item;
+  const isLong = (p.direction || 'LONG').toUpperCase() === 'LONG';
+  const symbol = (p.symbol || '').toUpperCase();
+  const exchange = (p.exchange || 'BYBIT').toUpperCase();
+  const dirIcon = isLong ? '🟢 LONG' : '🔴 SHORT';
+  const entry = formatPrice(p.entry_price);
+  const exit = formatPrice(p.exit_price || p.stop_loss);
+  const pnlUsd = parseFloat(p.realized_pnl_usd || 0);
+  const pnlPct = parseFloat(p.realized_pnl_pct || 0);
+  const pnlStr = `**-$${Math.abs(pnlUsd).toFixed(2)} (${pnlPct.toFixed(2)}%)**`;
+  const realizedR = parseFloat(p.realized_r || -1.0).toFixed(2);
+  const balance = p.virtual_balance ? `$${parseFloat(p.virtual_balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$10,000.00';
+  const tradeId = p.paper_trade_id || item.signal_id || 'PPT-CANONICAL';
+  const reason = p.exit_reason || 'Stop-Loss Breach Invalidation';
+
+  return {
+    embeds: [{
+      title: '🛑 PAPER TRADE STOP-LOSS HIT — LOSS',
+      description: `### 🔻 **${symbol}** ${dirIcon} — **Position Stopped Out**\n**ID:** \`${tradeId}\` | **Exchange:** \`${exchange}\` | **Result:** \`LOSS_RESOLVED\``,
+      color: 0xFF3366, // Rose Red
+      fields: [
+        { name: 'Entry Price', value: `\`${entry}\``, inline: true },
+        { name: 'Exit Price (SL)', value: `**${exit}**`, inline: true },
+        { name: 'Direction', value: `\`${dirIcon}\``, inline: true },
+
+        { name: '🛑 Realized Loss', value: pnlStr, inline: true },
+        { name: '⚡ Realized R-Multiple', value: `**${realizedR}R**`, inline: true },
+        { name: '🛡️ Margin Restored', value: `\`$${(p.margin_usd || 100) + pnlUsd} USDT\``, inline: true },
+
+        { name: '🏦 Updated Virtual Balance', value: `**${balance}**`, inline: true },
+        { name: '📋 Invalidation Reason', value: `\`${reason}\``, inline: true },
+        { name: '🏛️ Execution Venue', value: `\`${exchange} Futures\``, inline: true },
+      ],
+      footer: { text: '🦅 EAGLE FLASH — Paper Trading & Virtual Execution Engine • #paper-trades' },
+      timestamp: new Date().toISOString(),
+    }],
+  };
+}
+

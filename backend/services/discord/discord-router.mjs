@@ -90,6 +90,14 @@ export function getDailyPerformanceChannel() {
   return process.env.DISCORD_CHANNEL_DAILY_PERFORMANCE || null;
 }
 
+export function getPaperTradesChannel() {
+  return (
+    process.env.DISCORD_CHANNEL_PAPER_TRADES ||
+    process.env.DISCORD_PAPER_TRADES_CHANNEL_ID ||
+    null
+  );
+}
+
 export function getWeeklyPerformanceChannel() {
   return process.env.DISCORD_CHANNEL_WEEKLY_PERFORMANCE || null;
 }
@@ -124,6 +132,20 @@ export function resolveDiscordChannel(item) {
   const type = (p.type || p.spike_type || p.spikeType || p.primary_strategy || '').toUpperCase();
   const signalId = (p.signal_id || item.signal_id || '').toUpperCase();
   const actionClass = (p.action || p.actionClass || p.whaleAction || '').toUpperCase();
+
+  // 00. Paper Trading Sandbox Execution Alerts (#paper-trades)
+  const isPaperTrade = Boolean(
+    eventType === 'PAPER_ORDER_OPENED' ||
+    eventType === 'PAPER_TRADE_WON' ||
+    eventType === 'PAPER_TRADE_LOST' ||
+    eventType === 'PAPER_TRADE' ||
+    signalId.startsWith('PPT-') ||
+    (item.destination_channel && item.destination_channel.toUpperCase().includes('PAPER')) ||
+    (p.channel_target && p.channel_target.toUpperCase().includes('PAPER'))
+  );
+  if (isPaperTrade) {
+    return getPaperTradesChannel() || getSignalsChannel();
+  }
 
   // 0. New Coin Listings & Market Alerts (#new-listing-alert or #market-alerts)
   const isNewListing = Boolean(

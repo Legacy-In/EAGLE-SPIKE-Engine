@@ -174,6 +174,21 @@ module.exports = {
       out_file: './logs/performance-worker-out.log',
       time: true,
     },
+    {
+      name: 'eagle-flash-paper-monitor',
+      script: 'scripts/paper_monitor_worker.mjs',
+      cwd: './',
+      env: {
+        NODE_ENV: 'production',
+        PAPER_MONITOR_INTERVAL_MS: 3000,
+      },
+      autorestart: true,
+      restart_delay: 5000,
+      max_memory_restart: '500M',
+      error_file: './logs/paper-monitor-error.log',
+      out_file: './logs/paper-monitor-out.log',
+      time: true,
+    },
   ],
 };
 

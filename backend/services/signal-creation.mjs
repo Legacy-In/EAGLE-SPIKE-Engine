@@ -27,6 +27,7 @@ import {
 import { isValidActiveSymbol, isBlacklistedSymbol } from './symbol-validator.mjs';
 import { isSignatureInCooldown, recordSignatureDispatch, getRemainingCooldownMs } from './signal-dedup.mjs';
 import { evaluateSignalOutcome, upsertSignalOutcome } from './performance/performance-service.mjs';
+import { openPaperTrade, isPaperTradingActive } from './paper_trading_executor.mjs';
 
 // 1. Environment & Supabase Configuration
 let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -514,6 +515,13 @@ export async function createSignal(candidate, options = {}) {
         if (initOutcome) upsertSignalOutcome(initOutcome).catch(() => {});
       } catch {}
 
+      // Non-blocking Paper Trading Sandbox Execution
+      if (isPaperTradingActive()) {
+        openPaperTrade(signalPayload, { marginUsd: 100.0, leverage: 5 }).catch(err => {
+          console.warn('Paper trading execution notice:', err?.message);
+        });
+      }
+
       console.log(`✅ [SIGNAL_CREATE_SUCCESS] (PostgreSQL RPC Transaction) Signal ID: ${signalId}`);
       return {
         success: true,
@@ -646,6 +654,13 @@ export async function createSignal(candidate, options = {}) {
       );
       if (initOutcome) upsertSignalOutcome(initOutcome).catch(() => {});
     } catch {}
+
+    // Non-blocking Paper Trading Sandbox Execution
+    if (isPaperTradingActive()) {
+      openPaperTrade(signalPayload, { marginUsd: 100.0, leverage: 5 }).catch(err => {
+        console.warn('Paper trading execution notice:', err?.message);
+      });
+    }
 
     console.log(`✅ [SIGNAL_CREATE_SUCCESS] (Compensating Transaction) Signal ID: ${signalId}`);
     return {

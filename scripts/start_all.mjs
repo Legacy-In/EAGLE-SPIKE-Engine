@@ -174,6 +174,16 @@ export const SERVICES = [
     env: { NODE_ENV: 'production' },
     scriptPath: 'scripts/performance_worker.mjs',
   },
+  {
+    id: 'paper_monitor',
+    name: 'PAPER-MONITOR',
+    color: COLORS.brightMagenta,
+    command: process.execPath,
+    args: ['scripts/paper_monitor_worker.mjs'],
+    cwd: ROOT_DIR,
+    env: { NODE_ENV: 'production', PAPER_MONITOR_INTERVAL_MS: '3000' },
+    scriptPath: 'scripts/paper_monitor_worker.mjs',
+  },
 ];
 
 // Filter services based on CLI flags

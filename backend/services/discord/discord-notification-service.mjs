@@ -18,6 +18,9 @@ import {
   buildPreBreakoutStatusDiscordEmbed,
   buildNewListingDiscordEmbed,
   buildRsiLongDiscordEmbed,
+  buildPaperOrderOpenedDiscordEmbed,
+  buildPaperTradeWonDiscordEmbed,
+  buildPaperTradeLostDiscordEmbed,
   validateRoiInvariant,
 } from './discord-message-builder.mjs';
 
@@ -112,6 +115,15 @@ export class DiscordNotificationService {
       case 'RSI_HEATMAP_LONG':
       case 'RSI_LONG':
         messagePayload = buildRsiLongDiscordEmbed(item);
+        break;
+      case 'PAPER_ORDER_OPENED':
+        messagePayload = buildPaperOrderOpenedDiscordEmbed(item);
+        break;
+      case 'PAPER_TRADE_WON':
+        messagePayload = buildPaperTradeWonDiscordEmbed(item);
+        break;
+      case 'PAPER_TRADE_LOST':
+        messagePayload = buildPaperTradeLostDiscordEmbed(item);
         break;
       case 'PREP_DETECTED':
       case 'READY_DETECTED':
