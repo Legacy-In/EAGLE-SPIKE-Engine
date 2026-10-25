@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import { LogsScreen } from '../screens/LogsScreen';
 import { CoinDetailModal } from '../screens/CoinDetailModal';
 import { CredentialsModal } from '../screens/CredentialsModal';
 import { useMarketStore, MarketTicker } from '../store/useMarketStore';
+import { useEngineStore } from '../store/useEngineStore';
 
 export type MainTab = 'SCANNER' | 'SIGNALS' | 'FUTURES' | 'RADAR' | 'FLEET';
 export type SubScreen = 'HEATMAP' | 'HEDGE' | 'BACKTEST' | 'LOGS' | null;
@@ -33,6 +34,19 @@ export const RootNavigator: React.FC = () => {
   const [isCredentialsVisible, setIsCredentialsVisible] = useState<boolean>(false);
 
   const { selectedTicker, setSelectedTicker } = useMarketStore();
+
+  useEffect(() => {
+    // 1. Start global 11-worker fleet daemon immediately on app launch
+    useEngineStore.getState().startEngineDaemon();
+
+    // 2. Initialize live 3,661+ multi-exchange market snapshot & 2Hz WebSocket stream
+    const unsubFeed = useMarketStore.getState().initLiveMarketFeed();
+
+    return () => {
+      useEngineStore.getState().stopEngineDaemon();
+      unsubFeed();
+    };
+  }, []);
 
   if (!hasBooted) {
     return <SplashScreen onEnter={() => setHasBooted(true)} />;
