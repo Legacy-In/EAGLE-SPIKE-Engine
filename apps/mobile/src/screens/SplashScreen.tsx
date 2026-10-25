@@ -38,6 +38,15 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onEnter }) => {
 
   const isReady = step >= checklist.length;
 
+  useEffect(() => {
+    if (isReady) {
+      const autoTimer = setTimeout(() => {
+        onEnter();
+      }, 400);
+      return () => clearTimeout(autoTimer);
+    }
+  }, [isReady, onEnter]);
+
   return (
     <View style={styles.container}>
       {/* Mascot & Brand Header */}

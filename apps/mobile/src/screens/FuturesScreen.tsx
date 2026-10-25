@@ -2,19 +2,31 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * 🦅 EAGLE FLASH — SCREEN 3: FUTURES & PAPER SANDBOX TERMINAL
  * File: apps/mobile/src/screens/FuturesScreen.tsx
+ * Ultra-Premium Binance Pro dark-slate aesthetic & live price evaluation
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { Colors } from '../theme/colors';
 import { useTradingStore, Position, SettledTrade } from '../store/useTradingStore';
+import { useMarketStore } from '../store/useMarketStore';
 
 export const FuturesScreen: React.FC = () => {
   const {
     tradingMode,
     setTradingMode,
     equity,
+    balance,
     realizedPnl,
     winRate,
     availableMargin,
@@ -23,34 +35,76 @@ export const FuturesScreen: React.FC = () => {
     closePosition,
     moveStopToBreakeven,
     resetPortfolio,
+    openPaperPosition,
   } = useTradingStore();
 
+  const { tickers } = useMarketStore();
+
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'CLOSED'>('ACTIVE');
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState<boolean>(false);
+
+  // New Order Form State
+  const [orderSymbol, setOrderSymbol] = useState<string>('BTCUSDT');
+  const [orderSide, setOrderSide] = useState<'LONG' | 'SHORT'>('LONG');
+  const [orderLeverage, setOrderLeverage] = useState<number>(10);
+  const [orderMargin, setOrderMargin] = useState<number>(200);
+
+  const currentTicker = tickers.get(`${orderSymbol}_BINANCE`);
+  const livePrice = currentTicker?.price || 68450.0;
+
+  const handleExecuteOrder = () => {
+    if (orderMargin > availableMargin) {
+      Alert.alert('Margin Exceeded', 'You do not have enough available margin for this trade.');
+      return;
+    }
+
+    const isLong = orderSide === 'LONG';
+    const tp = isLong ? livePrice * 1.03 : livePrice * 0.97;
+    const sl = isLong ? livePrice * 0.985 : livePrice * 1.015;
+
+    openPaperPosition({
+      symbol: orderSymbol,
+      exchange: 'BINANCE',
+      direction: orderSide,
+      entryPrice: livePrice,
+      marginUsd: orderMargin,
+      leverage: orderLeverage,
+      takeProfit1: tp,
+      stopLoss: sl,
+    });
+
+    setIsOrderModalOpen(false);
+  };
 
   return (
     <View style={styles.container}>
       {/* ─── 1. TOP HEADER & MODE SWITCHER ─── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>🧪 FUTURES TERMINAL</Text>
-          <Text style={styles.headerSub}>Deterministic Quantitative Execution</Text>
+          <Text style={styles.headerTitle}>📈 FUTURES TERMINAL</Text>
+          <Text style={styles.headerSub}>Deterministic Execution & Risk Engine</Text>
         </View>
 
         <View style={styles.modeSwitchRow}>
           <TouchableOpacity
-            style={[styles.modePill, tradingMode === 'paper' && styles.modePillActive]}
+            style={[styles.modePill, tradingMode === 'paper' && styles.modePillPaperActive]}
             onPress={() => setTradingMode('paper')}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.modePillText, tradingMode === 'paper' && styles.modePillTextActive]}>
-              PAPER
+            <Text style={[styles.modePillText, tradingMode === 'paper' && styles.modePillPaperText]}>
+              🧪 PAPER
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.modePill, tradingMode === 'live' && styles.modePillLiveActive]}
-            onPress={() => setTradingMode('live')}
+            onPress={() => {
+              setTradingMode('live');
+              Alert.alert('Live Execution', 'Live trading uses your connected API keys in settings.');
+            }}
+            activeOpacity={0.7}
           >
             <Text style={[styles.modePillText, tradingMode === 'live' && styles.modePillLiveText]}>
-              LIVE
+              ⚡ LIVE
             </Text>
           </TouchableOpacity>
         </View>
@@ -83,14 +137,35 @@ export const FuturesScreen: React.FC = () => {
             <Text style={styles.statValue}>${availableMargin.toFixed(2)}</Text>
           </View>
           <View>
-            <Text style={styles.statLabel}>POSITIONS</Text>
-            <Text style={styles.statValue}>{activePositions.length} Active</Text>
+            <Text style={styles.statLabel}>ACTIVE / CLOSED</Text>
+            <Text style={styles.statValue}>
+              {activePositions.length} / {closedTrades.length}
+            </Text>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.resetButton} onPress={() => resetPortfolio(10000)}>
-          <Text style={styles.resetText}>🔄 Reset Sandbox Baseline ($10,000)</Text>
-        </TouchableOpacity>
+        <View style={styles.cardBtnRow}>
+          <TouchableOpacity
+            style={styles.newOrderBtn}
+            onPress={() => setIsOrderModalOpen(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.newOrderText}>+ NEW ORDER</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.resetButton}
+            onPress={() => {
+              Alert.alert('Reset Sandbox', 'Reset paper trading portfolio back to $10,000 baseline?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Reset', onPress: () => resetPortfolio(10000), style: 'destructive' },
+              ]);
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.resetText}>🔄 Reset $10k</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ─── 3. SUBTABS ─── */}
@@ -98,6 +173,7 @@ export const FuturesScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'ACTIVE' && styles.tabButtonActive]}
           onPress={() => setActiveTab('ACTIVE')}
+          activeOpacity={0.7}
         >
           <Text style={[styles.tabButtonText, activeTab === 'ACTIVE' && styles.tabButtonTextActive]}>
             Active Positions ({activePositions.length})
@@ -106,9 +182,10 @@ export const FuturesScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.tabButton, activeTab === 'CLOSED' && styles.tabButtonActive]}
           onPress={() => setActiveTab('CLOSED')}
+          activeOpacity={0.7}
         >
           <Text style={[styles.tabButtonText, activeTab === 'CLOSED' && styles.tabButtonTextActive]}>
-            Closed History ({closedTrades.length})
+            Settled History ({closedTrades.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -150,15 +227,17 @@ export const FuturesScreen: React.FC = () => {
                 {/* Price Details */}
                 <View style={styles.priceRow}>
                   <View>
-                    <Text style={styles.priceLabel}>ENTRY PRICE</Text>
+                    <Text style={styles.priceLabel}>ENTRY</Text>
                     <Text style={styles.priceVal}>${item.entryPrice.toLocaleString()}</Text>
                   </View>
                   <View>
-                    <Text style={styles.priceLabel}>MARK PRICE</Text>
-                    <Text style={styles.priceVal}>${item.markPrice.toLocaleString()}</Text>
+                    <Text style={styles.priceLabel}>LIVE MARK</Text>
+                    <Text style={[styles.priceVal, styles.textCyan]}>
+                      ${item.markPrice.toLocaleString()}
+                    </Text>
                   </View>
                   <View>
-                    <Text style={styles.priceLabel}>TARGET TP1</Text>
+                    <Text style={styles.priceLabel}>TARGET TP</Text>
                     <Text style={[styles.priceVal, styles.textGreen]}>
                       ${item.takeProfit1.toLocaleString()}
                     </Text>
@@ -176,19 +255,29 @@ export const FuturesScreen: React.FC = () => {
                   <TouchableOpacity
                     style={styles.beButton}
                     onPress={() => moveStopToBreakeven(item.id)}
+                    activeOpacity={0.7}
                   >
                     <Text style={styles.beText}>⚡ Move SL to Breakeven</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.closeButton}
                     onPress={() => closePosition(item.id)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={styles.closeBtnText}>✕ Close</Text>
+                    <Text style={styles.closeBtnText}>✕ Close Market</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             );
           }}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No Active Positions</Text>
+              <Text style={styles.emptySubtitle}>
+                Tap "+ NEW ORDER" or execute a signal from the SIGNALS feed
+              </Text>
+            </View>
+          }
         />
       ) : (
         <FlatList
@@ -209,7 +298,7 @@ export const FuturesScreen: React.FC = () => {
                     </View>
                   </View>
                   <Text style={styles.closedSub}>
-                    In: ${item.entryPrice} → Out: ${item.exitPrice}
+                    In: ${item.entryPrice.toLocaleString()} → Out: ${item.exitPrice.toLocaleString()}
                   </Text>
                 </View>
 
@@ -222,8 +311,136 @@ export const FuturesScreen: React.FC = () => {
               </View>
             );
           }}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>No Settled Trades</Text>
+              <Text style={styles.emptySubtitle}>Completed trades will be recorded here</Text>
+            </View>
+          }
         />
       )}
+
+      {/* ─── 5. NEW ORDER MODAL ─── */}
+      <Modal visible={isOrderModalOpen} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>⚡ EXECUTE PAPER ORDER</Text>
+              <TouchableOpacity onPress={() => setIsOrderModalOpen(false)}>
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick Symbol Picker */}
+            <Text style={styles.formLabel}>SELECT ASSET</Text>
+            <View style={styles.chipRow}>
+              {['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOGEUSDT', 'BNBUSDT'].map((sym) => (
+                <TouchableOpacity
+                  key={sym}
+                  style={[styles.formChip, orderSymbol === sym && styles.formChipActive]}
+                  onPress={() => setOrderSymbol(sym)}
+                >
+                  <Text style={[styles.formChipText, orderSymbol === sym && styles.formChipTextActive]}>
+                    {sym.replace('USDT', '')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Live Price Tag */}
+            <View style={styles.livePriceTag}>
+              <Text style={styles.livePriceLabel}>LIVE BINANCE FUTURES PRICE:</Text>
+              <Text style={styles.livePriceVal}>${livePrice.toLocaleString()}</Text>
+            </View>
+
+            {/* Direction Selector */}
+            <Text style={styles.formLabel}>DIRECTION</Text>
+            <View style={styles.sideBtnRow}>
+              <TouchableOpacity
+                style={[styles.sideBtn, orderSide === 'LONG' && styles.sideBtnLong]}
+                onPress={() => setOrderSide('LONG')}
+              >
+                <Text style={[styles.sideBtnText, orderSide === 'LONG' && styles.textWhite]}>
+                  ▲ LONG (BUY)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sideBtn, orderSide === 'SHORT' && styles.sideBtnShort]}
+                onPress={() => setOrderSide('SHORT')}
+              >
+                <Text style={[styles.sideBtnText, orderSide === 'SHORT' && styles.textWhite]}>
+                  ▼ SHORT (SELL)
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Leverage Selector */}
+            <Text style={styles.formLabel}>LEVERAGE</Text>
+            <View style={styles.chipRow}>
+              {[5, 10, 20, 50].map((lev) => (
+                <TouchableOpacity
+                  key={lev}
+                  style={[styles.formChip, orderLeverage === lev && styles.formChipActive]}
+                  onPress={() => setOrderLeverage(lev)}
+                >
+                  <Text style={[styles.formChipText, orderLeverage === lev && styles.formChipTextActive]}>
+                    {lev}x
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Margin Allocation */}
+            <Text style={styles.formLabel}>MARGIN ALLOCATION ($USD)</Text>
+            <View style={styles.chipRow}>
+              {[100, 200, 500, 1000].map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.formChip, orderMargin === m && styles.formChipActive]}
+                  onPress={() => setOrderMargin(m)}
+                >
+                  <Text style={[styles.formChipText, orderMargin === m && styles.formChipTextActive]}>
+                    ${m}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Total Position Value Summary */}
+            <View style={styles.orderSummaryCard}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Position Notional:</Text>
+                <Text style={styles.summaryVal}>
+                  ${(orderMargin * orderLeverage).toLocaleString()} USD
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Auto Take-Profit (+3.0%):</Text>
+                <Text style={[styles.summaryVal, styles.textGreen]}>
+                  ${(orderSide === 'LONG' ? livePrice * 1.03 : livePrice * 0.97).toFixed(2)}
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Auto Stop-Loss (-1.5%):</Text>
+                <Text style={[styles.summaryVal, styles.textRed]}>
+                  ${(orderSide === 'LONG' ? livePrice * 0.985 : livePrice * 1.015).toFixed(2)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitOrderBtn, orderSide === 'LONG' ? styles.bgLong : styles.bgShort]}
+              onPress={handleExecuteOrder}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.submitOrderText}>
+                CONFIRM {orderSide} {orderSymbol} ({orderLeverage}x)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -231,68 +448,74 @@ export const FuturesScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#0B0E11',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 10,
     backgroundColor: '#12161A',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.surfaceTertiary,
+    borderBottomColor: '#1E2329',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
-    color: Colors.longGreen,
-    letterSpacing: 1,
+    color: '#00D2FF',
+    letterSpacing: 0.8,
     fontFamily: 'monospace',
   },
   headerSub: {
     fontSize: 10,
-    color: Colors.textSecondary,
+    color: '#848E9C',
     fontFamily: 'monospace',
     marginTop: 2,
   },
   modeSwitchRow: {
     flexDirection: 'row',
-    backgroundColor: '#1C222A',
-    borderRadius: 8,
-    padding: 3,
+    backgroundColor: '#181A20',
+    borderRadius: 6,
+    padding: 2,
+    borderWidth: 1,
+    borderColor: '#2B313A',
   },
   modePill: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
-  modePillActive: {
-    backgroundColor: Colors.longGreenBg,
+  modePillPaperActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  modePillPaperText: {
+    color: '#0ECB81',
+    fontWeight: '800',
   },
   modePillLiveActive: {
-    backgroundColor: Colors.binanceGoldBg,
+    backgroundColor: 'rgba(240, 185, 11, 0.2)',
+  },
+  modePillLiveText: {
+    color: '#F0B90B',
+    fontWeight: '800',
   },
   modePillText: {
     fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.textSecondary,
+    fontWeight: '700',
+    color: '#848E9C',
     fontFamily: 'monospace',
   },
-  modePillTextActive: {
-    color: Colors.longGreen,
-  },
-  modePillLiveText: {
-    color: Colors.binanceGold,
-  },
   portfolioCard: {
-    margin: 16,
-    backgroundColor: Colors.surface,
-    borderColor: Colors.surfaceTertiary,
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+    backgroundColor: '#181A20',
+    borderColor: '#1E2329',
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 10,
+    padding: 14,
   },
   equityHeader: {
     flexDirection: 'row',
@@ -301,61 +524,80 @@ const styles = StyleSheet.create({
   },
   equityLabel: {
     fontSize: 9,
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
+    color: '#848E9C',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   winRateBadge: {
-    backgroundColor: Colors.longGreenBg,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   winRateText: {
     fontSize: 9,
-    fontWeight: 'bold',
-    color: Colors.longGreen,
+    fontWeight: '800',
+    color: '#0ECB81',
     fontFamily: 'monospace',
   },
   equityValue: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
-    color: Colors.textPrimary,
+    color: '#EAECEF',
     fontFamily: 'monospace',
     marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#242C36',
-    paddingTop: 10,
+    borderTopColor: '#2B313A',
+    paddingTop: 8,
   },
   statLabel: {
     fontSize: 8,
-    color: Colors.textTertiary,
-    fontFamily: 'monospace',
+    color: '#848E9C',
+    fontWeight: '700',
+    marginBottom: 2,
   },
   statValue: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: Colors.textPrimary,
+    color: '#EAECEF',
     fontFamily: 'monospace',
-    marginTop: 2,
+  },
+  cardBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  newOrderBtn: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 210, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: '#00D2FF',
+    paddingVertical: 7,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  newOrderText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#00D2FF',
+    fontFamily: 'monospace',
   },
   resetButton: {
-    marginTop: 12,
-    paddingVertical: 8,
-    backgroundColor: '#1E252E',
-    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    backgroundColor: '#1E2329',
+    borderRadius: 6,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.surfaceTertiary,
   },
   resetText: {
     fontSize: 10,
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
+    color: '#848E9C',
+    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',
@@ -365,42 +607,43 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: Colors.surface,
+    paddingVertical: 7,
+    borderRadius: 6,
+    backgroundColor: '#181A20',
+    borderWidth: 1,
+    borderColor: '#1E2329',
     alignItems: 'center',
   },
   tabButtonActive: {
-    backgroundColor: '#20262E',
-    borderWidth: 1,
-    borderColor: Colors.surfaceTertiary,
+    backgroundColor: 'rgba(0, 210, 255, 0.12)',
+    borderColor: '#00D2FF',
   },
   tabButtonText: {
     fontSize: 11,
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
+    color: '#848E9C',
+    fontWeight: '700',
   },
   tabButtonTextActive: {
-    color: Colors.textPrimary,
-    fontWeight: 'bold',
+    color: '#00D2FF',
+    fontWeight: '800',
   },
   listContainer: {
     paddingHorizontal: 16,
     paddingBottom: 24,
-    gap: 10,
+    gap: 8,
   },
   posCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.surfaceTertiary,
+    backgroundColor: '#181A20',
+    borderColor: '#1E2329',
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 8,
+    padding: 12,
   },
   posTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   posTitleGroup: {
     flexDirection: 'row',
@@ -410,37 +653,38 @@ const styles = StyleSheet.create({
   posSymbol: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: Colors.textPrimary,
+    color: '#EAECEF',
     fontFamily: 'monospace',
   },
   dirTag: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   tagLong: {
-    backgroundColor: Colors.longGreenBg,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
   },
   tagShort: {
-    backgroundColor: Colors.shortRedBg,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
   },
   dirTagText: {
     fontSize: 9,
-    fontWeight: 'bold',
+    fontWeight: '800',
     fontFamily: 'monospace',
   },
   posExchange: {
     fontSize: 9,
-    color: Colors.textTertiary,
+    color: '#848E9C',
     fontFamily: 'monospace',
   },
   pnlText: {
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '900',
     fontFamily: 'monospace',
   },
   pnlPct: {
-    fontSize: 9,
+    fontSize: 10,
+    fontWeight: 'bold',
     fontFamily: 'monospace',
     marginTop: 1,
   },
@@ -448,78 +692,246 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: '#12161A',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 8,
   },
   priceLabel: {
     fontSize: 8,
-    color: Colors.textTertiary,
-    fontFamily: 'monospace',
+    color: '#848E9C',
+    marginBottom: 2,
   },
   priceVal: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 'bold',
-    color: Colors.textPrimary,
+    color: '#EAECEF',
     fontFamily: 'monospace',
-    marginTop: 2,
+  },
+  textGreen: {
+    color: '#0ECB81',
+  },
+  textRed: {
+    color: '#F6465D',
+  },
+  textCyan: {
+    color: '#00D2FF',
+  },
+  textWhite: {
+    color: '#FFFFFF',
   },
   posActions: {
     flexDirection: 'row',
     gap: 8,
   },
   beButton: {
-    flex: 2,
-    backgroundColor: '#1C232C',
-    borderRadius: 8,
-    paddingVertical: 8,
+    flex: 1,
+    backgroundColor: '#1E2329',
+    paddingVertical: 6,
+    borderRadius: 4,
     alignItems: 'center',
   },
   beText: {
     fontSize: 10,
-    color: Colors.cyberCyan,
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#00D2FF',
   },
   closeButton: {
-    flex: 1,
-    backgroundColor: Colors.shortRedBg,
-    borderColor: Colors.shortRed,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 8,
+    borderColor: '#EF4444',
+    paddingVertical: 6,
+    borderRadius: 4,
     alignItems: 'center',
   },
   closeBtnText: {
     fontSize: 10,
-    color: Colors.shortRed,
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: '#EF4444',
   },
   closedCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#181A20',
+    borderColor: '#1E2329',
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 12,
-    borderRadius: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   closedSub: {
-    fontSize: 9,
-    color: Colors.textTertiary,
-    fontFamily: 'monospace',
-    marginTop: 4,
-  },
-  closedR: {
-    fontSize: 9,
-    color: Colors.textSecondary,
+    fontSize: 10,
+    color: '#848E9C',
     fontFamily: 'monospace',
     marginTop: 2,
   },
-  textGreen: {
-    color: Colors.longGreen,
+  closedR: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#848E9C',
+    fontFamily: 'monospace',
+    marginTop: 2,
   },
-  textRed: {
-    color: Colors.shortRed,
+  emptyContainer: {
+    paddingVertical: 50,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#EAECEF',
+  },
+  emptySubtitle: {
+    fontSize: 11,
+    color: '#848E9C',
+    marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#181A20',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#2B313A',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#00D2FF',
+    fontFamily: 'monospace',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#848E9C',
+  },
+  formLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#848E9C',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 6,
+  },
+  formChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#12161A',
+    borderWidth: 1,
+    borderColor: '#2B313A',
+  },
+  formChipActive: {
+    backgroundColor: 'rgba(0, 210, 255, 0.15)',
+    borderColor: '#00D2FF',
+  },
+  formChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#848E9C',
+  },
+  formChipTextActive: {
+    color: '#00D2FF',
+  },
+  livePriceTag: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#12161A',
+    padding: 8,
+    borderRadius: 6,
+    marginVertical: 4,
+  },
+  livePriceLabel: {
+    fontSize: 9,
+    color: '#848E9C',
+    fontWeight: '700',
+  },
+  livePriceVal: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#F0B90B',
+    fontFamily: 'monospace',
+  },
+  sideBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 6,
+  },
+  sideBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 6,
+    backgroundColor: '#12161A',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#2B313A',
+  },
+  sideBtnLong: {
+    backgroundColor: '#0ECB81',
+    borderColor: '#0ECB81',
+  },
+  sideBtnShort: {
+    backgroundColor: '#F6465D',
+    borderColor: '#F6465D',
+  },
+  sideBtnText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#848E9C',
+  },
+  orderSummaryCard: {
+    backgroundColor: '#12161A',
+    borderRadius: 6,
+    padding: 10,
+    marginVertical: 10,
+    gap: 4,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: {
+    fontSize: 10,
+    color: '#848E9C',
+  },
+  summaryVal: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#EAECEF',
+    fontFamily: 'monospace',
+  },
+  submitOrderBtn: {
+    paddingVertical: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  bgLong: {
+    backgroundColor: '#0ECB81',
+  },
+  bgShort: {
+    backgroundColor: '#F6465D',
+  },
+  submitOrderText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#0B0E11',
+    fontFamily: 'monospace',
   },
 });

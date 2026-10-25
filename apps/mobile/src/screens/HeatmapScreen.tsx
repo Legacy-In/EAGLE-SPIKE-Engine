@@ -44,6 +44,17 @@ export const HeatmapScreen: React.FC<{ onSelectCoin?: (ticker: MarketTicker) => 
   const [timeframe, setTimeframe] = useState<'15m' | '1h' | '4h' | '24h'>('24h');
   const { tickers, setSelectedTicker } = useMarketStore();
 
+  const dynamicTiles: HeatmapTile[] = HEATMAP_DATA.map((tile) => {
+    const live = tickers.get(`${tile.symbol}_BINANCE`);
+    if (!live) return tile;
+    return {
+      ...tile,
+      price: live.price,
+      change24h: live.change24h,
+      oiChange: live.oiDelta,
+    };
+  });
+
   const getTileColor = (val: number, type: 'pnl' | 'rsi' | 'oi') => {
     if (type === 'rsi') {
       if (val >= 70) return '#0ECB81'; // Overbought / Strong momentum
@@ -129,7 +140,7 @@ export const HeatmapScreen: React.FC<{ onSelectCoin?: (ticker: MarketTicker) => 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.sectionLabel}>MEGA CAP LEADERS</Text>
         <View style={styles.gridRow}>
-          {HEATMAP_DATA.filter((i) => i.category === 'Mega').map((tile) => {
+          {dynamicTiles.filter((i) => i.category === 'Mega').map((tile) => {
             const displayVal = metric === 'pnl' ? `${tile.change24h > 0 ? '+' : ''}${tile.change24h.toFixed(2)}%`
               : metric === 'rsi' ? `RSI ${tile.rsi.toFixed(1)}`
               : `OI ${tile.oiChange > 0 ? '+' : ''}${tile.oiChange.toFixed(1)}%`;
@@ -156,7 +167,7 @@ export const HeatmapScreen: React.FC<{ onSelectCoin?: (ticker: MarketTicker) => 
 
         <Text style={styles.sectionLabel}>LAYER 1 & AI SECTOR</Text>
         <View style={styles.gridRow}>
-          {HEATMAP_DATA.filter((i) => i.category === 'L1/AI').map((tile) => {
+          {dynamicTiles.filter((i) => i.category === 'L1/AI').map((tile) => {
             const displayVal = metric === 'pnl' ? `${tile.change24h > 0 ? '+' : ''}${tile.change24h.toFixed(2)}%`
               : metric === 'rsi' ? `RSI ${tile.rsi.toFixed(1)}`
               : `OI ${tile.oiChange > 0 ? '+' : ''}${tile.oiChange.toFixed(1)}%`;
@@ -183,7 +194,7 @@ export const HeatmapScreen: React.FC<{ onSelectCoin?: (ticker: MarketTicker) => 
 
         <Text style={styles.sectionLabel}>MEME & DEFI HIGH VOLATILITY</Text>
         <View style={styles.gridRow}>
-          {HEATMAP_DATA.filter((i) => i.category === 'Meme/DeFi').map((tile) => {
+          {dynamicTiles.filter((i) => i.category === 'Meme/DeFi').map((tile) => {
             const displayVal = metric === 'pnl' ? `${tile.change24h > 0 ? '+' : ''}${tile.change24h.toFixed(2)}%`
               : metric === 'rsi' ? `RSI ${tile.rsi.toFixed(1)}`
               : `OI ${tile.oiChange > 0 ? '+' : ''}${tile.oiChange.toFixed(1)}%`;

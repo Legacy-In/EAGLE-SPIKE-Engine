@@ -10,16 +10,18 @@ import {
 } from 'react-native';
 import { Colors } from '../theme/colors';
 import { useTradingStore } from '../store/useTradingStore';
+import { useMarketStore } from '../store/useMarketStore';
 
 export const BtcHedgeScreen: React.FC = () => {
   const { tradingMode, openPaperPosition } = useTradingStore();
+  const { btcPrice: liveBtcPrice } = useMarketStore();
   const isPaperMode = tradingMode === 'paper';
   const [strategy, setStrategy] = useState<'neutral' | 'straddle'>('neutral');
   const [leverage, setLeverage] = useState<number>(5);
   const [allocation, setAllocation] = useState<number>(1000);
   const [isHedgeActive, setIsHedgeActive] = useState<boolean>(true);
 
-  const btcPrice = 68420.5;
+  const btcPrice = liveBtcPrice > 0 ? liveBtcPrice : 68420.5;
   const longEntry = 68250.0;
   const shortEntry = 68250.0;
   const fundingYield = 18.42;

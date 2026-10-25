@@ -6,6 +6,8 @@
  */
 
 import { create } from 'zustand';
+import { marketWebSocketService } from '../services/marketWebSocket';
+import { useTradingStore } from './useTradingStore';
 
 export interface MarketTicker {
   id: string;
@@ -40,6 +42,7 @@ export type ExchangeFilter = 'ALL' | 'BYBIT' | 'BINANCE' | 'MEXC' | 'WEEX';
 
 interface MarketStoreState {
   tickers: Map<string, MarketTicker>;
+  tickerList: MarketTicker[];
   selectedExchange: ExchangeFilter;
   selectedPreset: PresetType;
   searchQuery: string;
@@ -57,17 +60,20 @@ interface MarketStoreState {
   setSelectedTicker: (ticker: MarketTicker | null) => void;
   updateTickers: (incoming: MarketTicker[]) => void;
   setConnected: (connected: boolean) => void;
+  setBtcMetrics: (price: number, change: number) => void;
+  initLiveMarketFeed: () => () => void;
 }
 
-export const useMarketStore = create<MarketStoreState>((set) => ({
+export const useMarketStore = create<MarketStoreState>((set, get) => ({
   tickers: new Map(),
+  tickerList: [],
   selectedExchange: 'ALL',
   selectedPreset: 'All',
   searchQuery: '',
-  btcPrice: 80951.54,
-  btcChange24h: 0.72,
-  marketBreadth: 47,
-  spikesCount: 4,
+  btcPrice: 68420.0,
+  btcChange24h: 2.45,
+  marketBreadth: 58,
+  spikesCount: 14,
   isConnected: true,
   selectedTicker: null,
 
@@ -76,6 +82,7 @@ export const useMarketStore = create<MarketStoreState>((set) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedTicker: (ticker) => set({ selectedTicker: ticker }),
   setConnected: (connected) => set({ isConnected: connected }),
+  setBtcMetrics: (price, change) => set({ btcPrice: price, btcChange24h: change }),
 
   updateTickers: (incoming) =>
     set((state) => {
@@ -83,6 +90,51 @@ export const useMarketStore = create<MarketStoreState>((set) => ({
       for (const t of incoming) {
         nextMap.set(t.id, t);
       }
-      return { tickers: nextMap };
+      return {
+        tickers: nextMap,
+        tickerList: Array.from(nextMap.values()),
+      };
     }),
+
+  initLiveMarketFeed: () => {
+    // 1. Load initial live snapshot
+    marketWebSocketService.fetchInitialSnapshot().then((snapshot) => {
+      if (snapshot && snapshot.length > 0) {
+        const map = new Map();
+        const priceMap: Record<string, number> = {};
+        for (const t of snapshot) {
+          map.set(t.id, t);
+          priceMap[t.symbol] = t.price;
+        }
+        set({
+          tickers: map,
+          tickerList: snapshot,
+          isConnected: true,
+        });
+        useTradingStore.getState().updateMarkPrices(priceMap);
+      }
+    });
+
+    // 2. Subscribe to continuous live WebSocket updates
+    const unsubscribe = marketWebSocketService.subscribe((updated, btcP, btcC) => {
+      const priceMap: Record<string, number> = {};
+      set((state) => {
+        const nextMap = new Map(state.tickers);
+        for (const t of updated) {
+          nextMap.set(t.id, t);
+          priceMap[t.symbol] = t.price;
+        }
+        return {
+          tickers: nextMap,
+          tickerList: Array.from(nextMap.values()),
+          btcPrice: btcP,
+          btcChange24h: btcC,
+          isConnected: true,
+        };
+      });
+      useTradingStore.getState().updateMarkPrices(priceMap);
+    });
+
+    return unsubscribe;
+  },
 }));

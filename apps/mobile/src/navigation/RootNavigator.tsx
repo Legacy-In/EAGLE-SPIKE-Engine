@@ -156,8 +156,9 @@ export const RootNavigator: React.FC = () => {
           }}
           activeOpacity={0.7}
         >
+          {activeTab === 'SCANNER' && <View style={[styles.activeIndicator, { backgroundColor: '#00D2FF' }]} />}
           <Text style={[styles.tabIcon, activeTab === 'SCANNER' && styles.tabIconActive]}>📊</Text>
-          <Text style={[styles.tabLabel, activeTab === 'SCANNER' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, activeTab === 'SCANNER' && { color: '#00D2FF', fontWeight: '900' }]}>
             SCANNER
           </Text>
         </TouchableOpacity>
@@ -170,8 +171,9 @@ export const RootNavigator: React.FC = () => {
           }}
           activeOpacity={0.7}
         >
+          {activeTab === 'SIGNALS' && <View style={[styles.activeIndicator, { backgroundColor: '#0ECB81' }]} />}
           <Text style={[styles.tabIcon, activeTab === 'SIGNALS' && styles.tabIconActive]}>⚡</Text>
-          <Text style={[styles.tabLabel, activeTab === 'SIGNALS' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, activeTab === 'SIGNALS' && { color: '#0ECB81', fontWeight: '900' }]}>
             SIGNALS
           </Text>
         </TouchableOpacity>
@@ -184,8 +186,9 @@ export const RootNavigator: React.FC = () => {
           }}
           activeOpacity={0.7}
         >
+          {activeTab === 'FUTURES' && <View style={[styles.activeIndicator, { backgroundColor: '#F0B90B' }]} />}
           <Text style={[styles.tabIcon, activeTab === 'FUTURES' && styles.tabIconActive]}>📈</Text>
-          <Text style={[styles.tabLabel, activeTab === 'FUTURES' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, activeTab === 'FUTURES' && { color: '#F0B90B', fontWeight: '900' }]}>
             FUTURES
           </Text>
         </TouchableOpacity>
@@ -198,8 +201,9 @@ export const RootNavigator: React.FC = () => {
           }}
           activeOpacity={0.7}
         >
+          {activeTab === 'RADAR' && <View style={[styles.activeIndicator, { backgroundColor: '#00D2FF' }]} />}
           <Text style={[styles.tabIcon, activeTab === 'RADAR' && styles.tabIconActive]}>🐋</Text>
-          <Text style={[styles.tabLabel, activeTab === 'RADAR' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, activeTab === 'RADAR' && { color: '#00D2FF', fontWeight: '900' }]}>
             RADAR
           </Text>
         </TouchableOpacity>
@@ -212,8 +216,9 @@ export const RootNavigator: React.FC = () => {
           }}
           activeOpacity={0.7}
         >
+          {activeTab === 'FLEET' && <View style={[styles.activeIndicator, { backgroundColor: '#EAECEF' }]} />}
           <Text style={[styles.tabIcon, activeTab === 'FLEET' && styles.tabIconActive]}>⚙️</Text>
-          <Text style={[styles.tabLabel, activeTab === 'FLEET' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, activeTab === 'FLEET' && { color: '#EAECEF', fontWeight: '900' }]}>
             FLEET
           </Text>
         </TouchableOpacity>
@@ -284,21 +289,31 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.surface,
+    backgroundColor: '#12161A',
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingVertical: 8,
-    paddingBottom: 12,
+    borderTopColor: '#1E2329',
+    paddingVertical: 6,
+    paddingBottom: 10,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    paddingVertical: 4,
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: -6,
+    width: 28,
+    height: 3,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
   },
   tabIcon: {
     fontSize: 18,
     marginBottom: 2,
-    opacity: 0.6,
+    opacity: 0.5,
   },
   tabIconActive: {
     opacity: 1,
@@ -306,10 +321,11 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.textMuted,
+    color: '#848E9C',
     letterSpacing: 0.5,
+    fontFamily: 'monospace',
   },
   tabLabelActive: {
-    color: Colors.gold,
+    color: '#00D2FF',
   },
 });

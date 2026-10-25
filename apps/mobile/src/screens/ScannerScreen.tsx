@@ -1,11 +1,11 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * 🦅 EAGLE FLASH — SCREEN 1: 120FPS NATIVE MARKET SCANNER
+ * 🦅 EAGLE FLASH — SCREEN 1: 120FPS LIVE MARKET SCANNER & WEBSOCKET ENGINE
  * File: apps/mobile/src/screens/ScannerScreen.tsx
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   ScrollView,
   FlatList,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Colors } from '../theme/colors';
 import {
@@ -42,111 +43,13 @@ const EXCHANGES: { key: ExchangeFilter; label: string; count: string }[] = [
   { key: 'WEEX', label: 'WEEX', count: '990+' },
 ];
 
-// High-speed seed data for instant presentation
-const SEED_TICKERS: MarketTicker[] = [
-  {
-    id: 'JCTUSDT_BYBIT',
-    symbol: 'JCTUSDT',
-    exchange: 'BYBIT',
-    price: 0.0061,
-    prevPrice: 0.0058,
-    change5m: 23.97,
-    change15m: 50.59,
-    change1h: 86.54,
-    change24h: 133.14,
-    rvol: 2.33,
-    volZ: 2.93,
-    oiDelta: 18.5,
-    takerRatio: 45,
-    eagleScore: 85,
-    volume24hUsd: 91100000,
-    sparkline: [0.004, 0.0045, 0.0051, 0.0058, 0.0061],
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'HOOKEDUSDT_MEXC',
-    symbol: 'HOOKEDUSDT',
-    exchange: 'MEXC',
-    price: 0.0815,
-    prevPrice: 0.078,
-    change5m: 17.17,
-    change15m: 36.25,
-    change1h: 62.0,
-    change24h: 95.39,
-    rvol: 1.95,
-    volZ: 2.09,
-    oiDelta: 13.9,
-    takerRatio: 45,
-    eagleScore: 81,
-    volume24hUsd: 750000,
-    sparkline: [0.05, 0.06, 0.068, 0.075, 0.0815],
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'ORDERUSDT_BINANCE',
-    symbol: 'ORDERUSDT',
-    exchange: 'BINANCE',
-    price: 0.0581,
-    prevPrice: 0.057,
-    change5m: 12.5,
-    change15m: 26.39,
-    change1h: 45.13,
-    change24h: 69.43,
-    rvol: 1.69,
-    volZ: 1.52,
-    oiDelta: 10.8,
-    takerRatio: 45,
-    eagleScore: 79,
-    volume24hUsd: 897900000,
-    sparkline: [0.045, 0.048, 0.052, 0.055, 0.0581],
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'ORDERUSDT_WEEX',
-    symbol: 'ORDERUSDT',
-    exchange: 'WEEX',
-    price: 0.0575,
-    prevPrice: 0.0565,
-    change5m: 12.28,
-    change15m: 25.93,
-    change1h: 44.36,
-    change24h: 68.24,
-    rvol: 1.68,
-    volZ: 1.5,
-    oiDelta: 10.7,
-    takerRatio: 45,
-    eagleScore: 79,
-    volume24hUsd: 10580000,
-    sparkline: [0.044, 0.047, 0.051, 0.054, 0.0575],
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'SOLUSDT_BYBIT',
-    symbol: 'SOLUSDT',
-    exchange: 'BYBIT',
-    price: 154.2,
-    prevPrice: 153.5,
-    change5m: 1.85,
-    change15m: 4.25,
-    change1h: 8.4,
-    change24h: 14.8,
-    rvol: 3.12,
-    volZ: 3.45,
-    oiDelta: 22.4,
-    takerRatio: 68,
-    eagleScore: 91,
-    volume24hUsd: 3450000000,
-    sparkline: [142, 145, 148, 151, 154.2],
-    updatedAt: Date.now(),
-  },
-];
-
 interface ScannerScreenProps {
   onSelectTicker: (ticker: MarketTicker) => void;
 }
 
 export const ScannerScreen: React.FC<ScannerScreenProps> = ({ onSelectTicker }) => {
   const {
+    tickerList,
     btcPrice,
     btcChange24h,
     selectedExchange,
@@ -155,19 +58,101 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({ onSelectTicker }) 
     setSelectedPreset,
     searchQuery,
     setSearchQuery,
+    isConnected,
+    initLiveMarketFeed,
   } = useMarketStore();
 
   const { tradingMode, toggleTradingMode } = useTradingStore();
 
+  // Initialize live WebSocket stream and snapshot
+  useEffect(() => {
+    const unsub = initLiveMarketFeed();
+    return () => {
+      unsub();
+    };
+  }, []);
+
   const filteredTickers = useMemo(() => {
-    return SEED_TICKERS.filter((item) => {
+    return tickerList.filter((item) => {
+      // Exchange filter
       if (selectedExchange !== 'ALL' && item.exchange !== selectedExchange) return false;
+
+      // Search query
       if (searchQuery.trim() && !item.symbol.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
+
+      // Quant Presets
+      if (selectedPreset === 'Vol Explosion') {
+        return item.rvol >= 2.0 || item.volZ >= 2.0;
+      }
+      if (selectedPreset === 'Momentum') {
+        return item.change24h >= 6.0;
+      }
+      if (selectedPreset === 'Accumulation') {
+        return item.oiDelta >= 8.0;
+      }
+      if (selectedPreset === 'Short Squeeze') {
+        return item.change24h >= 10.0;
+      }
+      if (selectedPreset === 'Long Squeeze') {
+        return item.change24h <= -6.0;
+      }
+      if (selectedPreset === 'Early Breakout') {
+        return item.change15m >= 2.5 || item.rvol >= 1.8;
+      }
+
       return true;
     });
-  }, [selectedExchange, searchQuery]);
+  }, [tickerList, selectedExchange, searchQuery, selectedPreset]);
+
+  const renderTickerRow = ({ item }: { item: MarketTicker }) => {
+    const isUp = item.change24h >= 0;
+    const priceFormatted =
+      item.price >= 1
+        ? item.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+        : item.price.toFixed(6);
+
+    return (
+      <TouchableOpacity
+        style={styles.tickerRow}
+        onPress={() => onSelectTicker(item)}
+        activeOpacity={0.7}
+      >
+        {/* Left Column: Symbol & Exchange */}
+        <View style={styles.colSymbol}>
+          <View style={styles.symbolBadgeRow}>
+            <Text style={styles.symbolName}>{item.symbol}</Text>
+            <View style={styles.exchangePill}>
+              <Text style={styles.exchangePillText}>{item.exchange}</Text>
+            </View>
+          </View>
+          <Text style={styles.volText}>
+            Vol ${(item.volume24hUsd / 1_000_000).toFixed(1)}M • Score {item.eagleScore}
+          </Text>
+        </View>
+
+        {/* Center Column: RVOL & Vol-Z */}
+        <View style={styles.colMetrics}>
+          <Text style={[styles.rvolText, item.rvol >= 2.0 && styles.rvolHot]}>
+            {item.rvol.toFixed(2)}x
+          </Text>
+          <Text style={styles.volZText}>Z {item.volZ >= 0 ? `+${item.volZ}` : item.volZ}</Text>
+        </View>
+
+        {/* Right Column: Price & 24h Change Box */}
+        <View style={styles.colPrice}>
+          <Text style={styles.priceNumber}>${priceFormatted}</Text>
+          <View style={[styles.changeBox, isUp ? styles.changeBoxUp : styles.changeBoxDown]}>
+            <Text style={[styles.changeText, isUp ? styles.changeTextUp : styles.changeTextDown]}>
+              {isUp ? '+' : ''}
+              {item.change24h.toFixed(2)}%
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -176,10 +161,10 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({ onSelectTicker }) 
         <View style={styles.headerLeft}>
           <Text style={styles.headerLogo}>🦅 EAGLE FLASH</Text>
           <View style={styles.btcTickerPill}>
-            <View style={styles.greenPulseDot} />
+            <View style={[styles.pulseDot, isConnected && styles.pulseDotLive]} />
             <Text style={styles.btcPillText}>
               BTC ${btcPrice.toLocaleString()} ({btcChange24h >= 0 ? '+' : ''}
-              {btcChange24h}%)
+              {btcChange24h.toFixed(2)}%)
             </Text>
           </View>
         </View>
@@ -190,156 +175,125 @@ export const ScannerScreen: React.FC<ScannerScreenProps> = ({ onSelectTicker }) 
           activeOpacity={0.8}
         >
           <Text style={styles.modePillText}>
-            {tradingMode === 'paper' ? '🧪 PAPER $10k' : '⚡ LIVE'}
+            {tradingMode === 'paper' ? '🧪 PAPER $10k' : '⚡ LIVE APIS'}
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* ─── 2. SUMMARY METRICS STRIP ─── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.metricsStrip}
-      >
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>PRIMARY WIN-RATE</Text>
-          <Text style={[styles.metricValue, { color: Colors.longGreen }]}>78.4% (WTD: 14W/4L)</Text>
+      <View style={styles.metricsStrip}>
+        <View style={styles.metricItem}>
+          <Text style={styles.metricValueText}>{tickerList.length || '3,470+'}</Text>
+          <Text style={styles.metricLabelText}>MARKETS</Text>
         </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>NET REALIZED R</Text>
-          <Text style={[styles.metricValue, { color: Colors.cyberCyan }]}>+24.8R (PF: 2.85)</Text>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+          <Text style={styles.metricValueText}>
+            {tickerList.filter((t) => t.change24h > 0).length} / {tickerList.length || '3,470'}
+          </Text>
+          <Text style={styles.metricLabelText}>BREADTH</Text>
         </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>VOL SPIKES</Text>
-          <Text style={[styles.metricValue, { color: Colors.binanceGold }]}>4 (RVOL ≥ 1.5x)</Text>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+          <Text style={[styles.metricValueText, { color: Colors.cyan }]}>
+            {tickerList.filter((t) => t.rvol >= 2.0).length}
+          </Text>
+          <Text style={styles.metricLabelText}>SPIKES 2X+</Text>
         </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>BREADTH</Text>
-          <Text style={styles.metricValue}>47% (Vol: 53%)</Text>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+          <Text style={[styles.metricValueText, { color: isConnected ? Colors.long : Colors.short }]}>
+            {isConnected ? 'LIVE WS' : 'CONNECTING'}
+          </Text>
+          <Text style={styles.metricLabelText}>FEED STATUS</Text>
         </View>
-      </ScrollView>
+      </View>
 
-      {/* ─── 3. STRATEGY PRESETS CAROUSEL ─── */}
+      {/* ─── 3. SEARCH & PRESET CAROUSEL ─── */}
+      <View style={styles.searchBarContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search 3,470+ coins (e.g. BTC, SOL, PEPE)..."
+          placeholderTextColor={Colors.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="characters"
+          autoCorrect={false}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
+            <Text style={styles.clearSearchText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Presets Carousel */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.presetsStrip}
+        style={styles.presetsScrollView}
+        contentContainerStyle={styles.presetsContainer}
       >
         {PRESETS.map((p) => {
-          const isSelected = selectedPreset === p;
+          const isActive = selectedPreset === p;
           return (
             <TouchableOpacity
               key={p}
-              style={[styles.presetChip, isSelected && styles.presetChipActive]}
+              style={[styles.presetPill, isActive && styles.presetPillActive]}
               onPress={() => setSelectedPreset(p)}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.presetChipText, isSelected && styles.presetChipTextActive]}>
-                {p}
-              </Text>
+              <Text style={[styles.presetText, isActive && styles.presetTextActive]}>{p}</Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
-      {/* ─── 4. EXCHANGE FILTER PILLS ─── */}
-      <View style={styles.exchangeBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.exchangeScroll}>
-          {EXCHANGES.map((ex) => {
-            const isSelected = selectedExchange === ex.key;
-            return (
-              <TouchableOpacity
-                key={ex.key}
-                style={[styles.exchangePill, isSelected && styles.exchangePillActive]}
-                onPress={() => setSelectedExchange(ex.key)}
-              >
-                <Text style={[styles.exchangeText, isSelected && styles.exchangeTextActive]}>
-                  {ex.label} <Text style={styles.exchangeCount}>({ex.count})</Text>
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* ─── 5. SEARCH BAR ─── */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search 3,470+ symbols (e.g. SOL, BTC)..."
-          placeholderTextColor={Colors.textTertiary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* ─── 6. TABLE HEADER ─── */}
-      <View style={styles.tableHeader}>
-        <Text style={[styles.columnHeader, { flex: 2 }]}>SYMBOL / VOL</Text>
-        <Text style={[styles.columnHeader, { flex: 1.5, textAlign: 'right' }]}>PRICE</Text>
-        <Text style={[styles.columnHeader, { flex: 1.8, textAlign: 'right' }]}>15M / SCORE</Text>
-      </View>
-
-      {/* ─── 7. HIGH-FREQUENCY VIRTUALIZED TICKER LIST ─── */}
-      <FlatList
-        data={filteredTickers}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          const isProfit = item.change15m >= 0;
-          const exchangeColor =
-            item.exchange === 'BYBIT'
-              ? Colors.bybitOrange
-              : item.exchange === 'BINANCE'
-              ? Colors.binanceYellow
-              : item.exchange === 'MEXC'
-              ? Colors.mexcCyan
-              : Colors.weexPurple;
-
+      {/* ─── 4. EXCHANGE SELECTOR ROW ─── */}
+      <View style={styles.exchangeSelectorRow}>
+        {EXCHANGES.map((ex) => {
+          const isActive = selectedExchange === ex.key;
           return (
             <TouchableOpacity
-              style={styles.tickerRow}
-              onPress={() => onSelectTicker(item)}
-              activeOpacity={0.7}
+              key={ex.key}
+              style={[styles.exchangeTab, isActive && styles.exchangeTabActive]}
+              onPress={() => setSelectedExchange(ex.key)}
             >
-              {/* Left Column: Symbol & Exchange */}
-              <View style={{ flex: 2 }}>
-                <View style={styles.symbolRow}>
-                  <Text style={styles.symbolText}>{item.symbol}</Text>
-                  <View style={[styles.exchangeBadge, { borderColor: exchangeColor }]}>
-                    <Text style={[styles.exchangeBadgeText, { color: exchangeColor }]}>
-                      {item.exchange}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.volumeText}>
-                  Vol ${(item.volume24hUsd / 1_000_000).toFixed(1)}M
-                </Text>
-              </View>
-
-              {/* Center Column: Price */}
-              <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
-                <Text style={styles.priceText}>
-                  ${item.price < 1 ? item.price.toFixed(4) : item.price.toLocaleString()}
-                </Text>
-                <Text style={styles.rvolText}>RVOL {item.rvol.toFixed(2)}x</Text>
-              </View>
-
-              {/* Right Column: 15M Change & Eagle Score */}
-              <View style={{ flex: 1.8, alignItems: 'flex-end' }}>
-                <View style={[styles.changeBadge, isProfit ? styles.badgeGreen : styles.badgeRed]}>
-                  <Text style={[styles.changeText, isProfit ? styles.textGreen : styles.textRed]}>
-                    {isProfit ? '+' : ''}
-                    {item.change15m.toFixed(2)}%
-                  </Text>
-                </View>
-                <View style={styles.scoreRow}>
-                  <Text style={styles.scoreLabel}>Score </Text>
-                  <Text style={styles.scoreValue}>{item.eagleScore}</Text>
-                </View>
-              </View>
+              <Text style={[styles.exchangeTabText, isActive && styles.exchangeTabTextActive]}>
+                {ex.label}
+              </Text>
             </TouchableOpacity>
           );
-        }}
-      />
+        })}
+      </View>
+
+      {/* ─── 5. TABLE HEADER ─── */}
+      <View style={styles.tableHeader}>
+        <Text style={[styles.tableColHeader, styles.colSymbol]}>ASSET / VOL</Text>
+        <Text style={[styles.tableColHeader, styles.colMetrics]}>RVOL / VOL-Z</Text>
+        <Text style={[styles.tableColHeader, styles.colPrice, { textAlign: 'right' }]}>
+          PRICE / 24H
+        </Text>
+      </View>
+
+      {/* ─── 6. VIRTUALIZED TICKER FEED ─── */}
+      {tickerList.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={Colors.cyan} size="large" />
+          <Text style={styles.loadingFeedText}>Connecting to Live WebSocket Feeds...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredTickers}
+          keyExtractor={(item) => item.id}
+          renderItem={renderTickerRow}
+          contentContainerStyle={styles.listContainer}
+          initialNumToRender={20}
+          maxToRenderPerBatch={25}
+          windowSize={10}
+          removeClippedSubviews={true}
+        />
+      )}
     </View>
   );
 };
@@ -354,253 +308,305 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 10,
-    backgroundColor: '#12161A',
+    paddingTop: 12,
+    paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.surfaceTertiary,
+    borderBottomColor: Colors.border,
   },
   headerLeft: {
-    gap: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerLogo: {
     fontSize: 16,
     fontWeight: '900',
-    color: Colors.longGreen,
-    letterSpacing: 1,
+    color: Colors.cyan,
+    letterSpacing: 0.5,
     fontFamily: 'monospace',
   },
   btcTickerPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  greenPulseDot: {
+  pulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.longGreen,
+    backgroundColor: Colors.textMuted,
+  },
+  pulseDotLive: {
+    backgroundColor: Colors.long,
   },
   btcPillText: {
     fontSize: 10,
-    color: Colors.textSecondary,
+    fontWeight: '800',
+    color: Colors.textPrimary,
     fontFamily: 'monospace',
+    fontVariant: ['tabular-nums'],
   },
   modeTogglePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  pillPaper: {
-    backgroundColor: Colors.longGreenBg,
-    borderColor: Colors.longGreen,
-  },
-  pillLive: {
-    backgroundColor: Colors.binanceGoldBg,
-    borderColor: Colors.binanceGold,
-  },
-  modePillText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-    fontFamily: 'monospace',
-  },
-  metricsStrip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  metricCard: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.surfaceTertiary,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  metricLabel: {
-    fontSize: 9,
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
-  },
-  metricValue: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  presetsStrip: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    gap: 8,
-  },
-  presetChip: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.surfaceTertiary,
-    borderWidth: 1,
-    borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
-  },
-  presetChipActive: {
-    backgroundColor: Colors.cyberCyanBg,
-    borderColor: Colors.cyberCyan,
-  },
-  presetChipText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
-  },
-  presetChipTextActive: {
-    color: Colors.cyberCyan,
-    fontWeight: 'bold',
-  },
-  exchangeBar: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.surfaceTertiary,
-    paddingBottom: 8,
-  },
-  exchangeScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  exchangePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#161A20',
   },
-  exchangePillActive: {
-    backgroundColor: '#28303C',
+  pillPaper: {
+    backgroundColor: 'rgba(240, 185, 11, 0.15)',
+    borderWidth: 1,
+    borderColor: Colors.gold,
   },
-  exchangeText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
+  pillLive: {
+    backgroundColor: 'rgba(14, 203, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: Colors.long,
   },
-  exchangeTextActive: {
-    color: Colors.textPrimary,
-    fontWeight: 'bold',
-  },
-  exchangeCount: {
+  modePillText: {
     fontSize: 9,
-    color: Colors.textTertiary,
+    fontWeight: '900',
+    color: Colors.textPrimary,
+    letterSpacing: 0.5,
   },
-  searchContainer: {
-    paddingHorizontal: 16,
+  metricsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: Colors.surface,
     paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  metricItem: {
+    alignItems: 'center',
+  },
+  metricValueText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: Colors.textPrimary,
+    fontFamily: 'monospace',
+    fontVariant: ['tabular-nums'],
+  },
+  metricLabelText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  metricDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: Colors.border,
+  },
+  searchBarContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    position: 'relative',
   },
   searchInput: {
     backgroundColor: Colors.surface,
-    borderColor: Colors.surfaceTertiary,
-    borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    fontSize: 11,
     color: Colors.textPrimary,
-    fontSize: 12,
     fontFamily: 'monospace',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  clearSearchBtn: {
+    position: 'absolute',
+    right: 28,
+    top: 17,
+  },
+  clearSearchText: {
+    color: Colors.textMuted,
+    fontSize: 12,
+  },
+  presetsScrollView: {
+    paddingVertical: 4,
+  },
+  presetsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 2,
+    gap: 6,
+    alignItems: 'center',
+  },
+  presetPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  presetPillActive: {
+    backgroundColor: Colors.surfaceHighlight,
+    borderColor: Colors.cyan,
+  },
+  presetText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.textMuted,
+  },
+  presetTextActive: {
+    color: Colors.cyan,
+  },
+  exchangeSelectorRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: '#0F1216',
+  },
+  exchangeTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  exchangeTabActive: {
+    borderBottomColor: Colors.gold,
+  },
+  exchangeTabText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textMuted,
+  },
+  exchangeTabTextActive: {
+    color: Colors.gold,
+    fontWeight: '900',
   },
   tableHeader: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderTopWidth: 1,
+    paddingVertical: 6,
+    backgroundColor: '#0A0D10',
     borderBottomWidth: 1,
-    borderColor: Colors.surfaceTertiary,
-    backgroundColor: '#0F1216',
+    borderBottomColor: Colors.border,
   },
-  columnHeader: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
+  tableColHeader: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  listContainer: {
+    paddingBottom: 40,
   },
   tickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#161A20',
+    borderBottomColor: '#14181E',
   },
-  symbolRow: {
+  colSymbol: {
+    flex: 2,
+  },
+  symbolBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    marginBottom: 2,
   },
-  symbolText: {
+  symbolName: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: Colors.textPrimary,
     fontFamily: 'monospace',
   },
-  exchangeBadge: {
-    borderWidth: 1,
+  exchangePill: {
+    backgroundColor: Colors.surfaceSecondary,
     paddingHorizontal: 4,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: 3,
   },
-  exchangeBadgeText: {
+  exchangePillText: {
     fontSize: 8,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
+    fontWeight: '800',
+    color: Colors.textMuted,
   },
-  volumeText: {
-    fontSize: 10,
-    color: Colors.textTertiary,
-    fontFamily: 'monospace',
-    marginTop: 2,
-  },
-  priceText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-    fontFamily: 'monospace',
-  },
-  rvolText: {
-    fontSize: 10,
+  volText: {
+    fontSize: 9,
     color: Colors.textSecondary,
     fontFamily: 'monospace',
-    marginTop: 2,
   },
-  changeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+  colMetrics: {
+    flex: 1.2,
+    alignItems: 'flex-start',
   },
-  badgeGreen: {
-    backgroundColor: Colors.longGreenBg,
+  rvolText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: Colors.textPrimary,
+    fontFamily: 'monospace',
+    fontVariant: ['tabular-nums'],
   },
-  badgeRed: {
-    backgroundColor: Colors.shortRedBg,
+  rvolHot: {
+    color: Colors.gold,
+  },
+  volZText: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    fontFamily: 'monospace',
+  },
+  colPrice: {
+    flex: 1.8,
+    alignItems: 'flex-end',
+  },
+  priceNumber: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: Colors.textPrimary,
+    fontFamily: 'monospace',
+    fontVariant: ['tabular-nums'],
+    marginBottom: 2,
+  },
+  changeBox: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    minWidth: 54,
+    alignItems: 'center',
+  },
+  changeBoxUp: {
+    backgroundColor: 'rgba(14, 203, 129, 0.15)',
+  },
+  changeBoxDown: {
+    backgroundColor: 'rgba(246, 70, 93, 0.15)',
   },
   changeText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
-  },
-  textGreen: {
-    color: Colors.longGreen,
-  },
-  textRed: {
-    color: Colors.shortRed,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 3,
-  },
-  scoreLabel: {
-    fontSize: 9,
-    color: Colors.textTertiary,
-    fontFamily: 'monospace',
-  },
-  scoreValue: {
     fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.longGreen,
+    fontWeight: '900',
     fontFamily: 'monospace',
+    fontVariant: ['tabular-nums'],
+  },
+  changeTextUp: {
+    color: Colors.long,
+  },
+  changeTextDown: {
+    color: Colors.short,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    gap: 12,
+  },
+  loadingFeedText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
   },
 });

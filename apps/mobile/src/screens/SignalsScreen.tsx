@@ -1,115 +1,239 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * 🦅 EAGLE FLASH — SCREEN 2: SIGNALS & INTELLIGENCE TERMINAL
+ * 🦅 EAGLE FLASH — SCREEN 2: LIVE SUPABASE SIGNALS & INTELLIGENCE TERMINAL
  * File: apps/mobile/src/screens/SignalsScreen.tsx
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { Colors } from '../theme/colors';
 import { useTradingStore } from '../store/useTradingStore';
-
-interface CanonicalSignal {
-  id: string;
-  symbol: string;
-  exchange: string;
-  direction: 'LONG' | 'SHORT';
-  entryPrice: number;
-  stopLoss: number;
-  tp1: number;
-  tp2: number;
-  tp3: number;
-  score: number;
-  scoreQuality: 'EXTREME' | 'HIGH' | 'MEDIUM';
-  rationale: string[];
-  createdAt: number;
-}
-
-const SEED_SIGNALS: CanonicalSignal[] = [
-  {
-    id: 'EGL-20261025-BYBIT-SOLUSDT-01',
-    symbol: 'SOLUSDT',
-    exchange: 'BYBIT',
-    direction: 'LONG',
-    entryPrice: 154.2,
-    stopLoss: 150.8,
-    tp1: 157.6,
-    tp2: 162.0,
-    tp3: 168.5,
-    score: 91,
-    scoreQuality: 'EXTREME',
-    rationale: [
-      'Multi-timeframe RVOL 3.12x expansion across 5m and 15m windows',
-      'Massive +22.4% Open Interest inflow in past 30 minutes',
-      'Aggressive delta-taker buy ratio reaching 68% taker dominance',
-      'Clear breakout above 4h local consolidation resistance at $152.0',
-    ],
-    createdAt: Date.now() - 1000 * 60 * 8,
-  },
-  {
-    id: 'EGL-20261025-BINANCE-ETHUSDT-02',
-    symbol: 'ETHUSDT',
-    exchange: 'BINANCE',
-    direction: 'SHORT',
-    entryPrice: 3520.0,
-    stopLoss: 3580.0,
-    tp1: 3450.0,
-    tp2: 3380.0,
-    tp3: 3260.0,
-    score: 84,
-    scoreQuality: 'HIGH',
-    rationale: [
-      'Bearish divergence on 1h RSI (14) with failing swing high at $3,550',
-      'Rapid Open Interest decline indicating massive long liquidation flush',
-      'Net negative taker flow (-$24.5M) dominated by market sellers',
-      'Rejection from upper 24h Bollinger band under heavy volume',
-    ],
-    createdAt: Date.now() - 1000 * 60 * 25,
-  },
-  {
-    id: 'EGL-20261025-MEXC-HOOKED-03',
-    symbol: 'HOOKEDUSDT',
-    exchange: 'MEXC',
-    direction: 'LONG',
-    entryPrice: 0.0815,
-    stopLoss: 0.0785,
-    tp1: 0.0848,
-    tp2: 0.0895,
-    tp3: 0.098,
-    score: 81,
-    scoreQuality: 'HIGH',
-    rationale: [
-      'Early breakout momentum with 1.95x RVOL on 15m timeframe',
-      'Taker buy pressure absorbing low ask liquidity on orderbook',
-      'Confirmed ATR volatility expansion with high reward-to-risk ratio',
-      'Fresh volume baseline breakout after multi-day base accumulation',
-    ],
-    createdAt: Date.now() - 1000 * 60 * 50,
-  },
-];
+import {
+  fetchLiveSignals,
+  fetchBigCapSignals,
+  subscribeToLiveSignals,
+  LiveSignalRecord,
+  LiveBigCapSignal,
+} from '../services/supabase';
 
 export const SignalsScreen: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'SIGNALS' | 'BIGCAP' | 'PRE_BREAKOUT'>('SIGNALS');
+  const [signals, setSignals] = useState<LiveSignalRecord[]>([]);
+  const [bigCapSignals, setBigCapSignals] = useState<LiveBigCapSignal[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const { openPaperPosition } = useTradingStore();
 
-  const handleExecutePaper = (sig: CanonicalSignal) => {
+  const loadData = async () => {
+    try {
+      const [sigs, bigcaps] = await Promise.all([
+        fetchLiveSignals(50),
+        fetchBigCapSignals(20),
+      ]);
+      setSignals(sigs);
+      setBigCapSignals(bigcaps);
+    } catch (e) {
+      console.warn('Error loading Supabase signals:', e);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+
+    // Real-time Postgres subscription
+    const channel = subscribeToLiveSignals((newSig) => {
+      setSignals((prev) => [newSig, ...prev.filter((s) => s.id !== newSig.id)]);
+    });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, []);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadData();
+  };
+
+  const handleExecutePaper = (sig: LiveSignalRecord) => {
     openPaperPosition({
       symbol: sig.symbol,
-      exchange: sig.exchange,
+      exchange: sig.exchange_id || 'BYBIT',
       direction: sig.direction,
-      entryPrice: sig.entryPrice,
-      takeProfit1: sig.tp1,
-      stopLoss: sig.stopLoss,
+      entryPrice: sig.entry_price,
+      takeProfit1: sig.target_1_price,
+      stopLoss: sig.stop_price,
     });
+  };
+
+  const renderSignalCard = ({ item }: { item: LiveSignalRecord }) => {
+    const isLong = item.direction === 'LONG';
+    const scoreColor = item.eagle_score >= 85 ? Colors.cyan : Colors.gold;
+
+    return (
+      <View style={styles.card}>
+        {/* Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.badgeRow}>
+            <View style={[styles.dirBadge, isLong ? styles.longBadge : styles.shortBadge]}>
+              <Text style={[styles.dirText, isLong ? styles.longText : styles.shortText]}>
+                {isLong ? '🚀 LONG' : '🔴 SHORT'} 5x
+              </Text>
+            </View>
+            <Text style={styles.symbolText}>{item.symbol}</Text>
+            <Text style={styles.exchangeText}>({item.exchange_id || 'BYBIT'})</Text>
+          </View>
+          <View style={[styles.scoreBadge, { borderColor: scoreColor }]}>
+            <Text style={[styles.scoreText, { color: scoreColor }]}>
+              Score {item.eagle_score || 80}
+            </Text>
+          </View>
+        </View>
+
+        {/* Pricing Grid */}
+        <View style={styles.priceGrid}>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>ENTRY</Text>
+            <Text style={styles.priceValue}>${item.entry_price?.toLocaleString()}</Text>
+          </View>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>TARGET TP1</Text>
+            <Text style={[styles.priceValue, styles.profitText]}>
+              ${item.target_1_price?.toLocaleString()}
+            </Text>
+          </View>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>TARGET TP2</Text>
+            <Text style={[styles.priceValue, styles.profitText]}>
+              ${item.target_2_price?.toLocaleString()}
+            </Text>
+          </View>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>STOP-LOSS</Text>
+            <Text style={[styles.priceValue, styles.lossText]}>
+              ${item.stop_price?.toLocaleString()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Quantitative Intelligence */}
+        <View style={styles.metricsRow}>
+          <View style={styles.metricPill}>
+            <Text style={styles.metricPillText}>RVOL {item.rvol?.toFixed(2)}x</Text>
+          </View>
+          <View style={styles.metricPill}>
+            <Text style={styles.metricPillText}>Vol-Z {item.volume_z_score?.toFixed(2)}</Text>
+          </View>
+          <View style={styles.metricPill}>
+            <Text style={styles.metricPillText}>Status: {item.status || 'DETECTED'}</Text>
+          </View>
+          {item.blockchain_network && (
+            <View style={[styles.metricPill, styles.chainPill]}>
+              <Text style={styles.chainText}>🔗 ON-CHAIN</Text>
+            </View>
+          )}
+        </View>
+
+        {/* One-Tap Execution Button */}
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={() => handleExecutePaper(item)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionBtnText}>⚡ Execute Paper Trade ($100)</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const renderBigCapCard = ({ item }: { item: LiveBigCapSignal }) => {
+    const isLong = item.direction === 'LONG';
+    const rationale = Array.isArray(item.rationale_json)
+      ? item.rationale_json
+      : typeof item.rationale_json === 'string'
+      ? [item.rationale_json]
+      : [];
+
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.badgeRow}>
+            <View style={[styles.dirBadge, isLong ? styles.longBadge : styles.shortBadge]}>
+              <Text style={[styles.dirText, isLong ? styles.longText : styles.shortText]}>
+                {isLong ? '💎 BIGCAP LONG' : '💎 BIGCAP SHORT'}
+              </Text>
+            </View>
+            <Text style={styles.symbolText}>{item.symbol}</Text>
+            <Text style={styles.exchangeText}>({item.best_timeframe || '15m'})</Text>
+          </View>
+          <View style={styles.scoreBadge}>
+            <Text style={styles.scoreText}>Score {item.eagle_score}</Text>
+          </View>
+        </View>
+
+        <View style={styles.priceGrid}>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>ENTRY</Text>
+            <Text style={styles.priceValue}>${item.entry_price?.toLocaleString()}</Text>
+          </View>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>TARGET 1</Text>
+            <Text style={[styles.priceValue, styles.profitText]}>
+              ${item.target_price_1?.toLocaleString()}
+            </Text>
+          </View>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>TARGET 2</Text>
+            <Text style={[styles.priceValue, styles.profitText]}>
+              ${item.target_price_2?.toLocaleString()}
+            </Text>
+          </View>
+          <View style={styles.priceCol}>
+            <Text style={styles.priceLabel}>STOP</Text>
+            <Text style={[styles.priceValue, styles.lossText]}>
+              ${item.stop_loss_price?.toLocaleString()}
+            </Text>
+          </View>
+        </View>
+
+        {rationale.length > 0 && (
+          <View style={styles.rationaleBox}>
+            <Text style={styles.rationaleTitle}>QUANTITATIVE RATIONALE:</Text>
+            {rationale.map((r, i) => (
+              <Text key={i} style={styles.bulletText}>
+                • {r}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    );
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>⚡ CANONICAL SIGNALS DESK</Text>
-        <Text style={styles.headerSubtitle}>Real-time Institutional Vol Spike Detection</Text>
+        <View>
+          <Text style={styles.headerTitle}>⚡ LIVE SIGNALS DESK</Text>
+          <Text style={styles.headerSubtitle}>Real-time Supabase PostgreSQL Stream</Text>
+        </View>
+        <View style={styles.liveIndicator}>
+          <View style={styles.pulseDot} />
+          <Text style={styles.liveText}>REALTIME</Text>
+        </View>
       </View>
 
       {/* Sub-Tabs */}
@@ -119,7 +243,7 @@ export const SignalsScreen: React.FC = () => {
           onPress={() => setActiveSubTab('SIGNALS')}
         >
           <Text style={[styles.tabText, activeSubTab === 'SIGNALS' && styles.tabTextActive]}>
-            Live Signals (3)
+            Perp Signals ({signals.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -127,89 +251,51 @@ export const SignalsScreen: React.FC = () => {
           onPress={() => setActiveSubTab('BIGCAP')}
         >
           <Text style={[styles.tabText, activeSubTab === 'BIGCAP' && styles.tabTextActive]}>
-            BigCap Desk (BTC/ETH)
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabItem, activeSubTab === 'PRE_BREAKOUT' && styles.tabItemActive]}
-          onPress={() => setActiveSubTab('PRE_BREAKOUT')}
-        >
-          <Text style={[styles.tabText, activeSubTab === 'PRE_BREAKOUT' && styles.tabTextActive]}>
-            Pre-Breakout (2)
+            BigCap Desk ({bigCapSignals.length})
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Signals Feed */}
-      <FlatList
-        data={SEED_SIGNALS}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => {
-          const isLong = item.direction === 'LONG';
-          return (
-            <View style={styles.signalCard}>
-              {/* Card Top Row */}
-              <View style={styles.cardHeader}>
-                <View style={styles.dirRow}>
-                  <View style={[styles.dirBadge, isLong ? styles.dirLong : styles.dirShort]}>
-                    <Text style={[styles.dirText, isLong ? styles.textLong : styles.textShort]}>
-                      {isLong ? '🚀 LONG 5x' : '🔴 SHORT 5x'}
-                    </Text>
-                  </View>
-                  <Text style={styles.symbolText}>{item.symbol}</Text>
-                  <Text style={styles.exchangeText}>({item.exchange})</Text>
-                </View>
-
-                <View style={styles.scoreBadge}>
-                  <Text style={styles.scoreText}>Score {item.score}</Text>
-                </View>
-              </View>
-
-              {/* Levels Matrix */}
-              <View style={styles.levelsGrid}>
-                <View style={styles.levelCol}>
-                  <Text style={styles.levelLabel}>ENTRY</Text>
-                  <Text style={styles.levelVal}>${item.entryPrice}</Text>
-                </View>
-                <View style={styles.levelCol}>
-                  <Text style={styles.levelLabel}>TARGET TP1</Text>
-                  <Text style={[styles.levelVal, { color: Colors.longGreen }]}>${item.tp1}</Text>
-                </View>
-                <View style={styles.levelCol}>
-                  <Text style={styles.levelLabel}>TARGET TP2</Text>
-                  <Text style={[styles.levelVal, { color: Colors.longGreen }]}>${item.tp2}</Text>
-                </View>
-                <View style={styles.levelCol}>
-                  <Text style={styles.levelLabel}>STOP-LOSS</Text>
-                  <Text style={[styles.levelVal, { color: Colors.shortRed }]}>${item.stopLoss}</Text>
-                </View>
-              </View>
-
-              {/* Quantitative Rationale */}
-              <View style={styles.rationaleBox}>
-                <Text style={styles.rationaleTitle}>QUANTITATIVE RATIONALE:</Text>
-                {item.rationale.map((r, idx) => (
-                  <Text key={idx} style={styles.rationaleItem}>
-                    • {r}
-                  </Text>
-                ))}
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={styles.paperExecButton}
-                  onPress={() => handleExecutePaper(item)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.paperExecText}>🧪 Execute Paper Trade ($100)</Text>
-                </TouchableOpacity>
-              </View>
+      {/* Content */}
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator color={Colors.cyan} size="large" />
+          <Text style={styles.loadingText}>Connecting to Supabase signals stream...</Text>
+        </View>
+      ) : activeSubTab === 'SIGNALS' ? (
+        <FlatList
+          data={signals}
+          keyExtractor={(item) => String(item.id || item.signal_id)}
+          renderItem={renderSignalCard}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={Colors.cyan}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No active signals detected.</Text>
             </View>
-          );
-        }}
-      />
+          }
+        />
+      ) : (
+        <FlatList
+          data={bigCapSignals}
+          keyExtractor={(item) => String(item.id || item.signal_id)}
+          renderItem={renderBigCapCard}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={Colors.cyan}
+            />
+          }
+        />
+      )}
     </View>
   );
 };
@@ -220,64 +306,88 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 10,
-    backgroundColor: '#12161A',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.surfaceTertiary,
+    borderBottomColor: Colors.border,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: Colors.longGreen,
-    letterSpacing: 1,
+    color: Colors.cyan,
+    letterSpacing: 0.5,
     fontFamily: 'monospace',
   },
   headerSubtitle: {
     fontSize: 10,
     color: Colors.textSecondary,
-    fontFamily: 'monospace',
     marginTop: 2,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(14, 203, 129, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(14, 203, 129, 0.3)',
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.long,
+  },
+  liveText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.long,
+    letterSpacing: 0.5,
   },
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.surfaceTertiary,
+    borderBottomColor: Colors.border,
   },
   tabItem: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: Colors.surface,
   },
   tabItemActive: {
-    backgroundColor: Colors.cyberCyanBg,
-    borderColor: Colors.cyberCyan,
+    backgroundColor: Colors.surfaceHighlight,
     borderWidth: 1,
+    borderColor: Colors.border,
   },
   tabText: {
     fontSize: 11,
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
+    fontWeight: '700',
+    color: Colors.textMuted,
   },
   tabTextActive: {
-    color: Colors.cyberCyan,
-    fontWeight: 'bold',
+    color: Colors.textPrimary,
   },
   listContent: {
-    padding: 16,
-    gap: 14,
+    padding: 14,
+    paddingBottom: 30,
   },
-  signalCard: {
+  card: {
     backgroundColor: Colors.surface,
-    borderColor: Colors.surfaceTertiary,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
+    borderColor: Colors.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -285,117 +395,164 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  dirRow: {
+  badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   dirBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 4,
   },
-  dirLong: {
-    backgroundColor: Colors.longGreenBg,
+  longBadge: {
+    backgroundColor: 'rgba(14, 203, 129, 0.15)',
   },
-  dirShort: {
-    backgroundColor: Colors.shortRedBg,
+  shortBadge: {
+    backgroundColor: 'rgba(246, 70, 93, 0.15)',
   },
   dirText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '900',
     fontFamily: 'monospace',
   },
-  textLong: {
-    color: Colors.longGreen,
+  longText: {
+    color: Colors.long,
   },
-  textShort: {
-    color: Colors.shortRed,
+  shortText: {
+    color: Colors.short,
   },
   symbolText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: Colors.textPrimary,
     fontFamily: 'monospace',
   },
   exchangeText: {
     fontSize: 10,
-    color: Colors.textTertiary,
-    fontFamily: 'monospace',
+    color: Colors.textMuted,
+    fontWeight: '700',
   },
   scoreBadge: {
-    backgroundColor: '#20262E',
+    borderWidth: 1,
+    borderColor: Colors.gold,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 4,
   },
   scoreText: {
     fontSize: 10,
-    fontWeight: 'bold',
-    color: Colors.binanceGold,
+    fontWeight: '900',
+    color: Colors.gold,
     fontFamily: 'monospace',
   },
-  levelsGrid: {
+  priceGrid: {
     flexDirection: 'row',
-    backgroundColor: '#101418',
-    borderRadius: 10,
+    justifyContent: 'space-between',
+    backgroundColor: Colors.background,
+    borderRadius: 6,
     padding: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#1C222A',
+    marginBottom: 10,
   },
-  levelCol: {
-    flex: 1,
+  priceCol: {
+    alignItems: 'center',
   },
-  levelLabel: {
+  priceLabel: {
     fontSize: 8,
-    color: Colors.textTertiary,
-    fontFamily: 'monospace',
+    fontWeight: '800',
+    color: Colors.textMuted,
+    marginBottom: 3,
   },
-  levelVal: {
-    fontSize: 11,
-    fontWeight: 'bold',
+  priceValue: {
+    fontSize: 12,
+    fontWeight: '800',
     color: Colors.textPrimary,
     fontFamily: 'monospace',
-    marginTop: 2,
+    fontVariant: ['tabular-nums'],
+  },
+  profitText: {
+    color: Colors.long,
+  },
+  lossText: {
+    color: Colors.short,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  metricPill: {
+    backgroundColor: Colors.surfaceSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  metricPillText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    fontFamily: 'monospace',
+  },
+  chainPill: {
+    backgroundColor: 'rgba(0, 210, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: Colors.cyan,
+  },
+  chainText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.cyan,
+    fontFamily: 'monospace',
+  },
+  actionBtn: {
+    backgroundColor: 'rgba(14, 203, 129, 0.12)',
+    borderWidth: 1,
+    borderColor: Colors.long,
+    borderRadius: 6,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  actionBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.long,
+    letterSpacing: 0.3,
   },
   rationaleBox: {
-    backgroundColor: '#12161C',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 8,
+    marginTop: 6,
   },
   rationaleTitle: {
     fontSize: 9,
-    fontWeight: 'bold',
-    color: Colors.textSecondary,
-    fontFamily: 'monospace',
+    fontWeight: '800',
+    color: Colors.textMuted,
     marginBottom: 4,
   },
-  rationaleItem: {
+  bulletText: {
     fontSize: 10,
-    color: Colors.textPrimary,
-    fontFamily: 'monospace',
+    color: Colors.textSecondary,
     lineHeight: 15,
+    marginBottom: 2,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  paperExecButton: {
+  centerContainer: {
     flex: 1,
-    backgroundColor: Colors.longGreenBg,
-    borderColor: Colors.longGreen,
-    borderWidth: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
   },
-  paperExecText: {
-    color: Colors.longGreen,
+  loadingText: {
     fontSize: 11,
-    fontWeight: 'bold',
-    fontFamily: 'monospace',
+    color: Colors.textSecondary,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 12,
+    color: Colors.textMuted,
   },
 });
